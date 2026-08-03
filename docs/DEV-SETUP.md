@@ -1,23 +1,46 @@
 # DEV-SETUP — как запустить проект
 
-## 1. Инструменты
+## 0. Что нужно установить (Windows)
 
-Ставим менеджер инструментов [Rokit](https://github.com/rojo-rbx/rokit), дальше он поставит всё сам:
+**Минимум, чтобы увидеть игру:**
+
+1. **Roblox Studio** — сама среда, где всё запускается. Нужен аккаунт Roblox.
+   ```
+   winget install --id Roblox.RobloxStudio
+   ```
+2. **Rojo** — синхронизирует файлы из репозитория в Studio.
+   ```
+   winget install --id Rojo.Rojo
+   ```
+3. **Плагин Rojo для Studio** — ставится самой Rojo одной командой:
+   ```
+   rojo plugin install
+   ```
+
+**Дополнительно (для тестов и удобства):**
+
+- **Rokit** (`winget install --id Rojo.Rokit`) — менеджер инструментов: поставит `wally`,
+  `stylua`, `selene`, `luau-lsp`, `run-in-roblox` нужных версий одной командой `rokit install`.
+  Если ставишь Rokit, отдельная установка Rojo не нужна — он придёт из `rokit.toml`.
+- **VS Code** + расширения **Luau Language Server** и **StyLua**.
+
+## 1. Инструменты через Rokit
 
 ```bash
 rokit install
 ```
 
-Это даст `rojo`, `stylua`, `selene`, `luau-lsp`, `run-in-roblox` нужных версий (см. `rokit.toml`).
-Если у тебя уже стоит Aftman — те же строки работают в `aftman.toml`.
+Ставит всё из `rokit.toml`. Если Rokit ругается, что версии нет, — обнови её
+командой `rokit add <имя-инструмента>`.
 
-Зависимости Luau ставятся через [Wally](https://wally.run):
+Зависимости Luau (нужны только для тестов — там лежит TestEZ):
 
 ```bash
 wally install
 ```
 
 Появятся папки `Packages/` и `DevPackages/` — они в `.gitignore` и в репозиторий не идут.
+Для запуска самой игры они не требуются.
 
 ## 2. Запуск в Roblox Studio
 
@@ -25,7 +48,14 @@ wally install
 rojo serve
 ```
 
-В Studio: плагин Rojo → **Connect**. Дальше правим файлы в редакторе, Studio обновляется сам.
+В Studio: открыть любое пустое место (Baseplate), вкладка **Plugins** → **Rojo** → **Connect**.
+Дальше **Play** — и правим файлы в редакторе, Studio обновляется сам.
+
+**Про сохранения:** без публикации места DataStore недоступен, и профиль работает
+в памяти — прогресс не переживёт перезапуск, это ожидаемо и в логе об этом написано.
+Чтобы сохранения заработали по-настоящему: опубликовать место
+(File → Publish to Roblox) и включить Game Settings → Security → **Enable Studio Access
+to API Services**.
 
 Собрать место в файл:
 
