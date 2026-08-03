@@ -1,4 +1,4 @@
---!strict
+--!nonstrict
 --[[
 	Точка входа клиента. Только сборка контроллеров — никакой игровой логики здесь.
 	Решения о верности ответов и наградах принимает сервер (docs/07-TECH-ARCH.md § 3).
@@ -12,8 +12,29 @@ local Letters = require(Shared.Config.Letters)
 
 local Controllers = script:WaitForChild("Controllers")
 local AudioController = require(Controllers.AudioController)
+local ChallengeController = require(Controllers.ChallengeController)
+local HUD = require(script:WaitForChild("UI").HUD)
 
 AudioController.init()
+ChallengeController.init()
+
+HUD.build({
+	onRepeat = function()
+		AudioController.repeatLast()
+	end,
+	-- ВРЕМЕННО: прямой запуск испытания до появления хаба с порталами островов
+	onStart = function()
+		ChallengeController.start("letter_rain")
+	end,
+})
+
+-- Срез профиля от сервера: единственный источник состояния для интерфейса.
+RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any)
+	if typeof(snapshot) ~= "table" then
+		return
+	end
+	HUD.setStars(snapshot.stars or 0)
+end)
 
 -- Сервер просит проиграть реплику: единственный канал озвучки между сервером и клиентом.
 RemoteDefs.event("PlayVO").OnClientEvent:Connect(function(key: string, interrupt: boolean?)

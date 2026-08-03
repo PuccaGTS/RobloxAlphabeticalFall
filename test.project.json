@@ -16,6 +16,9 @@
       },
       "Tests": {
         "$path": "tests"
+      },
+      "ServerChallenges": {
+        "$path": "src/server/Challenges"
       }
     },
 
