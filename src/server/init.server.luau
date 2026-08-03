@@ -17,6 +17,12 @@ local Words = require(Shared.Config.Words)
 local Islands = require(Shared.Config.Islands)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 
+local Services = script:WaitForChild("Services")
+local ProfileService = require(Services.ProfileService)
+local EconomyService = require(Services.EconomyService)
+local ProgressService = require(Services.ProgressService)
+
+-- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
 
 local function reportContentState()
@@ -52,12 +58,13 @@ end
 
 reportContentState()
 
+EconomyService.start()
+ProgressService.start()
+ProfileService.start() -- последним: он сразу начинает принимать игроков
+
 --[[
 	TODO (веха 1, docs/12-ROADMAP.md):
-	  ProfileService    — загрузка/сохранение профиля с session-lock и миграциями
-	  ProgressService   — применение MasteryRules и ReviewScheduler к ответам
 	  ChallengeService  — построение и валидация испытаний по контракту docs/07-TECH-ARCH.md § 5
-	  EconomyService    — начисление и списание Звёздочек (единственная точка начисления)
 	  ShopService       — покупки и инвентарь
 	  CosmeticsService  — надевание аксессуаров и питомцев при CharacterAdded
 ]]
