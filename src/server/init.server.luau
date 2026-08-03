@@ -22,6 +22,8 @@ local ProfileService = require(Services.ProfileService)
 local EconomyService = require(Services.EconomyService)
 local ProgressService = require(Services.ProgressService)
 local ChallengeService = require(Services.ChallengeService)
+local CosmeticsService = require(Services.CosmeticsService)
+local ShopService = require(Services.ShopService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -62,13 +64,14 @@ reportContentState()
 EconomyService.start()
 ProgressService.start()
 ChallengeService.start()
+CosmeticsService.start()
+ShopService.start()
 ProfileService.start() -- последним: он сразу начинает принимать игроков
 
 --[[
 	TODO (веха 1, docs/12-ROADMAP.md):
-	  ShopService       — покупки и инвентарь
-	  CosmeticsService  — надевание аксессуаров и питомцев при CharacterAdded
-	  Испытания «Эхо-буква» и «Мост слогов» по тому же контракту, что LetterRain
+	  Испытание «Эхо-буква» по тому же контракту, что LetterRain
+	  Питомцы-буквята: выдача за статус «освоенная», следование за игроком
 ]]
 
 print("[AlphabetFall] сервер запущен")

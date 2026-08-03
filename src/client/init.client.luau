@@ -13,14 +13,28 @@ local Letters = require(Shared.Config.Letters)
 local Controllers = script:WaitForChild("Controllers")
 local AudioController = require(Controllers.AudioController)
 local ChallengeController = require(Controllers.ChallengeController)
-local HUD = require(script:WaitForChild("UI").HUD)
+local UI = script:WaitForChild("UI")
+local HUD = require(UI.HUD)
+local ShopUI = require(UI.ShopUI)
 
 AudioController.init()
 ChallengeController.init()
 
+ShopUI.build({
+	onBuy = function(itemId: string)
+		RemoteDefs.event("BuyItem"):FireServer(itemId)
+	end,
+	onEquip = function(itemId: string)
+		RemoteDefs.event("EquipItem"):FireServer(itemId)
+	end,
+})
+
 HUD.build({
 	onRepeat = function()
 		AudioController.repeatLast()
+	end,
+	onShop = function()
+		ShopUI.setOpen(not ShopUI.isOpen())
 	end,
 	-- ВРЕМЕННО: прямой запуск испытания до появления хаба с порталами островов
 	onStart = function()
@@ -34,6 +48,7 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 		return
 	end
 	HUD.setStars(snapshot.stars or 0)
+	ShopUI.update(snapshot)
 end)
 
 -- Сервер просит проиграть реплику: единственный канал озвучки между сервером и клиентом.

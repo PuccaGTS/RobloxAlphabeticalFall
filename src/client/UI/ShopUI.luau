@@ -1,0 +1,233 @@
+--!nonstrict
+--[[
+	Магазин и гардероб — один экран.
+
+	Из docs/08-UX-UI.md: крупные карточки, цена цифрой И звёздочками (ребёнок ещё
+	не знает цифр), кнопка примерки важнее кнопки покупки, недоступное показываем
+	не замком, а тем, сколько осталось накопить.
+]]
+
+local Players = game:GetService("Players")
+
+local Shop = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Shop)
+
+local ShopUI = {}
+
+local player = Players.LocalPlayer
+
+local gui: ScreenGui? = nil
+local grid: ScrollingFrame? = nil
+local cards: { [string]: Frame } = {}
+local handlers: any = nil
+local lastSnapshot: any = nil
+
+local COLOR_BUY = Color3.fromRGB(120, 200, 130)
+local COLOR_EQUIP = Color3.fromRGB(255, 214, 102)
+local COLOR_EQUIPPED = Color3.fromRGB(150, 160, 180)
+local COLOR_LOCKED = Color3.fromRGB(90, 95, 110)
+
+local function corner(parent: Instance, radius: number)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius)
+	c.Parent = parent
+end
+
+--[[
+	Цена показывается и цифрой, и звёздочками: цифру ребёнок ещё не читает,
+	а «сколько звёздочек» считывает по количеству значков.
+]]
+local function priceText(price: number): string
+	local pips = math.clamp(math.ceil(price / 25), 1, 5)
+	return `{price} ` .. string.rep("⭐", pips)
+end
+
+local function makeCard(item): Frame
+	local card = Instance.new("Frame")
+	card.Name = item.id
+	card.Size = UDim2.fromOffset(180, 210)
+	card.BackgroundColor3 = Color3.fromRGB(45, 48, 62)
+	corner(card, 18)
+
+	local icon = Instance.new("TextLabel")
+	icon.Size = UDim2.fromScale(1, 0.42)
+	icon.BackgroundTransparency = 1
+	icon.Text = item.icon
+	icon.TextScaled = true
+	icon.Parent = card
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.fromScale(1, 0.16)
+	title.Position = UDim2.fromScale(0, 0.42)
+	title.BackgroundTransparency = 1
+	title.Text = item.title
+	title.TextColor3 = Color3.fromRGB(235, 235, 245)
+	title.TextScaled = true
+	title.Font = Enum.Font.FredokaOne
+	title.Parent = card
+
+	local price = Instance.new("TextLabel")
+	price.Name = "Price"
+	price.Size = UDim2.fromScale(1, 0.14)
+	price.Position = UDim2.fromScale(0, 0.58)
+	price.BackgroundTransparency = 1
+	price.Text = if item.price then priceText(item.price) else ""
+	price.TextColor3 = Color3.fromRGB(255, 214, 102)
+	price.TextScaled = true
+	price.Font = Enum.Font.FredokaOne
+	price.Parent = card
+
+	local action = Instance.new("TextButton")
+	action.Name = "Action"
+	action.Size = UDim2.fromScale(0.84, 0.2)
+	action.Position = UDim2.fromScale(0.08, 0.74)
+	action.BackgroundColor3 = COLOR_BUY
+	action.TextColor3 = Color3.fromRGB(30, 30, 40)
+	action.Text = "Купить"
+	action.TextScaled = true
+	action.Font = Enum.Font.FredokaOne
+	action.Parent = card
+	corner(action, 12)
+
+	action.Activated:Connect(function()
+		if not handlers or not lastSnapshot then
+			return
+		end
+		local owned = table.find(lastSnapshot.inventory or {}, item.id) ~= nil
+		if owned then
+			handlers.onEquip(item.id)
+		else
+			handlers.onBuy(item.id)
+		end
+	end)
+
+	cards[item.id] = card
+	return card
+end
+
+function ShopUI.build(callbacks)
+	if gui then
+		return
+	end
+	handlers = callbacks
+
+	local screen = Instance.new("ScreenGui")
+	screen.Name = "AlphabetFallShop"
+	screen.ResetOnSpawn = false
+	screen.IgnoreGuiInset = true
+	screen.Enabled = false
+	screen.Parent = player:WaitForChild("PlayerGui")
+	gui = screen
+
+	local panel = Instance.new("Frame")
+	panel.Size = UDim2.fromScale(0.86, 0.8)
+	panel.Position = UDim2.fromScale(0.07, 0.1)
+	panel.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+	panel.Parent = screen
+	corner(panel, 24)
+
+	local header = Instance.new("TextLabel")
+	header.Size = UDim2.fromScale(0.6, 0.1)
+	header.Position = UDim2.fromScale(0.04, 0.02)
+	header.BackgroundTransparency = 1
+	header.Text = "Магазин"
+	header.TextColor3 = Color3.fromRGB(255, 255, 255)
+	header.TextXAlignment = Enum.TextXAlignment.Left
+	header.TextScaled = true
+	header.Font = Enum.Font.FredokaOne
+	header.Parent = panel
+
+	local balance = Instance.new("TextLabel")
+	balance.Name = "Balance"
+	balance.Size = UDim2.fromScale(0.25, 0.09)
+	balance.Position = UDim2.fromScale(0.55, 0.025)
+	balance.BackgroundTransparency = 1
+	balance.Text = "⭐ 0"
+	balance.TextColor3 = Color3.fromRGB(255, 214, 102)
+	balance.TextScaled = true
+	balance.Font = Enum.Font.FredokaOne
+	balance.Parent = panel
+
+	local close = Instance.new("TextButton")
+	close.Size = UDim2.fromScale(0.1, 0.09)
+	close.Position = UDim2.fromScale(0.86, 0.025)
+	close.BackgroundColor3 = Color3.fromRGB(220, 90, 80)
+	close.TextColor3 = Color3.fromRGB(255, 255, 255)
+	close.Text = "✕"
+	close.TextScaled = true
+	close.Font = Enum.Font.FredokaOne
+	close.Parent = panel
+	corner(close, 14)
+	close.Activated:Connect(function()
+		ShopUI.setOpen(false)
+	end)
+
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Size = UDim2.fromScale(0.94, 0.82)
+	scroll.Position = UDim2.fromScale(0.03, 0.14)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 10
+	scroll.CanvasSize = UDim2.new()
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.Parent = panel
+	grid = scroll
+
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.fromOffset(180, 210)
+	layout.CellPadding = UDim2.fromOffset(14, 14)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = scroll
+
+	for order, id in Shop.ids() do
+		local card = makeCard(Shop.expect(id))
+		card.LayoutOrder = order
+		card.Parent = scroll
+	end
+end
+
+function ShopUI.setOpen(open: boolean)
+	if gui then
+		gui.Enabled = open
+	end
+end
+
+function ShopUI.isOpen(): boolean
+	return gui ~= nil and gui.Enabled
+end
+
+function ShopUI.update(snapshot)
+	lastSnapshot = snapshot
+	if not gui then
+		return
+	end
+
+	local balance = gui:FindFirstChild("Balance", true)
+	if balance and balance:IsA("TextLabel") then
+		balance.Text = `⭐ {snapshot.stars or 0}`
+	end
+
+	local inventory = snapshot.inventory or {}
+	local equipped = snapshot.equipped or {}
+
+	for id, card in cards do
+		local item = Shop.expect(id)
+		local action = card:FindFirstChild("Action") :: TextButton
+		local owned = table.find(inventory, id) ~= nil
+		local isEquipped = equipped[item.category] == id
+
+		if owned then
+			action.Text = if isEquipped then "Снять" else "Надеть"
+			action.BackgroundColor3 = if isEquipped then COLOR_EQUIPPED else COLOR_EQUIP
+		elseif item.price and (snapshot.stars or 0) >= item.price then
+			action.Text = "Купить"
+			action.BackgroundColor3 = COLOR_BUY
+		else
+			-- Не «замок», а сколько осталось накопить: замок демотивирует, цель — нет.
+			local left = (item.price or 0) - (snapshot.stars or 0)
+			action.Text = `ещё {left} ⭐`
+			action.BackgroundColor3 = COLOR_LOCKED
+		end
+	end
+end
+
+return ShopUI

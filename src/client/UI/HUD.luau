@@ -104,6 +104,11 @@ function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
 	repeatButton.Parent = screen
 	repeatButton.Activated:Connect(callbacks.onRepeat)
 
+	-- Магазин: петля «поучился — получил вещь» должна замыкаться в один тап
+	local shopButton = makeButton("Shop", "🛍", UDim2.fromScale(0.12, 0.12), UDim2.fromScale(0.84, 0.72))
+	shopButton.Parent = screen
+	shopButton.Activated:Connect(callbacks.onShop)
+
 	-- ВРЕМЕННО: запуск испытания до появления хаба
 	local startButton = makeButton("Start", "Играть", UDim2.fromScale(0.22, 0.1), UDim2.fromScale(0.39, 0.85))
 	startButton.Parent = screen
