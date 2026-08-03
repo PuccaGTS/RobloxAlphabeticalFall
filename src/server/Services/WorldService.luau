@@ -100,10 +100,17 @@ local function makeActivator(pad: BasePart, actionText: string, objectText: stri
 	prompt.Parent = pad
 	prompt.Triggered:Connect(action)
 
+	--[[
+		Касание срабатывает много раз в секунду, пока ребёнок стоит на паде.
+		Поэтому реагируем только на ВХОД на пад: пока он с него не сойдёт,
+		повторные касания игнорируются.
+	]]
+	local standing: { [Player]: boolean } = {}
+
 	pad.Touched:Connect(function(hit: BasePart)
 		local character = hit.Parent
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player then
+		if not player or standing[player] then
 			return
 		end
 
@@ -111,9 +118,18 @@ local function makeActivator(pad: BasePart, actionText: string, objectText: stri
 		if lastTouch[player] and now - lastTouch[player] < TOUCH_DEBOUNCE then
 			return
 		end
-		lastTouch[player] = now
 
+		standing[player] = true
+		lastTouch[player] = now
 		action(player)
+	end)
+
+	pad.TouchEnded:Connect(function(hit: BasePart)
+		local character = hit.Parent
+		local player = character and Players:GetPlayerFromCharacter(character)
+		if player then
+			standing[player] = nil
+		end
 	end)
 end
 

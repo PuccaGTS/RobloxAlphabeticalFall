@@ -47,7 +47,16 @@ local function finish(player: Player, reason: string)
 	active[player] = nil
 
 	local result = state.module.Finish(state)
-	local awarded = ProgressService.finishChallenge(player, state.module.id, result.stars)
+
+	--[[
+		Награда за испытание — только если ребёнок в нём хоть что-то сделал.
+		Иначе перезапуск (например, повторное касание пада) сам по себе приносил
+		звёздочки, и «фарм» сводился к тому, чтобы топтаться на портале.
+	]]
+	local awarded = 0
+	if #state.answers > 0 then
+		awarded = ProgressService.finishChallenge(player, state.module.id, result.stars)
+	end
 
 	RemoteDefs.event("ChallengeEnd"):FireClient(player, {
 		challengeId = state.module.id,
@@ -121,8 +130,16 @@ local function onStart(player: Player, challengeId: any)
 		return
 	end
 
+	--[[
+		Идущее испытание не перезапускаем.
+
+		Раньше повторный запрос обрывал текущее и строил новое: ребёнок стоял на паде,
+		касания шли одно за другим, арена пересобиралась в его текущей позиции —
+		и выглядело это так, будто стенд с буквами ходит за ним следом,
+		а буква-цель меняется сама по себе.
+	]]
 	if active[player] then
-		finish(player, "restart")
+		return
 	end
 
 	local letters = lettersFor(player, module)
@@ -150,8 +167,10 @@ local function onStart(player: Player, challengeId: any)
 	playVO(player, Challenges.expect(challengeId).voInstruction, true)
 
 	-- Страховка: испытание не может висеть вечно, даже если клиент замолчал.
+	-- Когда падать больше нечему, испытание обязано закончиться само и сразу:
+	-- «поймал 4 из 5, и ничего не происходит» — это ощущение поломки.
 	local timeout = math.min(module.duration(spec), Challenges.expect(challengeId).maxSeconds)
-	task.delay(timeout + 3, function()
+	task.delay(timeout + 1, function()
 		local state = active[player]
 		if state and state.spec == spec then
 			finish(player, "timeout")

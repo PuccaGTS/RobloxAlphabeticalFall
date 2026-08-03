@@ -125,7 +125,7 @@ local function makeLetterPart(item: any): BasePart
 	part.BottomSurface = Enum.SurfaceType.Smooth
 
 	-- Буква всегда развёрнута к ребёнку: узнавать её со спины невозможно
-	Glyph.attach(part, letter.glyph, LETTER_SIZE.Y * 1.1)
+	Glyph.attach(part, letter.glyph, 0.95)
 
 	-- ClickDetector сам работает и мышью, и тапом — отдельный код для тача не нужен.
 	local click = Instance.new("ClickDetector")
@@ -211,7 +211,6 @@ local function onSpec(newSpec: any)
 	-- Каждое испытание рисуется своим модулем: общего у них только сеть и HUD.
 	if newSpec.challengeId == "syllable_bridge" then
 		activeChallengeId = newSpec.challengeId
-		HUD.showTarget(nil, 0, newSpec.targetCount)
 		BridgeController.start(newSpec)
 		return
 	end
@@ -228,6 +227,9 @@ local function onSpec(newSpec: any)
 
 	buildBackdrop(container, spec.params.fallHeight)
 	HUD.showTarget(spec.params.targetGlyph, 0, spec.targetCount)
+	-- Пока нет озвучки, задание должно быть сказано хотя бы текстом,
+	-- иначе непонятно, что вообще происходит и что от тебя хотят.
+	HUD.toast(`Лови букву {spec.params.targetGlyph}`, 3)
 
 	-- Звук буквы-цели: сначала ребёнок слышит, что ловить, и только потом видит текст.
 	task.delay(0.6, function()
@@ -241,7 +243,7 @@ end
 
 local function onFeedback(feedback: any)
 	if activeChallengeId == "syllable_bridge" then
-		HUD.showTarget(nil, feedback.caught, feedback.targetCount)
+		-- букву-цель для следующей секции выставит сам мост
 		BridgeController.feedback(feedback)
 		return
 	end
@@ -278,6 +280,13 @@ local function onEnd(result: any)
 	cleanup()
 	BridgeController.stop()
 	activeChallengeId = nil
+
+	local stars = string.rep("⭐", math.clamp(result.stars or 1, 1, 3))
+	if (result.stars_awarded or 0) > 0 then
+		HUD.toast(`{stars}   +{result.stars_awarded}`, 4)
+	else
+		HUD.toast(`{stars}   Попробуем ещё?`, 4)
+	end
 	print(
 		string.format(
 			"[Challenge] итог: %d звезды, поймано %d из %d, +%d ⭐",

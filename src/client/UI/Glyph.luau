@@ -14,9 +14,13 @@ local Glyph = {}
 
 --[[
 	Вешает букву на деталь.
-	sizeStuds — высота надписи в мировых единицах, чтобы буква росла вместе с объектом.
+
+	scale — доля от размера САМОЙ детали, а не размер в студах. У BillboardGui
+	доля Scale считается от адорни: значение 6 на пятистудовом кубике давало
+	надпись в тридцать студов, буквы перекрывали друг друга и «менялись» при
+	движении камеры. Единица = ровно по размеру детали.
 ]]
-function Glyph.attach(part: BasePart, text: string, sizeStuds: number, color: Color3?): BillboardGui
+function Glyph.attach(part: BasePart, text: string, scale: number?, color: Color3?): BillboardGui
 	local existing = part:FindFirstChild("GlyphBillboard")
 	if existing then
 		existing:Destroy()
@@ -24,7 +28,7 @@ function Glyph.attach(part: BasePart, text: string, sizeStuds: number, color: Co
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "GlyphBillboard"
-	billboard.Size = UDim2.fromScale(sizeStuds, sizeStuds)
+	billboard.Size = UDim2.fromScale(scale or 1, scale or 1)
 	billboard.SizeOffset = Vector2.new(0, 0)
 	billboard.AlwaysOnTop = false
 	billboard.LightInfluence = 0

@@ -16,6 +16,7 @@ local Letters = require(Shared.Config.Letters)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local Glyph = require(script.Parent.Parent.UI.Glyph)
+local HUD = require(script.Parent.Parent.UI.HUD)
 
 local BridgeController = {}
 
@@ -52,7 +53,7 @@ local function makeBlock(name: string, glyph: string, color: Color3, cframe: CFr
 	part.Material = Enum.Material.SmoothPlastic
 	part.Parent = folder
 
-	Glyph.attach(part, glyph, BLOCK_SIZE.Y * 1.1)
+	Glyph.attach(part, glyph, 0.95)
 
 	return part
 end
@@ -74,6 +75,12 @@ local function showSection(index: number)
 	if not section then
 		return
 	end
+
+	-- Задание сказано вслух голосом, но озвучки пока нет — дублируем его на экране,
+	-- иначе ребёнок видит только цветные кубы и не знает, что от него хотят.
+	local targetGlyph = Letters.expect(section.targetVowel).glyph
+	HUD.showTarget(targetGlyph, index - 1, #spec.params.sections)
+	HUD.toast(`Приставь букву {targetGlyph}`, 3)
 
 	local base = origin * CFrame.new(0, 0, -(index - 1) * PLANK_STEP)
 
@@ -132,7 +139,7 @@ local function layPlank(index: number, text: string)
 
 	-- Прочитанный слог остаётся написанным на доске: ребёнок видит,
 	-- сколько он уже прочитал, и это самая честная награда в игре.
-	Glyph.attach(plank, text, 3.5, Color3.fromRGB(255, 245, 220))
+	Glyph.attach(plank, text, 0.55, Color3.fromRGB(255, 245, 220))
 
 	TweenService:Create(plank, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Transparency = 0 }):Play()
 end

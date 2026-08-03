@@ -52,7 +52,7 @@ local function buildSegment(letterId: string, index: number): BasePart
 	part.CFrame = CFrame.new(BASE_POSITION + Vector3.new(0, index * SEGMENT_HEIGHT, 0))
 		* CFrame.Angles(0, index * 0.22, 0)
 
-	Glyph.attach(part, letter.glyph, SEGMENT_SIZE.Y * 1.3)
+	Glyph.attach(part, letter.glyph, 0.9)
 
 	local click = Instance.new("ClickDetector")
 	click.MaxActivationDistance = 80
