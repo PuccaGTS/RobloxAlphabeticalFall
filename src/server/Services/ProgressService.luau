@@ -238,6 +238,26 @@ function ProgressService.start()
 	end)
 end
 
+--[[
+	Первая ли это встреча с буквой.
+
+	«Впервые» — значит по ней вообще не было ни одного ответа, ни верного, ни нет.
+	Именно в этот момент, и только в этот, звучит знакомство: «Это буква М.
+	Она говорит: м-м-м». Второй раз здороваться с буквой странно.
+]]
+function ProgressService.isFirstMeeting(player: Player, letterId: string): boolean
+	local profile = ProfileService.get(player)
+	if not profile then
+		return false
+	end
+
+	local progress = profile.letters[letterId]
+	if not progress then
+		return true
+	end
+	return progress.correct == 0 and progress.wrong == 0
+end
+
 function ProgressService.difficultyFor(player: Player, challengeId: string): number
 	local profile = ProfileService.get(player)
 	if not profile then

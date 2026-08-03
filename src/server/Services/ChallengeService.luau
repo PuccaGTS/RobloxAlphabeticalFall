@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Challenges = require(Shared.Config.Challenges)
+local Letters = require(Shared.Config.Letters)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
@@ -201,10 +202,26 @@ local function onStart(player: Player, challengeId: any)
 		answers = {},
 	}
 
+	--[[
+		Знакомство с новой буквой — до инструкции.
+
+		Порядок реплик важен: сначала «Это буква М, она говорит м-м-м»,
+		и только потом «лови вот эту». Сперва ребёнку показывают, кто это,
+		и лишь затем просят с ней что-то сделать.
+	]]
+	local targetLetter = spec.params.targetLetter
+	if targetLetter and ProgressService.isFirstMeeting(player, targetLetter) then
+		local letter = Letters.get(targetLetter)
+		if letter then
+			spec.params.introGlyph = letter.glyph
+			playVO(player, letter.vo.intro, true)
+		end
+	end
+
 	fire(startedHooks, player, spec)
 
 	RemoteDefs.event("ChallengeSpec"):FireClient(player, spec)
-	playVO(player, Challenges.expect(challengeId).voInstruction, true)
+	playVO(player, Challenges.expect(challengeId).voInstruction)
 
 	-- Страховка: испытание не может висеть вечно, даже если клиент замолчал.
 	-- Когда падать больше нечему, испытание обязано закончиться само и сразу:

@@ -143,6 +143,59 @@ function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
 	toastCorner.Parent = toast
 end
 
+--[[
+	Знакомство с буквой: она выезжает крупно на весь экран, держится, пока звучит
+	реплика, и уходит. Никаких кнопок — ребёнку ничего не нужно делать,
+	это момент «посмотри и послушай», а не задание.
+]]
+function HUD.showIntro(glyph: string)
+	if not gui then
+		return
+	end
+
+	local existing = gui:FindFirstChild("Intro")
+	if existing then
+		existing:Destroy()
+	end
+
+	local card = Instance.new("TextLabel")
+	card.Name = "Intro"
+	card.Size = UDim2.fromScale(0.36, 0.42)
+	card.Position = UDim2.fromScale(0.32, 0.24)
+	card.BackgroundColor3 = Color3.fromRGB(255, 250, 240)
+	card.BackgroundTransparency = 0.05
+	card.TextColor3 = Color3.fromRGB(40, 40, 55)
+	card.Text = glyph
+	card.TextScaled = true
+	card.Font = Enum.Font.FredokaOne
+	card.Parent = gui
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 28)
+	corner.Parent = card
+
+	card.Size = UDim2.fromScale(0.05, 0.06)
+	TweenService:Create(
+		card,
+		TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Size = UDim2.fromScale(0.36, 0.42) }
+	):Play()
+
+	task.delay(3.2, function()
+		if card.Parent then
+			local out = TweenService:Create(
+				card,
+				TweenInfo.new(0.35),
+				{ TextTransparency = 1, BackgroundTransparency = 1 }
+			)
+			out.Completed:Connect(function()
+				card:Destroy()
+			end)
+			out:Play()
+		end
+	end)
+end
+
 local toastToken = 0
 
 function HUD.toast(text: string, seconds: number?)

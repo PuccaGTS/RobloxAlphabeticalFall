@@ -207,9 +207,22 @@ local function onHeartbeat()
 	end
 end
 
+--[[
+	Знакомство с новой буквой: крупная буква на экране, пока звучит
+	«Это буква М, она говорит м-м-м». Один раз за всю игру на каждую букву.
+]]
+local function announceIntro(incoming: any)
+	local glyph = incoming.params and incoming.params.introGlyph
+	if not glyph then
+		return
+	end
+	HUD.showIntro(glyph)
+end
+
 local function onSpec(newSpec: any)
 	cleanup()
 	BridgeController.stop()
+	announceIntro(newSpec)
 
 	-- Каждое испытание рисуется своим модулем: общего у них только сеть и HUD.
 	if newSpec.challengeId == "syllable_bridge" then

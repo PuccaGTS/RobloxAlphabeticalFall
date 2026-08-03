@@ -81,6 +81,14 @@ for i = 1, AudioRegistry.HINT_COUNT do
 	ids[string.format("hint_%02d", i)] = ""
 end
 
+-- Реплики первого знакомства: по одной на каждую букву справочника.
+for letterId in Letters.all do
+	local key = Letters.expect(letterId).vo.intro
+	if ids[key] == nil then
+		ids[key] = ""
+	end
+end
+
 -- Слоги и слова: ключи создаются из конфигов, чтобы список нельзя было забыть обновить.
 for _, syllableId in Syllables.ids() do
 	local key = Syllables.expect(syllableId).vo
@@ -110,6 +118,7 @@ function AudioRegistry.requiredKeys(): { string }
 	for id in Letters.all do
 		local letter = Letters.expect(id)
 		set[letter.vo.sound] = true
+		set[letter.vo.intro] = true
 		if letter.vo.long then
 			set[letter.vo.long] = true
 		end
