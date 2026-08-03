@@ -87,14 +87,15 @@ local function showSection(index: number)
 
 	local base = origin * CFrame.new(0, 0, -(index - 1) * PLANK_STEP)
 
-	-- Согласная: она никуда не девается, ребёнок «приставляет» к ней гласную
-	local consonant = makeBlock(
-		"Consonant",
-		section.consonantGlyph,
-		Letters.expect(section.consonantId).color,
+	-- Левая половинка (согласная, а на первом острове — гласная): она никуда
+	-- не девается, ребёнок «приставляет» к ней вторую букву
+	local left = makeBlock(
+		"Left",
+		section.leftGlyph,
+		Letters.expect(section.leftId).color,
 		base * CFrame.new(-4.5, 0, 0)
 	)
-	table.insert(sectionParts, consonant)
+	table.insert(sectionParts, left)
 
 	for order, choice in section.choices do
 		local offset = 2 + (order - 1) * 5

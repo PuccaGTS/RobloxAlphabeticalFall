@@ -27,9 +27,18 @@ local WorldService = {}
 local HUB_RADIUS = 46
 local PAD_DISTANCE = 30
 
+--[[
+	Какое испытание запускает портал острова.
+
+	Все острова ведут в «Буквопад», а «Мост слогов» стоит отдельным падом и открыт
+	с самого начала. Причина не косметическая: для статуса «изученная» буква обязана
+	быть успешно пройдена в ДВУХ разных типах испытаний (docs/02-LEARNING.md § 9).
+	Если бы мост открывался только на втором острове, а второй остров требовал
+	изученных букв первого, прогресс упирался бы в тупик на четвёртой минуте.
+]]
 local ISLAND_CHALLENGE = {
 	[1] = "letter_rain",
-	[2] = "syllable_bridge",
+	[2] = "letter_rain",
 	[3] = "letter_rain",
 }
 
@@ -154,6 +163,29 @@ function WorldService.build()
 	prompt(shopPad, "Открыть", "Магазин").Triggered:Connect(function(player: Player)
 		RemoteDefs.event("OpenUI"):FireClient(player, "shop")
 	end)
+
+	-- Мост слогов: доступен сразу и всем, см. комментарий к ISLAND_CHALLENGE
+	local bridgePad = part(
+		"BridgePad",
+		Vector3.new(10, 1, 10),
+		CFrame.new(PAD_DISTANCE, 1.5, 0),
+		Color3.fromRGB(190, 150, 230),
+		hub
+	)
+	label(bridgePad, "🌉 Мост слогов", 4)
+	prompt(bridgePad, "Строить", "Мост слогов").Triggered:Connect(function(player: Player)
+		ChallengeService.startFor(player, "syllable_bridge")
+	end)
+
+	--[[
+		Чужие точки появления (например, из шаблона Baseplate) выключаем: иначе
+		ребёнка выбрасывает мимо площади, а то и внутрь подиума Башни.
+	]]
+	for _, instance in workspace:GetDescendants() do
+		if instance:IsA("SpawnLocation") and instance ~= spawn then
+			instance.Enabled = false
+		end
+	end
 
 	for index, island in Islands.all do
 		buildIslandPad(hub, island, index, Islands.count() + 1)

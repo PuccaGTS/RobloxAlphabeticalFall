@@ -81,20 +81,27 @@ function SyllableBridge.Build(player: Player, letters: { string }, difficulty: n
 	local seed = math.floor(os.clock() * 1000) % 2 ^ 31
 	local random = Random.new(seed)
 
+	--[[
+		Левая половинка моста. Обычно это согласная (МА, ПУ), но на первом острове
+		согласных ещё нет вообще — там слоги строятся из двух гласных (АУ, УА).
+		Без этой ветки мост был бы недоступен, пока ребёнок не дойдёт до второго острова,
+		то есть ровно тогда, когда он больше всего нужен.
+	]]
+	local lefts = if #consonants > 0 then consonants else vowels
+
 	local sections = {}
 	local index = 0
 	local guard = 0
 
-	while #sections < sectionCount and guard < sectionCount * 12 do
+	while #sections < sectionCount and guard < sectionCount * 20 do
 		guard += 1
 
-		local consonantId = if #consonants > 0
-			then consonants[(index % #consonants) + 1]
-			else nil
+		local leftId = lefts[(index % #lefts) + 1]
 		local targetVowel = vowels[random:NextInteger(1, #vowels)]
 
-		-- Ищем слог в справочнике: часть сочетаний запрещена методикой (ЖЫ, ШЫ и т.п.)
-		local syllableId = if consonantId then consonantId .. targetVowel else nil
+		-- Ищем слог в справочнике: часть сочетаний запрещена методикой (ЖЫ, ШЫ и т.п.),
+		-- а из двух гласных существуют только осмысленные пары.
+		local syllableId = if leftId ~= targetVowel then leftId .. targetVowel else nil
 		local syllable = if syllableId then Syllables.get(syllableId) else nil
 
 		if syllable then
@@ -118,8 +125,8 @@ function SyllableBridge.Build(player: Player, letters: { string }, difficulty: n
 
 			table.insert(sections, {
 				index = #sections + 1,
-				consonantId = consonantId,
-				consonantGlyph = Letters.expect(consonantId).glyph,
+				leftId = leftId,
+				leftGlyph = Letters.expect(leftId).glyph,
 				targetVowel = targetVowel,
 				syllableId = syllableId,
 				text = syllable.text,

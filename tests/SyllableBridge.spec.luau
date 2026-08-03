@@ -37,8 +37,19 @@ return function()
 			local spec = build()
 			for _, section in spec.params.sections do
 				local syllable = Syllables.expect(section.syllableId)
-				expect(syllable.minIsland >= Letters.expect(section.consonantId).island).to.equal(true)
+				expect(syllable.minIsland >= Letters.expect(section.leftId).island).to.equal(true)
 				expect(syllable.minIsland >= Letters.expect(section.targetVowel).island).to.equal(true)
+			end
+		end)
+
+		it("работает на первом острове, где есть только гласные", function()
+			-- АУ, УА — с них начинается чтение, и мост обязан собираться уже здесь
+			local spec = build({ "a", "u", "i" })
+
+			expect(#spec.params.sections > 0).to.equal(true)
+			for _, section in spec.params.sections do
+				expect(Syllables.get(section.syllableId)).to.be.ok()
+				expect(section.leftId).never.to.equal(section.targetVowel)
 			end
 		end)
 
