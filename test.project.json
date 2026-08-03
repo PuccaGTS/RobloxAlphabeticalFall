@@ -1,0 +1,29 @@
+{
+  "name": "AlphabetFall-Tests",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Shared": {
+        "$path": "src/shared"
+      },
+      "Packages": {
+        "$path": { "optional": "Packages" }
+      },
+      "DevPackages": {
+        "$path": { "optional": "DevPackages" }
+      },
+      "Tests": {
+        "$path": "tests"
+      }
+    },
+
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "TestRunner": {
+        "$path": "tools/TestRunner.server.luau"
+      }
+    }
+  }
+}

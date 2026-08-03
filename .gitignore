@@ -1,0 +1,37 @@
+# Roblox сборки
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+build/
+
+# Исходники ассетов (хранятся вне git, см. docs/10-CONTENT-PIPELINE.md)
+assets/audio/**/*.wav
+assets/audio/**/*.mp3
+assets/audio/**/*.ogg
+assets/models/**/*.fbx
+assets/art/**/*.psd
+assets/art/**/*.blend
+!assets/**/MANIFEST.csv
+!assets/**/README.md
+
+# Зависимости и генерируемые файлы
+Packages/
+DevPackages/
+ServerPackages/
+sourcemap.json
+# wally.lock коммитим — он фиксирует версии зависимостей
+
+# Инструменты
+.rokit/
+.aftman/
+~/
+
+# Редакторы / ОС
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

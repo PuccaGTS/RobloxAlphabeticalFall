@@ -1,0 +1,65 @@
+--!strict
+--[[
+	Точка входа сервера.
+
+	Порядок запуска важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
+	Пока сервисы не написаны, здесь остаётся проверка целостности конфигов —
+	она сразу покажет в логе, чего не хватает контенту.
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local RemoteDefs = require(Shared.Net.RemoteDefs)
+local Letters = require(Shared.Config.Letters)
+local Syllables = require(Shared.Config.Syllables)
+local Words = require(Shared.Config.Words)
+local Islands = require(Shared.Config.Islands)
+local AudioRegistry = require(Shared.Config.AudioRegistry)
+
+RemoteDefs.init()
+
+local function reportContentState()
+	print(
+		string.format(
+			"[AlphabetFall] контент: букв %d, слогов %d, слов %d, островов %d",
+			Letters.count(),
+			Syllables.count(),
+			#Words.ids(),
+			Islands.count()
+		)
+	)
+
+	local unregistered = AudioRegistry.unregistered()
+	if #unregistered > 0 then
+		warn(
+			`[AlphabetFall] в реестре озвучки нет {#unregistered} ключей: `
+				.. table.concat(unregistered, ", ")
+		)
+	end
+
+	local pending = AudioRegistry.pending()
+	if #pending > 0 then
+		print(
+			string.format(
+				"[AlphabetFall] озвучка не загружена для %d из %d реплик — игра работает молча",
+				#pending,
+				#AudioRegistry.requiredKeys()
+			)
+		)
+	end
+end
+
+reportContentState()
+
+--[[
+	TODO (веха 1, docs/12-ROADMAP.md):
+	  ProfileService    — загрузка/сохранение профиля с session-lock и миграциями
+	  ProgressService   — применение MasteryRules и ReviewScheduler к ответам
+	  ChallengeService  — построение и валидация испытаний по контракту docs/07-TECH-ARCH.md § 5
+	  EconomyService    — начисление и списание Звёздочек (единственная точка начисления)
+	  ShopService       — покупки и инвентарь
+	  CosmeticsService  — надевание аксессуаров и питомцев при CharacterAdded
+]]
+
+print("[AlphabetFall] сервер запущен")

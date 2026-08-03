@@ -1,0 +1,18 @@
+{
+  "luau-lsp.sourcemap.enabled": true,
+  "luau-lsp.sourcemap.autogenerate": true,
+  "luau-lsp.sourcemap.rojoProjectFile": "default.project.json",
+  "luau-lsp.sourcemap.includeNonScripts": true,
+  "luau-lsp.completion.imports.enabled": true,
+  "[lua]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true
+  },
+  "[luau]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true
+  },
+  "files.associations": {
+    "*.luau": "luau"
+  }
+}

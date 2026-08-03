@@ -1,0 +1,15 @@
+* text=auto eol=lf
+
+*.luau text eol=lf
+*.lua  text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.md   text eol=lf
+
+*.rbxl  binary
+*.rbxlx text eol=lf
+*.png   binary
+*.wav   binary
+*.ogg   binary
+*.mp3   binary
+*.fbx   binary
