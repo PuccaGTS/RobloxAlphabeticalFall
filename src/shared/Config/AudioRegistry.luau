@@ -55,6 +55,7 @@ local ids: { [string]: string } = {
 	instr_syllable_bridge = "",
 	instr_bubbles = "",
 	instr_build_word = "",
+	instr_tunnel_run = "",
 
 	-- === Сюжет и навигация ===
 	story_intro = "",

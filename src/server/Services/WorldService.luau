@@ -325,6 +325,20 @@ function WorldService.build()
 		ChallengeService.startFor(player, "syllable_bridge")
 	end)
 
+	-- Вход в туннель. Временно стоит здесь: настоящий вход — два портала миров
+	-- на новом спавне (docs/14-TUNNEL-MODE.md § 3.1), они ещё не построены.
+	local tunnelPad = part(
+		"TunnelPad",
+		Vector3.new(12, 1, 12),
+		CFrame.new(0, 1.5, -PAD_DISTANCE),
+		Color3.fromRGB(140, 220, 200),
+		hub
+	)
+	caption(tunnelPad, "🌀 Азбучный туннель", 5)
+	makeActivator(tunnelPad, "Бежать", "Азбучный туннель", function(player: Player)
+		ChallengeService.startFor(player, "tunnel_run")
+	end)
+
 	buildDecor(hub)
 
 	--[[

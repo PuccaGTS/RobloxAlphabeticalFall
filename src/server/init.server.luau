@@ -25,6 +25,7 @@ local ChallengeService = require(Services.ChallengeService)
 local CosmeticsService = require(Services.CosmeticsService)
 local ShopService = require(Services.ShopService)
 local WorldService = require(Services.WorldService)
+local TunnelService = require(Services.TunnelService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -65,6 +66,7 @@ reportContentState()
 EconomyService.start()
 ProgressService.start()
 ChallengeService.start()
+TunnelService.start() -- подписывается на хуки испытаний, поэтому после ChallengeService
 CosmeticsService.start()
 ShopService.start()
 WorldService.start()

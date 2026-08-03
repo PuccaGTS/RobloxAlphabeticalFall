@@ -41,6 +41,9 @@ local heartbeat: RBXScriptConnection? = nil
 local blockedUntil = 0
 local wasBlocked = false
 local activeChallengeId: string? = nil
+-- Буква-цель отдельно от spec: у туннеля геометрию строит сервер, и spec на клиенте
+-- не хранится, но HUD всё равно должен показывать, что искать.
+local activeTargetGlyph: string? = nil
 
 local function cleanup()
 	if heartbeat then
@@ -215,6 +218,21 @@ local function onSpec(newSpec: any)
 		return
 	end
 
+	--[[
+		Туннель рисует сервер: ворота и стены — настоящая геометрия мира, а не
+		клиентские декорации. Клиенту остаётся только показать, что ловить.
+	]]
+	if newSpec.challengeId == "tunnel_run" then
+		activeChallengeId = newSpec.challengeId
+		activeTargetGlyph = newSpec.params.targetGlyph
+		HUD.showTarget(newSpec.params.targetGlyph, 0, newSpec.targetCount)
+		HUD.toast(`Беги в ворота с буквой {newSpec.params.targetGlyph}`, 4)
+		task.delay(0.6, function()
+			AudioController.speak(newSpec.params.targetVO)
+		end)
+		return
+	end
+
 	activeChallengeId = newSpec.challengeId
 	spec = newSpec
 	startedAt = os.clock()
@@ -245,6 +263,17 @@ local function onFeedback(feedback: any)
 	if activeChallengeId == "syllable_bridge" then
 		-- букву-цель для следующей секции выставит сам мост
 		BridgeController.feedback(feedback)
+		return
+	end
+
+	if activeChallengeId == "tunnel_run" then
+		HUD.showTarget(activeTargetGlyph, feedback.caught, feedback.targetCount)
+		if not feedback.correct and feedback.tappedLetterId then
+			local tapped = Letters.get(feedback.tappedLetterId)
+			if tapped then
+				AudioController.speak(tapped.vo.sound)
+			end
+		end
 		return
 	end
 
@@ -280,6 +309,7 @@ local function onEnd(result: any)
 	cleanup()
 	BridgeController.stop()
 	activeChallengeId = nil
+	activeTargetGlyph = nil
 
 	local stars = string.rep("⭐", math.clamp(result.stars or 1, 1, 3))
 	if (result.stars_awarded or 0) > 0 then

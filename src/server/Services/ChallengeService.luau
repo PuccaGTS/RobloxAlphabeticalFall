@@ -21,15 +21,51 @@ local RateLimiter = require(script.Parent.RateLimiter)
 
 local LetterRain = require(script.Parent.Parent.Challenges.LetterRain)
 local SyllableBridge = require(script.Parent.Parent.Challenges.SyllableBridge)
+local TunnelRun = require(script.Parent.Parent.Challenges.TunnelRun)
 
 local ChallengeService = {}
 
 local MODULES = {
 	[LetterRain.id] = LetterRain,
 	[SyllableBridge.id] = SyllableBridge,
+	[TunnelRun.id] = TunnelRun,
 }
 
 local active: { [Player]: any } = {}
+
+--[[
+	Хуки жизненного цикла испытания.
+
+	Нужны, чтобы миростроительные сервисы (например, TunnelService) могли поднять
+	и убрать геометрию, не создавая кольцевой зависимости: ChallengeService не знает
+	про туннели, туннели знают про ChallengeService.
+]]
+local startedHooks: { (player: Player, spec: any) -> () } = {}
+local finishedHooks: { (player: Player, spec: any, reason: string) -> () } = {}
+
+function ChallengeService.onStarted(hook: (player: Player, spec: any) -> ())
+	table.insert(startedHooks, hook)
+end
+
+function ChallengeService.onFinished(hook: (player: Player, spec: any, reason: string) -> ())
+	table.insert(finishedHooks, hook)
+end
+
+-- Хук на каждый ответ: нужен, например, чтобы притормозить бегущего после неверных ворот.
+local answerHooks: { (player: Player, spec: any, result: any) -> () } = {}
+
+function ChallengeService.onAnswer(hook: (player: Player, spec: any, result: any) -> ())
+	table.insert(answerHooks, hook)
+end
+
+local function fire(hooks, ...)
+	for _, hook in hooks do
+		local ok, err = pcall(hook, ...)
+		if not ok then
+			warn(`[ChallengeService] хук упал: {err}`)
+		end
+	end
+end
 
 local function randomVO(prefix: string, count: number): string
 	return string.format("%s_%02d", prefix, math.random(1, math.max(1, count)))
@@ -45,6 +81,8 @@ local function finish(player: Player, reason: string)
 		return
 	end
 	active[player] = nil
+
+	fire(finishedHooks, player, state.spec, reason)
 
 	local result = state.module.Finish(state)
 
@@ -163,6 +201,8 @@ local function onStart(player: Player, challengeId: any)
 		answers = {},
 	}
 
+	fire(startedHooks, player, spec)
+
 	RemoteDefs.event("ChallengeSpec"):FireClient(player, spec)
 	playVO(player, Challenges.expect(challengeId).voInstruction, true)
 
@@ -178,18 +218,31 @@ local function onStart(player: Player, challengeId: any)
 	end)
 end
 
-local function onAction(player: Player, action: any)
+local function handleAction(player: Player, action: any, trusted: boolean)
 	local state = active[player]
 	if not state then
 		return
 	end
 
-	if not RateLimiter.allow(player, "ChallengeAction", RemoteDefs.RATE_LIMITS.ChallengeAction) then
+	-- Действия из мира (касание ворот) приходят от сервера и лимиту не подлежат:
+	-- ограничивать надо клиента, а не собственные триггеры.
+	if
+		not trusted
+		and not RateLimiter.allow(player, "ChallengeAction", RemoteDefs.RATE_LIMITS.ChallengeAction)
+	then
 		return
 	end
 
 	local result = state.module.Validate(state, action)
 	if not result.handled then
+		return
+	end
+
+	-- «Тихое» действие (пересечение финиша) прогресс не двигает и наград не приносит.
+	if result.silent then
+		if result.finished then
+			finish(player, "completed")
+		end
 		return
 	end
 
@@ -203,6 +256,7 @@ local function onAction(player: Player, action: any)
 	table.insert(state.answers, answer)
 
 	local outcome = ProgressService.applyAnswer(player, answer)
+	fire(answerHooks, player, state.spec, result)
 
 	-- Прочитанный впервые слог — отдельная награда, один раз за слог.
 	if result.syllableId then
@@ -248,11 +302,21 @@ function ChallengeService.startFor(player: Player, challengeId: string)
 	onStart(player, challengeId)
 end
 
+--[[
+	Действие, порождённое самим сервером: касание ворот или финишной черты в туннеле.
+	Клиенту здесь верить не нужно вовсе — он о таком действии даже не знает.
+]]
+function ChallengeService.submitAction(player: Player, action: any)
+	handleAction(player, action, true)
+end
+
 function ChallengeService.start()
 	RateLimiter.start()
 
 	RemoteDefs.event("StartChallenge").OnServerEvent:Connect(onStart)
-	RemoteDefs.event("ChallengeAction").OnServerEvent:Connect(onAction)
+	RemoteDefs.event("ChallengeAction").OnServerEvent:Connect(function(player: Player, action: any)
+		handleAction(player, action, false)
+	end)
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		active[player] = nil

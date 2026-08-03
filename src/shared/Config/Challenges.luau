@@ -65,6 +65,20 @@ local Challenges: { [string]: ChallengeMeta } = {
 		},
 	},
 
+	--[[
+		Туннель — единственное испытание, чьи параметры живут не здесь, а в Config/Tunnel:
+		там геометрия, дорожки и расстояния, и разрывать их надвое бессмысленно.
+	]]
+	tunnel_run = {
+		id = "tunnel_run",
+		title = "Азбучный туннель",
+		voInstruction = "instr_tunnel_run",
+		trains = { "recognize", "sound_to_letter" },
+		minLetters = 2,
+		maxSeconds = 600,
+		params = {},
+	},
+
 	bubbles = {
 		id = "bubbles",
 		title = "Пузыри",
