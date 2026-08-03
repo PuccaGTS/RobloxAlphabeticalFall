@@ -20,11 +20,13 @@ local ProgressService = require(script.Parent.ProgressService)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 local LetterRain = require(script.Parent.Parent.Challenges.LetterRain)
+local SyllableBridge = require(script.Parent.Parent.Challenges.SyllableBridge)
 
 local ChallengeService = {}
 
 local MODULES = {
 	[LetterRain.id] = LetterRain,
+	[SyllableBridge.id] = SyllableBridge,
 }
 
 local active: { [Player]: any } = {}
@@ -136,7 +138,9 @@ local function onStart(player: Player, challengeId: any)
 		module = module,
 		spec = spec,
 		startedAt = os.clock(),
+		sectionStartedAt = os.clock(),
 		answered = {},
+		section = 0,
 		caught = 0,
 		missed = 0,
 		answers = {},
@@ -181,12 +185,18 @@ local function onAction(player: Player, action: any)
 
 	local outcome = ProgressService.applyAnswer(player, answer)
 
+	-- Прочитанный впервые слог — отдельная награда, один раз за слог.
+	if result.syllableId then
+		ProgressService.markSyllableRead(player, result.syllableId)
+	end
+
 	local voKey = if result.correct
 		then randomVO("praise", AudioRegistry.PRAISE_COUNT)
 		else randomVO("retry", AudioRegistry.RETRY_COUNT)
 
 	RemoteDefs.event("ChallengeFeedback"):FireClient(player, {
 		itemIndex = result.itemIndex,
+		sectionIndex = result.sectionIndex,
 		correct = result.correct,
 		-- сколько секунд «сачок опущен» после промаха
 		cooldown = result.cooldown or 0,
@@ -195,9 +205,15 @@ local function onAction(player: Player, action: any)
 		vo = voKey,
 		-- буква, по которой ребёнок промахнулся: клиент озвучит «Это П. А нам нужна М»
 		tappedLetterId = if result.correct then nil else result.tappedLetterId,
+		syllableVO = result.syllableVO,
+		syllableText = result.syllableText,
 		mastery = if outcome then outcome.mastery else nil,
 	})
 
+	-- Сначала слитный слог, и только потом похвала: эталон звучания важнее реакции.
+	if result.syllableVO then
+		playVO(player, result.syllableVO)
+	end
 	playVO(player, voKey)
 
 	if result.finished then

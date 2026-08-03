@@ -61,6 +61,7 @@ local Challenges: { [string]: ChallengeMeta } = {
 			sections = { 4, 4, 5, 5, 6 }, -- сколько слогов в мосту
 			vowelChoices = { 2, 3, 3, 4, 4 }, -- из скольких гласных выбирать
 			hintAfterSec = { 8, 8, 10, 12, 12 },
+			missCooldown = { 1.6, 1.4, 1.2, 1.1, 1.0 }, -- пауза на подсказку, см. LetterRain
 		},
 	},
 

@@ -18,6 +18,7 @@ local Letters = require(Shared.Config.Letters)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local AudioController = require(script.Parent.AudioController)
+local BridgeController = require(script.Parent.BridgeController)
 local HUD = require(script.Parent.Parent.UI.HUD)
 
 local ChallengeController = {}
@@ -38,6 +39,7 @@ local heartbeat: RBXScriptConnection? = nil
 -- Пока «сачок опущен» после промаха, тапы не уходят на сервер и буквы притушены.
 local blockedUntil = 0
 local wasBlocked = false
+local activeChallengeId: string? = nil
 
 local function cleanup()
 	if heartbeat then
@@ -191,7 +193,17 @@ end
 
 local function onSpec(newSpec: any)
 	cleanup()
+	BridgeController.stop()
 
+	-- Каждое испытание рисуется своим модулем: общего у них только сеть и HUD.
+	if newSpec.challengeId == "syllable_bridge" then
+		activeChallengeId = newSpec.challengeId
+		HUD.showTarget(nil, 0, newSpec.targetCount)
+		BridgeController.start(newSpec)
+		return
+	end
+
+	activeChallengeId = newSpec.challengeId
 	spec = newSpec
 	startedAt = os.clock()
 	origin = resolveOrigin()
@@ -214,6 +226,12 @@ local function onSpec(newSpec: any)
 end
 
 local function onFeedback(feedback: any)
+	if activeChallengeId == "syllable_bridge" then
+		HUD.showTarget(nil, feedback.caught, feedback.targetCount)
+		BridgeController.feedback(feedback)
+		return
+	end
+
 	local part = parts[feedback.itemIndex]
 	if part then
 		parts[feedback.itemIndex] = nil
@@ -244,6 +262,8 @@ end
 
 local function onEnd(result: any)
 	cleanup()
+	BridgeController.stop()
+	activeChallengeId = nil
 	print(
 		string.format(
 			"[Challenge] итог: %d звезды, поймано %d из %d, +%d ⭐",
