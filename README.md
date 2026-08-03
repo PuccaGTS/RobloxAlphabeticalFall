@@ -36,6 +36,7 @@
 | [11-COMPLIANCE.md](docs/11-COMPLIANCE.md) | Правила Roblox для детской аудитории, приватность, модерация |
 | [12-ROADMAP.md](docs/12-ROADMAP.md) | MVP, вехи, объём работ, что режем первым |
 | [13-PARENT-MODE.md](docs/13-PARENT-MODE.md) | Родительский режим: отчёты, настройки, безопасность |
+| [14-TUNNEL-MODE.md](docs/14-TUNNEL-MODE.md) | Туннельный режим: бег, ворота с буквами, спавн с магазином |
 | [DEV-SETUP.md](docs/DEV-SETUP.md) | Как поднять проект, запустить тесты, что уже написано |
 | [HOW-TO-CHECK.md](docs/HOW-TO-CHECK.md) | Пошаговый сценарий запуска и приёмки — начни отсюда |
 
