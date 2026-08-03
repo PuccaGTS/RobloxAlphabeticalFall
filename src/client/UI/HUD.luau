@@ -20,6 +20,7 @@ local gui: ScreenGui? = nil
 local starsLabel: TextLabel? = nil
 local targetLabel: TextLabel? = nil
 local progressLabel: TextLabel? = nil
+local toastLabel: TextLabel? = nil
 
 local function makeButton(name: string, text: string, size: UDim2, position: UDim2): TextButton
 	local button = Instance.new("TextButton")
@@ -109,10 +110,54 @@ function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
 	shopButton.Parent = screen
 	shopButton.Activated:Connect(callbacks.onShop)
 
-	-- ВРЕМЕННО: запуск испытания до появления хаба
-	local startButton = makeButton("Start", "Играть", UDim2.fromScale(0.22, 0.1), UDim2.fromScale(0.39, 0.85))
+	-- Дубли падов из хаба: ребёнок может не дойти до пада, а взрослому нужен быстрый
+	-- способ проверить обе механики. Уберём, когда хаб обрастёт навигацией.
+	local startButton = makeButton("Start", "Буквы", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.28, 0.85))
 	startButton.Parent = screen
 	startButton.Activated:Connect(callbacks.onStart)
+
+	local bridgeButton = makeButton("Bridge", "Слоги", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.52, 0.85))
+	bridgeButton.Parent = screen
+	bridgeButton.Activated:Connect(callbacks.onBridge)
+
+	-- Сообщение поверх всего: без него любой отказ выглядит как «игра сломалась»
+	local toast = Instance.new("TextLabel")
+	toast.Name = "Toast"
+	toast.Size = UDim2.fromScale(0.5, 0.09)
+	toast.Position = UDim2.fromScale(0.25, 0.33)
+	toast.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
+	toast.BackgroundTransparency = 0.15
+	toast.TextColor3 = Color3.fromRGB(255, 255, 255)
+	toast.Text = ""
+	toast.TextScaled = true
+	toast.Font = Enum.Font.FredokaOne
+	toast.Visible = false
+	toast.Parent = screen
+	toastLabel = toast
+
+	local toastCorner = Instance.new("UICorner")
+	toastCorner.CornerRadius = UDim.new(0, 16)
+	toastCorner.Parent = toast
+end
+
+local toastToken = 0
+
+function HUD.toast(text: string, seconds: number?)
+	if not toastLabel then
+		return
+	end
+
+	toastToken += 1
+	local token = toastToken
+
+	toastLabel.Text = text
+	toastLabel.Visible = true
+
+	task.delay(seconds or 2.5, function()
+		if toastLabel and toastToken == token then
+			toastLabel.Visible = false
+		end
+	end)
 end
 
 function HUD.setStars(value: number)

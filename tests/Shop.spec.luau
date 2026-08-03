@@ -71,6 +71,20 @@ return function()
 			end
 		end)
 
+		it("носимый предмет собран больше чем из одной детали", function()
+			-- из одного куба не получается ни кепка, ни корона — получается куб на голове
+			for _, id in Shop.ids() do
+				local item = Shop.expect(id)
+				if item.visual then
+					expect(#item.visual >= 2).to.equal(true)
+					for _, piece in item.visual do
+						expect(typeof(piece.size)).to.equal("Vector3")
+						expect(typeof(piece.offset)).to.equal("CFrame")
+					end
+				end
+			end
+		end)
+
 		it("в срезе MVP есть предметы всех категорий", function()
 			for _, category in Shop.CATEGORIES do
 				local found = false

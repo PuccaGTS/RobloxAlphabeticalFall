@@ -1,33 +1,42 @@
 --!nonstrict
 --[[
-	Азбучная Башня — витрина прогресса и бесплатное повторение.
+	Азбучная Башня — «зачем она нужна».
 
-	Башня строится НА КЛИЕНТЕ, потому что она у каждого своя: у одного ребёнка буква
-	освоена, у другого нет, а один общий объект в мире так не умеет.
+	Три ответа, и все три должны читаться ребёнком без объяснений взрослого:
 
-	Тап по сегменту произносит букву. Это важнее, чем кажется: ребёнок сам,
-	без испытания и без награды, тыкает в буквы и слушает их — ровно то повторение,
-	которое мы пытаемся организовать планировщиком (docs/02-LEARNING.md § 6).
+	1. Это ВИТРИНА. Видно, сколько букв уже твои: серые — незнакомые, светящиеся —
+	   освоенные. Ребёнок 5 лет не понимает процентов и прогресс-баров,
+	   но прекрасно понимает «вот эти уже мои, а эти ещё нет».
+	2. Это ЦЕЛЬ. Башню видно с любой точки площади, и она достраивается сама
+	   по мере обучения — ради этого возвращаются.
+	3. Это ПОВТОРЕНИЕ. Тап по букве произносит её. Бесплатно, без испытания
+	   и без награды — просто подошёл и послушал. Ровно то повторение, ради которого
+	   существует планировщик (docs/02-LEARNING.md § 6).
+
+	Башня строится на клиенте: она у каждого своя, один общий объект в мире так не умеет.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 
 local AudioController = require(script.Parent.AudioController)
+local Glyph = require(script.Parent.Parent.UI.Glyph)
 
 local TowerController = {}
 
 local BASE_POSITION = Vector3.new(0, 4, 0)
-local SEGMENT_HEIGHT = 1.8
-local SEGMENT_SIZE = Vector3.new(4, 1.6, 4)
+local SEGMENT_HEIGHT = 2.4
+local SEGMENT_SIZE = Vector3.new(5, 2.2, 5)
 local FOLDER_NAME = "AlphabetTower"
 
-local COLOR_LOCKED = Color3.fromRGB(120, 120, 130)
+local COLOR_LOCKED = Color3.fromRGB(105, 108, 122)
 
 local segments: { [string]: BasePart } = {}
 local folder: Folder? = nil
+local counter: TextLabel? = nil
 
 local function buildSegment(letterId: string, index: number): BasePart
 	local letter = Letters.expect(letterId)
@@ -39,36 +48,73 @@ local function buildSegment(letterId: string, index: number): BasePart
 	part.CanCollide = false
 	part.Material = Enum.Material.SmoothPlastic
 	part.Color = COLOR_LOCKED
-	part.Transparency = 0.35
-	-- лёгкая спираль, чтобы башня читалась как башня, а не как столб
+	part.Transparency = 0.4
 	part.CFrame = CFrame.new(BASE_POSITION + Vector3.new(0, index * SEGMENT_HEIGHT, 0))
-		* CFrame.Angles(0, index * 0.18, 0)
+		* CFrame.Angles(0, index * 0.22, 0)
 
-	for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
-		local surface = Instance.new("SurfaceGui")
-		surface.Face = face
-		surface.CanvasSize = Vector2.new(200, 100)
-		surface.MaxDistance = 150
-		surface.Parent = part
-
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.fromScale(1, 1)
-		label.BackgroundTransparency = 1
-		label.Text = letter.glyph
-		label.TextColor3 = Color3.fromRGB(255, 255, 255)
-		label.TextScaled = true
-		label.Font = Enum.Font.FredokaOne
-		label.Parent = surface
-	end
+	Glyph.attach(part, letter.glyph, SEGMENT_SIZE.Y * 1.3)
 
 	local click = Instance.new("ClickDetector")
-	click.MaxActivationDistance = 60
+	click.MaxActivationDistance = 80
 	click.Parent = part
+
 	click.MouseClick:Connect(function()
 		AudioController.speak(letter.vo.sound)
+		-- Отклик обязателен: без него тап по букве ощущается как «ничего не произошло»,
+		-- особенно пока озвучки нет.
+		local original = part.Size
+		TweenService:Create(part, TweenInfo.new(0.12), { Size = original * 1.18 }):Play()
+		task.delay(0.14, function()
+			if part.Parent then
+				TweenService:Create(part, TweenInfo.new(0.2), { Size = original }):Play()
+			end
+		end)
 	end)
 
 	return part
+end
+
+local function buildSign(parent: Instance)
+	local sign = Instance.new("Part")
+	sign.Name = "TowerSign"
+	sign.Size = Vector3.new(10, 3, 0.6)
+	sign.CFrame = CFrame.new(BASE_POSITION + Vector3.new(0, -0.5, 6))
+	sign.Color = Color3.fromRGB(255, 240, 200)
+	sign.Anchored = true
+	sign.CanCollide = false
+	sign.Material = Enum.Material.SmoothPlastic
+	sign.Parent = parent
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Size = UDim2.fromOffset(320, 120)
+	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = 200
+	billboard.Parent = sign
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.fromScale(1, 0.45)
+	title.BackgroundTransparency = 1
+	title.Text = "ТВОИ БУКВЫ"
+	title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	title.TextStrokeTransparency = 0
+	title.TextScaled = true
+	title.Font = Enum.Font.FredokaOne
+	title.Parent = billboard
+
+	local value = Instance.new("TextLabel")
+	value.Name = "Counter"
+	value.Size = UDim2.fromScale(1, 0.55)
+	value.Position = UDim2.fromScale(0, 0.45)
+	value.BackgroundTransparency = 1
+	value.Text = "0 / " .. Letters.count()
+	value.TextColor3 = Color3.fromRGB(255, 214, 102)
+	value.TextStrokeTransparency = 0
+	value.TextScaled = true
+	value.Font = Enum.Font.FredokaOne
+	value.Parent = billboard
+
+	counter = value
 end
 
 function TowerController.build()
@@ -86,36 +132,50 @@ function TowerController.build()
 		segment.Parent = container
 		segments[letterId] = segment
 	end
+
+	buildSign(container)
 end
 
 --[[
 	Состояния сегмента повторяют статусы буквы из docs/01-GDD.md § 4:
-	серый силуэт → тусклый → яркий → с сиянием.
+	серый силуэт → тусклый → яркий → сияющий.
 ]]
 function TowerController.update(snapshot)
 	if not snapshot or typeof(snapshot.mastery) ~= "table" then
 		return
 	end
 
+	local known = 0
+
 	for letterId, segment in segments do
 		local mastery = snapshot.mastery[letterId] or 0
 		local letter = Letters.expect(letterId)
 
+		if mastery >= 2 then
+			known += 1
+		end
+
 		if mastery <= 0 then
 			segment.Color = COLOR_LOCKED
-			segment.Transparency = 0.35
+			segment.Transparency = 0.4
 			segment.Material = Enum.Material.SmoothPlastic
 		elseif mastery == 1 then
-			segment.Color = letter.color:Lerp(Color3.new(1, 1, 1), 0.5)
-			segment.Transparency = 0.15
+			segment.Color = letter.color:Lerp(Color3.new(1, 1, 1), 0.45)
+			segment.Transparency = 0.1
+			segment.Material = Enum.Material.SmoothPlastic
 		elseif mastery == 2 then
 			segment.Color = letter.color
 			segment.Transparency = 0
+			segment.Material = Enum.Material.SmoothPlastic
 		else
 			segment.Color = letter.color
 			segment.Transparency = 0
 			segment.Material = Enum.Material.Neon
 		end
+	end
+
+	if counter then
+		counter.Text = `{known} / {Letters.count()}`
 	end
 end
 

@@ -15,11 +15,13 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
+local Glyph = require(script.Parent.Parent.UI.Glyph)
+
 local BridgeController = {}
 
 local FOLDER_NAME = "AlphabetFall_Bridge"
 local PLANK_STEP = 7
-local BLOCK_SIZE = Vector3.new(4, 4, 0.8)
+local BLOCK_SIZE = Vector3.new(5, 5, 1)
 
 local player = Players.LocalPlayer
 
@@ -50,19 +52,7 @@ local function makeBlock(name: string, glyph: string, color: Color3, cframe: CFr
 	part.Material = Enum.Material.SmoothPlastic
 	part.Parent = folder
 
-	local surface = Instance.new("SurfaceGui")
-	surface.Face = Enum.NormalId.Front
-	surface.CanvasSize = Vector2.new(200, 200)
-	surface.Parent = part
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = glyph
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
-	label.TextScaled = true
-	label.Font = Enum.Font.FredokaOne
-	label.Parent = surface
+	Glyph.attach(part, glyph, BLOCK_SIZE.Y * 1.1)
 
 	return part
 end
@@ -140,19 +130,9 @@ local function layPlank(index: number, text: string)
 	plank.Transparency = 1
 	plank.Parent = folder
 
-	local surface = Instance.new("SurfaceGui")
-	surface.Face = Enum.NormalId.Top
-	surface.CanvasSize = Vector2.new(400, 200)
-	surface.Parent = plank
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = text
-	label.TextColor3 = Color3.fromRGB(60, 45, 30)
-	label.TextScaled = true
-	label.Font = Enum.Font.FredokaOne
-	label.Parent = surface
+	-- Прочитанный слог остаётся написанным на доске: ребёнок видит,
+	-- сколько он уже прочитал, и это самая честная награда в игре.
+	Glyph.attach(plank, text, 3.5, Color3.fromRGB(255, 245, 220))
 
 	TweenService:Create(plank, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Transparency = 0 }):Play()
 end

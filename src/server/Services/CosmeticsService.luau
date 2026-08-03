@@ -68,32 +68,39 @@ local function clearCosmetics(character: Model)
 	end
 end
 
+--[[
+	Предмет собирается из нескольких деталей: из одного куба не получается ни кепка,
+	ни корона — получается куб на голове. Каждая деталь приваривается к телу отдельно.
+]]
 local function attachVisual(character: Model, folder: Folder, item)
 	local target = findAttachPart(character, item.category)
 	if not target or not item.visual then
 		return
 	end
 
-	local visual = item.visual
+	for index, piece in item.visual do
+		local part = Instance.new("Part")
+		part.Name = `{item.id}_{index}`
+		part.Shape = shapeOf(piece.shape)
+		part.Size = piece.size
+		part.Color = piece.color
+		part.Material = piece.material or Enum.Material.SmoothPlastic
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.Massless = true
+		part.Anchored = false
+		part.TopSurface = Enum.SurfaceType.Smooth
+		part.BottomSurface = Enum.SurfaceType.Smooth
+		-- Смещения в рецептах заданы относительно ЦЕНТРА головы или торса.
+		part.CFrame = target.CFrame * piece.offset
+		part.Parent = folder
 
-	local part = Instance.new("Part")
-	part.Name = item.id
-	part.Shape = shapeOf(visual.shape)
-	part.Size = visual.size
-	part.Color = visual.color
-	part.Material = visual.material or Enum.Material.SmoothPlastic
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.Massless = true
-	part.Anchored = false
-	part.CFrame = target.CFrame * visual.offset
-	part.Parent = folder
-
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = target
-	weld.Part1 = part
-	weld.Parent = part
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = target
+		weld.Part1 = part
+		weld.Parent = part
+	end
 end
 
 local function attachTrail(character: Model, item)

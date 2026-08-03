@@ -20,11 +20,12 @@ local RemoteDefs = require(Shared.Net.RemoteDefs)
 local AudioController = require(script.Parent.AudioController)
 local BridgeController = require(script.Parent.BridgeController)
 local HUD = require(script.Parent.Parent.UI.HUD)
+local Glyph = require(script.Parent.Parent.UI.Glyph)
 
 local ChallengeController = {}
 
-local LANE_WIDTH = 5
-local LETTER_SIZE = Vector3.new(4, 4, 0.6)
+local LANE_WIDTH = 6
+local LETTER_SIZE = Vector3.new(5.5, 5.5, 1)
 local FOLDER_NAME = "AlphabetFall_Challenge"
 
 local player = Players.LocalPlayer
@@ -72,10 +73,37 @@ local function resolveOrigin(): CFrame
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		return root.CFrame * CFrame.new(0, 0, -14)
+		-- Только направление взгляда, без наклона: иначе площадка «падения» кренится
+		-- вместе с камерой и буквы улетают вбок.
+		local look = root.CFrame.LookVector
+		local flat = Vector3.new(look.X, 0, look.Z)
+		if flat.Magnitude < 0.05 then
+			flat = Vector3.new(0, 0, -1)
+		end
+		local base = root.Position + flat.Unit * 18 - Vector3.new(0, 2, 0)
+		return CFrame.lookAt(base, base + flat.Unit)
 	end
 
 	return CFrame.new(0, 0, 0)
+end
+
+-- Задник: без него буквы висят в пустоте и не читаются на фоне неба.
+local function buildBackdrop(parent: Instance, height: number)
+	local backdrop = Instance.new("Part")
+	backdrop.Name = "Backdrop"
+	backdrop.Size = Vector3.new(LANE_WIDTH * 6, height + 8, 1)
+	backdrop.CFrame = origin * CFrame.new(0, height / 2, 3)
+	backdrop.Color = Color3.fromRGB(74, 86, 130)
+	backdrop.Transparency = 0.25
+	backdrop.Anchored = true
+	backdrop.CanCollide = false
+	backdrop.CanQuery = false
+	backdrop.Material = Enum.Material.SmoothPlastic
+	backdrop.Parent = parent
+
+	local corner = Instance.new("SpecialMesh")
+	corner.MeshType = Enum.MeshType.Brick
+	corner.Parent = backdrop
 end
 
 local function laneOffset(lane: number, lanes: number): number
@@ -96,20 +124,8 @@ local function makeLetterPart(item: any): BasePart
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 
-	local surface = Instance.new("SurfaceGui")
-	surface.Face = Enum.NormalId.Front
-	surface.CanvasSize = Vector2.new(200, 200)
-	surface.AlwaysOnTop = false
-	surface.Parent = part
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = letter.glyph
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
-	label.TextScaled = true
-	label.Font = Enum.Font.FredokaOne
-	label.Parent = surface
+	-- Буква всегда развёрнута к ребёнку: узнавать её со спины невозможно
+	Glyph.attach(part, letter.glyph, LETTER_SIZE.Y * 1.1)
 
 	-- ClickDetector сам работает и мышью, и тапом — отдельный код для тача не нужен.
 	local click = Instance.new("ClickDetector")
@@ -178,10 +194,7 @@ local function onHeartbeat()
 
 			-- Пауза после промаха видна глазами: буквы притушены и не ловятся.
 			part.Transparency = if blocked then 0.65 else 0
-			local surface = part:FindFirstChildOfClass("SurfaceGui")
-			if surface then
-				surface.Enabled = not blocked
-			end
+			Glyph.setTransparency(part, if blocked then 0.7 else 0)
 		end
 	end
 
@@ -213,6 +226,7 @@ local function onSpec(newSpec: any)
 	container.Parent = workspace
 	folder = container
 
+	buildBackdrop(container, spec.params.fallHeight)
 	HUD.showTarget(spec.params.targetGlyph, 0, spec.targetCount)
 
 	-- Звук буквы-цели: сначала ребёнок слышит, что ловить, и только потом видит текст.

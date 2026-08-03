@@ -38,9 +38,11 @@ HUD.build({
 	onShop = function()
 		ShopUI.setOpen(not ShopUI.isOpen())
 	end,
-	-- ВРЕМЕННО: прямой запуск испытания до появления хаба с порталами островов
 	onStart = function()
 		ChallengeController.start("letter_rain")
+	end,
+	onBridge = function()
+		ChallengeController.start("syllable_bridge")
 	end,
 })
 
@@ -58,6 +60,8 @@ end)
 RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string)
 	if screen == "shop" then
 		ShopUI.setOpen(true)
+	elseif screen == "locked_island" then
+		HUD.toast("Этот остров ещё спит. Поучись ещё немножко!", 3)
 	end
 end)
 
