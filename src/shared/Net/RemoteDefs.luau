@@ -23,6 +23,7 @@ local EVENTS: { string } = {
 	"EquipItem", -- C→S
 	"PlayVO", -- S→C  проиграть реплику по vo_key
 	"EchoReport", -- C→S  факт «сказал» (без аудиоданных!)
+	"OpenUI", -- S→C  объект мира просит открыть экран ("shop")
 }
 
 local FUNCTIONS: { string } = {

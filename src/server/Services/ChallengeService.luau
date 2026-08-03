@@ -205,6 +205,14 @@ local function onAction(player: Player, action: any)
 	end
 end
 
+--[[
+	Запуск испытания со стороны сервера — например, с портала в хабе.
+	Проходит ту же валидацию, что и запрос от клиента.
+]]
+function ChallengeService.startFor(player: Player, challengeId: string)
+	onStart(player, challengeId)
+end
+
 function ChallengeService.start()
 	RateLimiter.start()
 

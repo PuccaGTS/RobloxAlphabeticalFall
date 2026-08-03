@@ -24,6 +24,7 @@ local ProgressService = require(Services.ProgressService)
 local ChallengeService = require(Services.ChallengeService)
 local CosmeticsService = require(Services.CosmeticsService)
 local ShopService = require(Services.ShopService)
+local WorldService = require(Services.WorldService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -66,6 +67,7 @@ ProgressService.start()
 ChallengeService.start()
 CosmeticsService.start()
 ShopService.start()
+WorldService.start()
 ProfileService.start() -- последним: он сразу начинает принимать игроков
 
 --[[

@@ -13,12 +13,14 @@ local Letters = require(Shared.Config.Letters)
 local Controllers = script:WaitForChild("Controllers")
 local AudioController = require(Controllers.AudioController)
 local ChallengeController = require(Controllers.ChallengeController)
+local TowerController = require(Controllers.TowerController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
 
 AudioController.init()
 ChallengeController.init()
+TowerController.init()
 
 ShopUI.build({
 	onBuy = function(itemId: string)
@@ -49,6 +51,14 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 	end
 	HUD.setStars(snapshot.stars or 0)
 	ShopUI.update(snapshot)
+	TowerController.update(snapshot)
+end)
+
+-- Объект в мире просит открыть экран (пад магазина в хабе).
+RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string)
+	if screen == "shop" then
+		ShopUI.setOpen(true)
+	end
 end)
 
 -- Сервер просит проиграть реплику: единственный канал озвучки между сервером и клиентом.
