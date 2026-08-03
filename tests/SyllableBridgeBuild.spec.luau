@@ -58,28 +58,34 @@ return function()
 			end
 		end)
 
-		it("даёт ровно столько секций, сколько просит сложность", function()
-			for difficulty = 1, 5 do
-				local spec = SyllableBridge.Build(nil, { "m", "a", "u" }, difficulty)
-				expect(#spec.params.sections).to.equal(spec.targetCount)
-			end
-		end)
-
-		it("в каждой секции есть верный вариант и нет дублей", function()
-			local spec = SyllableBridge.Build(nil, { "o", "a" }, 4)
-
-			for _, section in spec.params.sections do
-				local seen = {}
-				local hasTarget = false
-				for _, choice in section.choices do
-					expect(seen[choice.letterId]).to.equal(nil)
-					seen[choice.letterId] = true
-					if choice.letterId == section.targetVowel then
-						hasTarget = true
-					end
+		it(
+			"даёт ровно столько секций, сколько просит сложность",
+			function()
+				for difficulty = 1, 5 do
+					local spec = SyllableBridge.Build(nil, { "m", "a", "u" }, difficulty)
+					expect(#spec.params.sections).to.equal(spec.targetCount)
 				end
-				expect(hasTarget).to.equal(true)
 			end
-		end)
+		)
+
+		it(
+			"в каждой секции есть верный вариант и нет дублей",
+			function()
+				local spec = SyllableBridge.Build(nil, { "o", "a" }, 4)
+
+				for _, section in spec.params.sections do
+					local seen = {}
+					local hasTarget = false
+					for _, choice in section.choices do
+						expect(seen[choice.letterId]).to.equal(nil)
+						seen[choice.letterId] = true
+						if choice.letterId == section.targetVowel then
+							hasTarget = true
+						end
+					end
+					expect(hasTarget).to.equal(true)
+				end
+			end
+		)
 	end)
 end

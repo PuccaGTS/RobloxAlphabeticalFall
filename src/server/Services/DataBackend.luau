@@ -113,7 +113,9 @@ function Store:loadAsync(key: string): (any, string?)
 			task.wait(LOCK_WAIT_DELAY)
 		else
 			lastError = tostring(result)
-			warn(`[DataBackend] загрузка "{key}" не удалась (попытка {attempt}): {lastError}`)
+			warn(
+				`[DataBackend] загрузка "{key}" не удалась (попытка {attempt}): {lastError}`
+			)
 			task.wait(RETRY_DELAY * attempt)
 		end
 	end
@@ -139,9 +141,7 @@ function Store:saveAsync(key: string, data: any, release: boolean): (boolean, st
 
 				return {
 					data = data,
-					lock = if release
-						then nil
-						else { jobId = ourLockId(), placeId = game.PlaceId, at = now },
+					lock = if release then nil else { jobId = ourLockId(), placeId = game.PlaceId, at = now },
 					savedAt = now,
 				}
 			end)
@@ -156,7 +156,9 @@ function Store:saveAsync(key: string, data: any, release: boolean): (boolean, st
 		end
 
 		lastError = tostring(err)
-		warn(`[DataBackend] сохранение "{key}" не удалось (попытка {attempt}): {lastError}`)
+		warn(
+			`[DataBackend] сохранение "{key}" не удалось (попытка {attempt}): {lastError}`
+		)
 		task.wait(RETRY_DELAY * attempt)
 	end
 
@@ -225,7 +227,9 @@ function DataBackend.auto(name: string, scope: string?): (Backend, boolean)
 	end
 
 	if RunService:IsStudio() then
-		warn("[DataBackend] DataStore недоступен — работаем в памяти (только Studio)")
+		warn(
+			"[DataBackend] DataStore недоступен — работаем в памяти (только Studio)"
+		)
 		return DataBackend.newMemory(), false
 	end
 

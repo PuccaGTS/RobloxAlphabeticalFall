@@ -98,7 +98,9 @@ local function loadProfile(player: Player)
 	saveProfile(player, false)
 	pushSnapshot(player)
 
-	print(`[ProfileService] профиль загружен: {player.Name} (звёздочек: {profile.stars})`)
+	print(
+		`[ProfileService] профиль загружен: {player.Name} (звёздочек: {profile.stars})`
+	)
 end
 
 local function releaseProfile(player: Player)
@@ -164,7 +166,9 @@ function ProfileService.start()
 	local selected, isReal = DataBackend.auto(STORE_NAME, STORE_SCOPE)
 	backend = selected
 	if not isReal then
-		warn("[ProfileService] прогресс НЕ сохраняется между сессиями (режим памяти)")
+		warn(
+			"[ProfileService] прогресс НЕ сохраняется между сессиями (режим памяти)"
+		)
 	end
 
 	for _, player in Players:GetPlayers() do

@@ -23,16 +23,19 @@ return function()
 			end
 		end)
 
-		it("у каждой буквы есть звук, а тянущиеся имеют растянутую версию", function()
-			for _, id in Letters.ordered() do
-				local letter = Letters.expect(id)
-				expect(letter.vo.sound).to.be.a("string")
-				expect(#letter.vo.sound > 0).to.equal(true)
-				if letter.sustainable and letter.kind ~= "sign" then
-					expect(letter.vo.long).to.be.ok()
+		it(
+			"у каждой буквы есть звук, а тянущиеся имеют растянутую версию",
+			function()
+				for _, id in Letters.ordered() do
+					local letter = Letters.expect(id)
+					expect(letter.vo.sound).to.be.a("string")
+					expect(#letter.vo.sound > 0).to.equal(true)
+					if letter.sustainable and letter.kind ~= "sign" then
+						expect(letter.vo.long).to.be.ok()
+					end
 				end
 			end
-		end)
+		)
 
 		it("буквы-путаницы существуют в алфавите", function()
 			for _, id in Letters.ordered() do
@@ -69,20 +72,23 @@ return function()
 			end
 		end)
 
-		it("не содержат запрещённых сочетаний ЖЫ/ШЫ/ЧЫ/ЩЫ/ЦЫ", function()
-			for _, id in Syllables.ids() do
-				local syllable = Syllables.expect(id)
-				if syllable.consonant and syllable.kind == "open" then
-					local pair = syllable.consonant .. "_" .. syllable.vowel
-					local forbidden = pair == "zh_y"
-						or pair == "sh_y"
-						or pair == "ch_y"
-						or pair == "shch_y"
-						or pair == "c_y"
-					expect(forbidden).to.equal(false)
+		it(
+			"не содержат запрещённых сочетаний ЖЫ/ШЫ/ЧЫ/ЩЫ/ЦЫ",
+			function()
+				for _, id in Syllables.ids() do
+					local syllable = Syllables.expect(id)
+					if syllable.consonant and syllable.kind == "open" then
+						local pair = syllable.consonant .. "_" .. syllable.vowel
+						local forbidden = pair == "zh_y"
+							or pair == "sh_y"
+							or pair == "ch_y"
+							or pair == "shch_y"
+							or pair == "c_y"
+						expect(forbidden).to.equal(false)
+					end
 				end
 			end
-		end)
+		)
 
 		it("открываются не раньше островов своих букв", function()
 			for _, id in Syllables.ids() do
@@ -95,14 +101,17 @@ return function()
 			end
 		end)
 
-		it("закрытые слоги не даются раньше третьего острова", function()
-			for _, id in Syllables.ids() do
-				local syllable = Syllables.expect(id)
-				if syllable.kind == "closed" then
-					expect(syllable.minIsland >= 3).to.equal(true)
+		it(
+			"закрытые слоги не даются раньше третьего острова",
+			function()
+				for _, id in Syllables.ids() do
+					local syllable = Syllables.expect(id)
+					if syllable.kind == "closed" then
+						expect(syllable.minIsland >= 3).to.equal(true)
+					end
 				end
 			end
-		end)
+		)
 	end)
 
 	describe("Config: слова", function()
@@ -117,15 +126,18 @@ return function()
 			end
 		end)
 
-		it("не содержат букв с более позднего острова, чем сами доступны", function()
-			for _, id in Words.ids() do
-				local word = Words.expect(id)
-				for _, letterId in word.letters do
-					local letter = Letters.expect(letterId)
-					expect(letter.island <= word.minIsland).to.equal(true)
+		it(
+			"не содержат букв с более позднего острова, чем сами доступны",
+			function()
+				for _, id in Words.ids() do
+					local word = Words.expect(id)
+					for _, letterId in word.letters do
+						local letter = Letters.expect(letterId)
+						expect(letter.island <= word.minIsland).to.equal(true)
+					end
 				end
 			end
-		end)
+		)
 
 		it("разбиты на слоги без потери букв", function()
 			for _, id in Words.ids() do
@@ -144,11 +156,14 @@ return function()
 	end)
 
 	describe("Config: острова", function()
-		it("состав островов совпадает со справочником букв", function()
-			for _, island in Islands.all do
-				expect(#island.letters).to.equal(#Letters.byIsland(island.index))
+		it(
+			"состав островов совпадает со справочником букв",
+			function()
+				for _, island in Islands.all do
+					expect(#island.letters).to.equal(#Letters.byIsland(island.index))
+				end
 			end
-		end)
+		)
 
 		it("первый остров открыт всегда", function()
 			expect(Islands.isUnlocked(1, function()
@@ -156,21 +171,24 @@ return function()
 			end)).to.equal(true)
 		end)
 
-		it("следующий остров требует 80% изученных букв предыдущего", function()
-			local first = Letters.byIsland(1)
-			local learned = {}
+		it(
+			"следующий остров требует 80% изученных букв предыдущего",
+			function()
+				local first = Letters.byIsland(1)
+				local learned = {}
 
-			local function masteryOf(id)
-				return if learned[id] then 2 else 0
+				local function masteryOf(id)
+					return if learned[id] then 2 else 0
+				end
+
+				expect(Islands.isUnlocked(2, masteryOf)).to.equal(false)
+
+				for _, id in first do
+					learned[id] = true
+				end
+				expect(Islands.isUnlocked(2, masteryOf)).to.equal(true)
 			end
-
-			expect(Islands.isUnlocked(2, masteryOf)).to.equal(false)
-
-			for _, id in first do
-				learned[id] = true
-			end
-			expect(Islands.isUnlocked(2, masteryOf)).to.equal(true)
-		end)
+		)
 
 		it("ссылается только на существующие испытания", function()
 			for _, island in Islands.all do
@@ -182,27 +200,33 @@ return function()
 	end)
 
 	describe("Config: испытания", function()
-		it("у каждого параметра ровно пять значений сложности", function()
-			for _, id in Challenges.ids() do
-				local meta = Challenges.expect(id)
-				for name, values in meta.params do
-					expect(#values).to.equal(5)
-					if #values ~= 5 then
-						warn(`{id}.{name}: ожидалось 5 значений`)
+		it(
+			"у каждого параметра ровно пять значений сложности",
+			function()
+				for _, id in Challenges.ids() do
+					local meta = Challenges.expect(id)
+					for name, values in meta.params do
+						expect(#values).to.equal(5)
+						if #values ~= 5 then
+							warn(`{id}.{name}: ожидалось 5 значений`)
+						end
 					end
 				end
 			end
-		end)
+		)
 	end)
 
 	describe("Config: озвучка", function()
-		it("все реплики, которые просит игра, объявлены в реестре", function()
-			local missing = AudioRegistry.unregistered()
-			if #missing > 0 then
-				warn("нет в реестре: " .. table.concat(missing, ", "))
+		it(
+			"все реплики, которые просит игра, объявлены в реестре",
+			function()
+				local missing = AudioRegistry.unregistered()
+				if #missing > 0 then
+					warn("нет в реестре: " .. table.concat(missing, ", "))
+				end
+				expect(#missing).to.equal(0)
 			end
-			expect(#missing).to.equal(0)
-		end)
+		)
 
 		it("реестр содержит звуки всех букв и все слоги", function()
 			local required = AudioRegistry.requiredKeys()

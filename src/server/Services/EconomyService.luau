@@ -70,7 +70,9 @@ function EconomyService.award(player: Player, source: string, amount: number, me
 	local bucket = bucketFor(player, now)
 	local allowed = math.max(0, Economy.MAX_STARS_PER_HOUR - bucket.earned)
 	if allowed <= 0 then
-		warn(`[EconomyService] потолок начислений для {player.Name}: источник {source}`)
+		warn(
+			`[EconomyService] потолок начислений для {player.Name}: источник {source}`
+		)
 		return 0
 	end
 

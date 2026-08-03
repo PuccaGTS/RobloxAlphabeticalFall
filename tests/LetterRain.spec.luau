@@ -44,19 +44,23 @@ return function()
 			expect(spec.params.targetGlyph).to.equal("П")
 		end)
 
-		it("создаёт ровно столько целевых букв, сколько нужно поймать", function()
-			local spec = build()
-			local targets = 0
-			for _, item in spec.params.items do
-				if item.isTarget then
-					targets += 1
+		it(
+			"создаёт ровно столько целевых букв, сколько нужно поймать",
+			function()
+				local spec = build()
+				local targets = 0
+				for _, item in spec.params.items do
+					if item.isTarget then
+						targets += 1
+					end
 				end
-			end
 
-			local expected = DifficultyCurve.pick(Challenges.expect("letter_rain").params.targetCount, DIFFICULTY)
-			expect(spec.targetCount).to.equal(expected)
-			expect(targets).to.equal(expected)
-		end)
+				local expected =
+					DifficultyCurve.pick(Challenges.expect("letter_rain").params.targetCount, DIFFICULTY)
+				expect(spec.targetCount).to.equal(expected)
+				expect(targets).to.equal(expected)
+			end
+		)
 
 		it("первая упавшая буква всегда целевая", function()
 			for _ = 1, 20 do
@@ -120,44 +124,50 @@ return function()
 			expect(state.missed).to.equal(1)
 		end)
 
-		it("ответ засчитывается целевой букве, а не той, по которой промахнулись", function()
-			local spec = build()
-			local state = stateFor(spec)
+		it(
+			"ответ засчитывается целевой букве, а не той, по которой промахнулись",
+			function()
+				local spec = build()
+				local state = stateFor(spec)
 
-			local wrongIndex = firstIndexWhere(spec.params.items, function(item)
-				return not item.isTarget
-			end)
-			state.startedAt = os.clock() - spec.params.items[wrongIndex].spawnAt
+				local wrongIndex = firstIndexWhere(spec.params.items, function(item)
+					return not item.isTarget
+				end)
+				state.startedAt = os.clock() - spec.params.items[wrongIndex].spawnAt
 
-			local result = LetterRain.Validate(state, { itemIndex = wrongIndex })
+				local result = LetterRain.Validate(state, { itemIndex = wrongIndex })
 
-			expect(result.letterId).to.equal(spec.params.targetLetter)
-			expect(result.tappedLetterId).to.equal(spec.params.items[wrongIndex].letterId)
-		end)
+				expect(result.letterId).to.equal(spec.params.targetLetter)
+				expect(result.tappedLetterId).to.equal(spec.params.items[wrongIndex].letterId)
+			end
+		)
 
-		it("после промаха ловля блокируется на время подсказки", function()
-			local spec = build()
-			local state = stateFor(spec)
+		it(
+			"после промаха ловля блокируется на время подсказки",
+			function()
+				local spec = build()
+				local state = stateFor(spec)
 
-			local wrongIndex = firstIndexWhere(spec.params.items, function(item)
-				return not item.isTarget
-			end)
-			state.startedAt = os.clock() - spec.params.items[wrongIndex].spawnAt
+				local wrongIndex = firstIndexWhere(spec.params.items, function(item)
+					return not item.isTarget
+				end)
+				state.startedAt = os.clock() - spec.params.items[wrongIndex].spawnAt
 
-			local miss = LetterRain.Validate(state, { itemIndex = wrongIndex })
-			expect(miss.cooldown > 0).to.equal(true)
-			expect(state.blockedUntil > os.clock()).to.equal(true)
+				local miss = LetterRain.Validate(state, { itemIndex = wrongIndex })
+				expect(miss.cooldown > 0).to.equal(true)
+				expect(state.blockedUntil > os.clock()).to.equal(true)
 
-			-- перебор не работает: следующий тап не засчитывается, пока идёт подсказка
-			local nextTargetIndex = firstIndexWhere(spec.params.items, function(item)
-				return item.isTarget
-			end)
-			local blocked = LetterRain.Validate(state, { itemIndex = nextTargetIndex })
+				-- перебор не работает: следующий тап не засчитывается, пока идёт подсказка
+				local nextTargetIndex = firstIndexWhere(spec.params.items, function(item)
+					return item.isTarget
+				end)
+				local blocked = LetterRain.Validate(state, { itemIndex = nextTargetIndex })
 
-			expect(blocked.handled).to.equal(false)
-			expect(blocked.blocked).to.equal(true)
-			expect(state.caught).to.equal(0)
-		end)
+				expect(blocked.handled).to.equal(false)
+				expect(blocked.blocked).to.equal(true)
+				expect(state.caught).to.equal(0)
+			end
+		)
 
 		it("после окончания паузы ловля снова работает", function()
 			local spec = build()
@@ -191,14 +201,17 @@ return function()
 			expect(state.caught).to.equal(1)
 		end)
 
-		it("игнорирует тап по букве, которая ещё не появилась", function()
-			local spec = build()
-			local state = stateFor(spec)
-			local lastIndex = #spec.params.items
+		it(
+			"игнорирует тап по букве, которая ещё не появилась",
+			function()
+				local spec = build()
+				local state = stateFor(spec)
+				local lastIndex = #spec.params.items
 
-			local result = LetterRain.Validate(state, { itemIndex = lastIndex })
-			expect(result.handled).to.equal(false)
-		end)
+				local result = LetterRain.Validate(state, { itemIndex = lastIndex })
+				expect(result.handled).to.equal(false)
+			end
+		)
 
 		it("игнорирует тап по уже упавшей букве", function()
 			local spec = build()
@@ -220,21 +233,24 @@ return function()
 			expect(LetterRain.Validate(state, { itemIndex = -3 }).handled).to.equal(false)
 		end)
 
-		it("сообщает о завершении, когда поймано нужное количество", function()
-			local spec = build()
-			local state = stateFor(spec)
+		it(
+			"сообщает о завершении, когда поймано нужное количество",
+			function()
+				local spec = build()
+				local state = stateFor(spec)
 
-			local last = nil
-			for index, item in spec.params.items do
-				if item.isTarget then
-					state.startedAt = os.clock() - item.spawnAt
-					last = LetterRain.Validate(state, { itemIndex = index })
+				local last = nil
+				for index, item in spec.params.items do
+					if item.isTarget then
+						state.startedAt = os.clock() - item.spawnAt
+						last = LetterRain.Validate(state, { itemIndex = index })
+					end
 				end
-			end
 
-			expect(state.caught).to.equal(spec.targetCount)
-			expect(last.finished).to.equal(true)
-		end)
+				expect(state.caught).to.equal(spec.targetCount)
+				expect(last.finished).to.equal(true)
+			end
+		)
 	end)
 
 	describe("LetterRain.Finish", function()
@@ -246,20 +262,26 @@ return function()
 			expect(LetterRain.Finish(state).stars).to.equal(3)
 		end)
 
-		it("снимает звезду за промахи, но не наказывает сильнее", function()
-			local spec = build()
-			local state = stateFor(spec)
-			state.caught = spec.targetCount
-			state.missed = 4
+		it(
+			"снимает звезду за промахи, но не наказывает сильнее",
+			function()
+				local spec = build()
+				local state = stateFor(spec)
+				state.caught = spec.targetCount
+				state.missed = 4
 
-			expect(LetterRain.Finish(state).stars).to.equal(2)
-		end)
+				expect(LetterRain.Finish(state).stars).to.equal(2)
+			end
+		)
 
-		it("даёт хотя бы одну звезду даже при нулевом результате", function()
-			local spec = build()
-			local state = stateFor(spec)
+		it(
+			"даёт хотя бы одну звезду даже при нулевом результате",
+			function()
+				local spec = build()
+				local state = stateFor(spec)
 
-			expect(LetterRain.Finish(state).stars).to.equal(1)
-		end)
+				expect(LetterRain.Finish(state).stars).to.equal(1)
+			end
+		)
 	end)
 end

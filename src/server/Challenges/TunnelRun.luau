@@ -40,7 +40,7 @@ end
 	letters — очередь повторений. Первая буква становится главной целью забега:
 	один туннель — одна буква, чтобы ребёнок успел с ней освоиться.
 ]]
-function TunnelRun.Build(player: Player, letters: { string }, difficulty: number)
+function TunnelRun.Build(_player: Player, letters: { string }, difficulty: number)
 	assert(#letters >= TunnelRun.minLetters, "TunnelRun: нужно минимум две буквы")
 
 	local gateCount = DifficultyCurve.pick(Tunnel.PARAMS.gates, difficulty)

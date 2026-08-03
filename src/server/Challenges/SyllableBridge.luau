@@ -55,7 +55,7 @@ end
 	Собирает секции моста. Каждая секция — один слог: согласная слева,
 	несколько гласных на выбор справа.
 ]]
-function SyllableBridge.Build(player: Player, letters: { string }, difficulty: number)
+function SyllableBridge.Build(_player: Player, letters: { string }, difficulty: number)
 	local meta = Challenges.expect(SyllableBridge.id)
 	local sectionCount = DifficultyCurve.pick(meta.params.sections, difficulty)
 	local choiceCount = DifficultyCurve.pick(meta.params.vowelChoices, difficulty)
@@ -105,7 +105,30 @@ function SyllableBridge.Build(player: Player, letters: { string }, difficulty: n
 		candidates = collect(lefts, vowels)
 	end
 
-	assert(#candidates > 0, "SyllableBridge: в справочнике нет ни одного подходящего слога")
+	assert(
+		#candidates > 0,
+		"SyllableBridge: в справочнике нет ни одного подходящего слога"
+	)
+
+	--[[
+		Отдельный набор гласных для ВАРИАНТОВ ответа.
+
+		Если в очереди была одна гласная, вариант в воротах оставался ровно один —
+		и выбора не было вовсе: ребёнок тыкал единственную кнопку и «проходил» задание,
+		ничего не узнав. Варианты добираем из соседних гласных, даже когда
+		сам слог строится из букв очереди.
+	]]
+	local choicePool = table.clone(vowels)
+	if #choicePool < math.max(2, choiceCount) then
+		for _, id in Letters.vowels() do
+			if not table.find(choicePool, id) then
+				table.insert(choicePool, id)
+			end
+			if #choicePool >= math.max(2, choiceCount) then
+				break
+			end
+		end
+	end
 
 	local shuffledCandidates = shuffled(candidates, random)
 	local sections = {}
@@ -117,7 +140,7 @@ function SyllableBridge.Build(player: Player, letters: { string }, difficulty: n
 		local targetVowel = candidate.vowel
 
 		local choices = { targetVowel }
-		for _, id in shuffled(vowels, random) do
+		for _, id in shuffled(choicePool, random) do
 			if #choices >= choiceCount then
 				break
 			end

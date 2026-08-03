@@ -60,9 +60,9 @@ local function clearCosmetics(character: Model)
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if root then
 		for _, name in { "AlphabetFallTrail", "AFTrailTop", "AFTrailBottom" } do
-			local existing = root:FindFirstChild(name)
-			if existing then
-				existing:Destroy()
+			local leftover = root:FindFirstChild(name)
+			if leftover then
+				leftover:Destroy()
 			end
 		end
 	end

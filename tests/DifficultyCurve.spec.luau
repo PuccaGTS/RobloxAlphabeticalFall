@@ -4,20 +4,23 @@ local DifficultyCurve = require(ReplicatedStorage.Shared.Logic.DifficultyCurve)
 
 return function()
 	describe("DifficultyCurve", function()
-		it("понижает уровень после трёх ошибок подряд и включает подсказки", function()
-			local level = 3
-			local streaks = DifficultyCurve.newStreaks()
+		it(
+			"понижает уровень после трёх ошибок подряд и включает подсказки",
+			function()
+				local level = 3
+				local streaks = DifficultyCurve.newStreaks()
 
-			local result
-			for _ = 1, 3 do
-				result = DifficultyCurve.apply(level, streaks, false)
-				level, streaks = result.level, result.streaks
+				local result
+				for _ = 1, 3 do
+					result = DifficultyCurve.apply(level, streaks, false)
+					level, streaks = result.level, result.streaks
+				end
+
+				expect(level).to.equal(2)
+				expect(result.changed).to.equal(-1)
+				expect(result.forceHints).to.equal(true)
 			end
-
-			expect(level).to.equal(2)
-			expect(result.changed).to.equal(-1)
-			expect(result.forceHints).to.equal(true)
-		end)
+		)
 
 		it("повышает уровень после пяти успехов подряд", function()
 			local level = 2
@@ -71,13 +74,16 @@ return function()
 			expect(level).to.equal(DifficultyCurve.MIN_LEVEL)
 		end)
 
-		it("достаёт параметр испытания по уровню с зажимом по краям", function()
-			local values = { 5, 5, 6, 7, 8 }
+		it(
+			"достаёт параметр испытания по уровню с зажимом по краям",
+			function()
+				local values = { 5, 5, 6, 7, 8 }
 
-			expect(DifficultyCurve.pick(values, 1)).to.equal(5)
-			expect(DifficultyCurve.pick(values, 4)).to.equal(7)
-			expect(DifficultyCurve.pick(values, 99)).to.equal(8)
-			expect(DifficultyCurve.pick(values, 0)).to.equal(5)
-		end)
+				expect(DifficultyCurve.pick(values, 1)).to.equal(5)
+				expect(DifficultyCurve.pick(values, 4)).to.equal(7)
+				expect(DifficultyCurve.pick(values, 99)).to.equal(8)
+				expect(DifficultyCurve.pick(values, 0)).to.equal(5)
+			end
+		)
 	end)
 end

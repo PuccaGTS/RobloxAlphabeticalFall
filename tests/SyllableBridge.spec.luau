@@ -42,29 +42,35 @@ return function()
 			end
 		end)
 
-		it("работает на первом острове, где есть только гласные", function()
-			-- АУ, УА — с них начинается чтение, и мост обязан собираться уже здесь
-			local spec = build({ "a", "u", "i" })
+		it(
+			"работает на первом острове, где есть только гласные",
+			function()
+				-- АУ, УА — с них начинается чтение, и мост обязан собираться уже здесь
+				local spec = build({ "a", "u", "i" })
 
-			expect(#spec.params.sections > 0).to.equal(true)
-			for _, section in spec.params.sections do
-				expect(Syllables.get(section.syllableId)).to.be.ok()
-				expect(section.leftId).never.to.equal(section.targetVowel)
-			end
-		end)
-
-		it("правильная гласная всегда есть среди вариантов", function()
-			local spec = build()
-			for _, section in spec.params.sections do
-				local found = false
-				for _, choice in section.choices do
-					if choice.letterId == section.targetVowel then
-						found = true
-					end
+				expect(#spec.params.sections > 0).to.equal(true)
+				for _, section in spec.params.sections do
+					expect(Syllables.get(section.syllableId)).to.be.ok()
+					expect(section.leftId).never.to.equal(section.targetVowel)
 				end
-				expect(found).to.equal(true)
 			end
-		end)
+		)
+
+		it(
+			"правильная гласная всегда есть среди вариантов",
+			function()
+				local spec = build()
+				for _, section in spec.params.sections do
+					local found = false
+					for _, choice in section.choices do
+						if choice.letterId == section.targetVowel then
+							found = true
+						end
+					end
+					expect(found).to.equal(true)
+				end
+			end
+		)
 
 		it("варианты не повторяются", function()
 			local spec = build()
@@ -85,11 +91,14 @@ return function()
 			end
 		end)
 
-		it("добирает гласные, если в очереди была одна согласная", function()
-			local spec = build({ "m", "a" })
-			expect(#spec.params.sections > 0).to.equal(true)
-			expect(#spec.params.sections[1].choices >= 2).to.equal(true)
-		end)
+		it(
+			"добирает гласные, если в очереди была одна согласная",
+			function()
+				local spec = build({ "m", "a" })
+				expect(#spec.params.sections > 0).to.equal(true)
+				expect(#spec.params.sections[1].choices >= 2).to.equal(true)
+			end
+		)
 	end)
 
 	describe("SyllableBridge.Validate", function()
@@ -131,28 +140,31 @@ return function()
 			expect(state.caught).to.equal(0)
 		end)
 
-		it("после промаха выбор блокируется на время подсказки", function()
-			local spec = build()
-			local state = stateFor(spec)
-			local section = spec.params.sections[1]
+		it(
+			"после промаха выбор блокируется на время подсказки",
+			function()
+				local spec = build()
+				local state = stateFor(spec)
+				local section = spec.params.sections[1]
 
-			local wrong = nil
-			for _, choice in section.choices do
-				if choice.letterId ~= section.targetVowel then
-					wrong = choice.letterId
-					break
+				local wrong = nil
+				for _, choice in section.choices do
+					if choice.letterId ~= section.targetVowel then
+						wrong = choice.letterId
+						break
+					end
 				end
+				SyllableBridge.Validate(state, { sectionIndex = 1, letterId = wrong })
+
+				local blocked = SyllableBridge.Validate(state, {
+					sectionIndex = 1,
+					letterId = section.targetVowel,
+				})
+
+				expect(blocked.handled).to.equal(false)
+				expect(blocked.blocked).to.equal(true)
 			end
-			SyllableBridge.Validate(state, { sectionIndex = 1, letterId = wrong })
-
-			local blocked = SyllableBridge.Validate(state, {
-				sectionIndex = 1,
-				letterId = section.targetVowel,
-			})
-
-			expect(blocked.handled).to.equal(false)
-			expect(blocked.blocked).to.equal(true)
-		end)
+		)
 
 		it("игнорирует ответ не на текущую секцию", function()
 			local spec = build()
@@ -209,9 +221,12 @@ return function()
 			expect(SyllableBridge.Finish(state).stars).to.equal(3)
 		end)
 
-		it("даёт хотя бы звезду, даже если ничего не собрано", function()
-			local spec = build()
-			expect(SyllableBridge.Finish(stateFor(spec)).stars).to.equal(1)
-		end)
+		it(
+			"даёт хотя бы звезду, даже если ничего не собрано",
+			function()
+				local spec = build()
+				expect(SyllableBridge.Finish(stateFor(spec)).stars).to.equal(1)
+			end
+		)
 	end)
 end

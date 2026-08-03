@@ -57,7 +57,14 @@ local function piece(
 	return { shape = shape, color = color, size = size, offset = offset, material = material }
 end
 
-local function hat(id: string, title: string, price: number, tier: number, icon: string, visual: Visual): ShopItem
+local function hat(
+	id: string,
+	title: string,
+	price: number,
+	tier: number,
+	icon: string,
+	visual: Visual
+): ShopItem
 	return {
 		id = id,
 		category = "hat",
@@ -97,7 +104,12 @@ local Items: { [string]: ShopItem } = {
 	}),
 	-- Колпак = поля + конус из сужающихся ярусов + звезда на макушке
 	hat_stargazer = hat("hat_stargazer", "Колпак звездочёта", 25, 0, "🎩", {
-		piece("Cylinder", Color3.fromRGB(70, 62, 170), Vector3.new(0.3, 3, 3), CFrame.new(0, 0.7, 0) * CFrame.Angles(0, 0, math.rad(90))),
+		piece(
+			"Cylinder",
+			Color3.fromRGB(70, 62, 170),
+			Vector3.new(0.3, 3, 3),
+			CFrame.new(0, 0.7, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
 		piece("Block", Color3.fromRGB(90, 80, 200), Vector3.new(1.7, 0.9, 1.7), CFrame.new(0, 1.25, 0)),
 		piece("Block", Color3.fromRGB(105, 95, 215), Vector3.new(1.2, 0.9, 1.2), CFrame.new(0, 2.05, 0)),
 		piece("Block", Color3.fromRGB(120, 110, 230), Vector3.new(0.7, 0.9, 0.7), CFrame.new(0, 2.8, 0)),
@@ -105,7 +117,12 @@ local Items: { [string]: ShopItem } = {
 	}),
 	-- Ушки = ободок + два уха
 	hat_ears = hat("hat_ears", "Ушки", 50, 1, "🐰", {
-		piece("Cylinder", Color3.fromRGB(240, 230, 225), Vector3.new(0.35, 2.3, 2.3), CFrame.new(0, 0.9, 0) * CFrame.Angles(0, 0, math.rad(90))),
+		piece(
+			"Cylinder",
+			Color3.fromRGB(240, 230, 225),
+			Vector3.new(0.35, 2.3, 2.3),
+			CFrame.new(0, 0.9, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
 		piece(
 			"Block",
 			Color3.fromRGB(250, 240, 230),
@@ -127,7 +144,13 @@ local Items: { [string]: ShopItem } = {
 	}),
 	-- Корона = обруч + пять зубцов
 	hat_crown = hat("hat_crown", "Корона", 120, 1, "👑", {
-		piece("Cylinder", GOLD, Vector3.new(0.8, 2.3, 2.3), CFrame.new(0, 1, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.Material.Neon),
+		piece(
+			"Cylinder",
+			GOLD,
+			Vector3.new(0.8, 2.3, 2.3),
+			CFrame.new(0, 1, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Enum.Material.Neon
+		),
 		piece("Block", GOLD, Vector3.new(0.4, 1, 0.4), CFrame.new(0, 1.8, -1), Enum.Material.Neon),
 		piece("Block", GOLD, Vector3.new(0.4, 1.1, 0.4), CFrame.new(-0.95, 1.85, -0.3), Enum.Material.Neon),
 		piece("Block", GOLD, Vector3.new(0.4, 1.1, 0.4), CFrame.new(0.95, 1.85, -0.3), Enum.Material.Neon),
@@ -146,9 +169,24 @@ local Items: { [string]: ShopItem } = {
 		icon = "🎒",
 		visual = {
 			piece("Block", Color3.fromRGB(200, 80, 60), Vector3.new(1.9, 2.1, 0.9), CFrame.new(0, 0, 0.9)),
-			piece("Block", Color3.fromRGB(240, 230, 210), Vector3.new(1.3, 1.4, 0.15), CFrame.new(0, 0.1, 1.4)),
-			piece("Block", Color3.fromRGB(160, 60, 45), Vector3.new(0.35, 1.8, 0.3), CFrame.new(-0.7, 0.1, 0.35)),
-			piece("Block", Color3.fromRGB(160, 60, 45), Vector3.new(0.35, 1.8, 0.3), CFrame.new(0.7, 0.1, 0.35)),
+			piece(
+				"Block",
+				Color3.fromRGB(240, 230, 210),
+				Vector3.new(1.3, 1.4, 0.15),
+				CFrame.new(0, 0.1, 1.4)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(160, 60, 45),
+				Vector3.new(0.35, 1.8, 0.3),
+				CFrame.new(-0.7, 0.1, 0.35)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(160, 60, 45),
+				Vector3.new(0.35, 1.8, 0.3),
+				CFrame.new(0.7, 0.1, 0.35)
+			),
 		},
 	},
 	back_wings = {
@@ -201,11 +239,36 @@ local Items: { [string]: ShopItem } = {
 		unlockIsland = 1,
 		icon = "🤓",
 		visual = {
-			piece("Cylinder", Color3.fromRGB(35, 35, 45), Vector3.new(0.12, 0.8, 0.8), CFrame.new(-0.45, 0.15, -0.62) * CFrame.Angles(0, math.rad(90), 0)),
-			piece("Cylinder", Color3.fromRGB(35, 35, 45), Vector3.new(0.12, 0.8, 0.8), CFrame.new(0.45, 0.15, -0.62) * CFrame.Angles(0, math.rad(90), 0)),
-			piece("Block", Color3.fromRGB(35, 35, 45), Vector3.new(0.5, 0.12, 0.12), CFrame.new(0, 0.15, -0.62)),
-			piece("Block", Color3.fromRGB(35, 35, 45), Vector3.new(0.12, 0.12, 0.9), CFrame.new(-0.8, 0.15, -0.25)),
-			piece("Block", Color3.fromRGB(35, 35, 45), Vector3.new(0.12, 0.12, 0.9), CFrame.new(0.8, 0.15, -0.25)),
+			piece(
+				"Cylinder",
+				Color3.fromRGB(35, 35, 45),
+				Vector3.new(0.12, 0.8, 0.8),
+				CFrame.new(-0.45, 0.15, -0.62) * CFrame.Angles(0, math.rad(90), 0)
+			),
+			piece(
+				"Cylinder",
+				Color3.fromRGB(35, 35, 45),
+				Vector3.new(0.12, 0.8, 0.8),
+				CFrame.new(0.45, 0.15, -0.62) * CFrame.Angles(0, math.rad(90), 0)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(35, 35, 45),
+				Vector3.new(0.5, 0.12, 0.12),
+				CFrame.new(0, 0.15, -0.62)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(35, 35, 45),
+				Vector3.new(0.12, 0.12, 0.9),
+				CFrame.new(-0.8, 0.15, -0.25)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(35, 35, 45),
+				Vector3.new(0.12, 0.12, 0.9),
+				CFrame.new(0.8, 0.15, -0.25)
+			),
 		},
 	},
 	face_mask = {
@@ -217,10 +280,30 @@ local Items: { [string]: ShopItem } = {
 		unlockIsland = 1,
 		icon = "🎭",
 		visual = {
-			piece("Block", Color3.fromRGB(120, 200, 140), Vector3.new(2.1, 1.3, 0.25), CFrame.new(0, 0.1, -0.65)),
-			piece("Ball", Color3.fromRGB(255, 255, 255), Vector3.new(0.55, 0.55, 0.3), CFrame.new(-0.45, 0.3, -0.78)),
-			piece("Ball", Color3.fromRGB(255, 255, 255), Vector3.new(0.55, 0.55, 0.3), CFrame.new(0.45, 0.3, -0.78)),
-			piece("Block", Color3.fromRGB(90, 165, 110), Vector3.new(2.1, 0.25, 0.28), CFrame.new(0, -0.45, -0.66)),
+			piece(
+				"Block",
+				Color3.fromRGB(120, 200, 140),
+				Vector3.new(2.1, 1.3, 0.25),
+				CFrame.new(0, 0.1, -0.65)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 255, 255),
+				Vector3.new(0.55, 0.55, 0.3),
+				CFrame.new(-0.45, 0.3, -0.78)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 255, 255),
+				Vector3.new(0.55, 0.55, 0.3),
+				CFrame.new(0.45, 0.3, -0.78)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(90, 165, 110),
+				Vector3.new(2.1, 0.25, 0.28),
+				CFrame.new(0, -0.45, -0.66)
+			),
 		},
 	},
 
@@ -230,7 +313,7 @@ local Items: { [string]: ShopItem } = {
 		category = "trail",
 		title = "Звёздная пыль",
 		price = 150,
-		tier = 2,
+		tier = 1,
 		unlockIsland = 1,
 		icon = "✨",
 		trail = {

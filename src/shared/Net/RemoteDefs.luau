@@ -74,7 +74,10 @@ end
 
 -- Вызывается один раз на сервере при старте.
 function RemoteDefs.init()
-	assert(RunService:IsServer(), "RemoteDefs.init можно вызывать только на сервере")
+	assert(
+		RunService:IsServer(),
+		"RemoteDefs.init можно вызывать только на сервере"
+	)
 	local parent = ensureFolder()
 
 	for _, name in EVENTS do

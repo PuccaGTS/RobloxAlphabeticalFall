@@ -57,11 +57,14 @@ return function()
 			end
 		end)
 
-		it("самый дешёвый предмет по карману после первого испытания", function()
-			-- принцип из docs/04-ECONOMY.md: первая покупка в первые пять минут
-			local cheapest = Shop.expect(Shop.ids()[1]).price
-			expect(cheapest <= Economy.rewardForChallenge(2)).to.equal(true)
-		end)
+		it(
+			"самый дешёвый предмет по карману после первого испытания",
+			function()
+				-- принцип из docs/04-ECONOMY.md: первая покупка в первые пять минут
+				local cheapest = Shop.expect(Shop.ids()[1]).price
+				expect(cheapest <= Economy.rewardForChallenge(2)).to.equal(true)
+			end
+		)
 
 		it("у каждого предмета есть чем его показать", function()
 			for _, id in Shop.ids() do
@@ -71,19 +74,22 @@ return function()
 			end
 		end)
 
-		it("носимый предмет собран больше чем из одной детали", function()
-			-- из одного куба не получается ни кепка, ни корона — получается куб на голове
-			for _, id in Shop.ids() do
-				local item = Shop.expect(id)
-				if item.visual then
-					expect(#item.visual >= 2).to.equal(true)
-					for _, piece in item.visual do
-						expect(typeof(piece.size)).to.equal("Vector3")
-						expect(typeof(piece.offset)).to.equal("CFrame")
+		it(
+			"носимый предмет собран больше чем из одной детали",
+			function()
+				-- из одного куба не получается ни кепка, ни корона — получается куб на голове
+				for _, id in Shop.ids() do
+					local item = Shop.expect(id)
+					if item.visual then
+						expect(#item.visual >= 2).to.equal(true)
+						for _, piece in item.visual do
+							expect(typeof(piece.size)).to.equal("Vector3")
+							expect(typeof(piece.offset)).to.equal("CFrame")
+						end
 					end
 				end
 			end
-		end)
+		)
 
 		it("в срезе MVP есть предметы всех категорий", function()
 			for _, category in Shop.CATEGORIES do

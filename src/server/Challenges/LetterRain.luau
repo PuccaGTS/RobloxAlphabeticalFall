@@ -43,7 +43,7 @@ end
 	letters — очередь от планировщика повторений: первая буква становится целью,
 	остальные идут в отвлекающие.
 ]]
-function LetterRain.Build(player: Player, letters: { string }, difficulty: number)
+function LetterRain.Build(_player: Player, letters: { string }, difficulty: number)
 	assert(#letters >= LetterRain.minLetters, "LetterRain: нужно минимум две буквы")
 
 	local meta = Challenges.expect(LetterRain.id)
@@ -99,9 +99,7 @@ function LetterRain.Build(player: Player, letters: { string }, difficulty: numbe
 
 		table.insert(items, {
 			index = index,
-			letterId = if isTarget
-				then targetId
-				else distractorPool[random:NextInteger(1, #distractorPool)],
+			letterId = if isTarget then targetId else distractorPool[random:NextInteger(1, #distractorPool)],
 			isTarget = isTarget,
 			spawnAt = (index - 1) * spawnInterval,
 			lane = lane,

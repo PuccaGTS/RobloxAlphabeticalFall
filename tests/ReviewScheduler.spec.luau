@@ -56,41 +56,50 @@ return function()
 		end)
 
 		describe("очередь сессии", function()
-			it("берёт ровно одну новую букву — следующую по программе", function()
-				local progress = {
-					a = progressAt(MasteryRules.LEARNED, NOW + DAY),
-				}
-				local queue = ReviewScheduler.buildQueue(progress, { "a", "u", "o", "m" }, NOW)
+			it(
+				"берёт ровно одну новую букву — следующую по программе",
+				function()
+					local progress = {
+						a = progressAt(MasteryRules.LEARNED, NOW + DAY),
+					}
+					local queue = ReviewScheduler.buildQueue(progress, { "a", "u", "o", "m" }, NOW)
 
-				expect(#queue.new).to.equal(1)
-				expect(queue.new[1]).to.equal("u")
-			end)
+					expect(#queue.new).to.equal(1)
+					expect(queue.new[1]).to.equal("u")
+				end
+			)
 
-			it("начинает сессию со знакомой буквы, а не с новой", function()
-				local progress = {
-					a = progressAt(MasteryRules.FAMILIAR, NOW - 100),
-				}
-				local queue = ReviewScheduler.buildQueue(progress, { "a", "u" }, NOW)
+			it(
+				"начинает сессию со знакомой буквы, а не с новой",
+				function()
+					local progress = {
+						a = progressAt(MasteryRules.FAMILIAR, NOW - 100),
+					}
+					local queue = ReviewScheduler.buildQueue(progress, { "a", "u" }, NOW)
 
-				expect(#queue.warmup).to.equal(1)
-				expect(queue.warmup[1]).to.equal("a")
-				expect(queue.flat[1]).to.equal("a")
-				expect(queue.flat[2]).to.equal("u")
-			end)
+					expect(#queue.warmup).to.equal(1)
+					expect(queue.warmup[1]).to.equal("a")
+					expect(queue.flat[1]).to.equal("a")
+					expect(queue.flat[2]).to.equal("u")
+				end
+			)
 
-			it("сначала подставляет то, что просрочено дольше всех", function()
-				local progress = {
-					a = progressAt(MasteryRules.FAMILIAR, NOW - 10),
-					u = progressAt(MasteryRules.FAMILIAR, NOW - 5000),
-					o = progressAt(MasteryRules.FAMILIAR, NOW - 100),
-				}
-				local queue = ReviewScheduler.buildQueue(progress, { "a", "u", "o" }, NOW)
+			it(
+				"сначала подставляет то, что просрочено дольше всех",
+				function()
+					local progress = {
+						a = progressAt(MasteryRules.FAMILIAR, NOW - 10),
+						u = progressAt(MasteryRules.FAMILIAR, NOW - 5000),
+						o = progressAt(MasteryRules.FAMILIAR, NOW - 100),
+					}
+					local queue = ReviewScheduler.buildQueue(progress, { "a", "u", "o" }, NOW)
 
-				-- самая просроченная уходит в разогрев, дальше по убыванию просрочки
-				expect(queue.warmup[1]).to.equal("u")
-				expect(queue.review[1]).to.equal("o")
-				expect(queue.review[2]).to.equal("a")
-			end)
+					-- самая просроченная уходит в разогрев, дальше по убыванию просрочки
+					expect(queue.warmup[1]).to.equal("u")
+					expect(queue.review[1]).to.equal("o")
+					expect(queue.review[2]).to.equal("a")
+				end
+			)
 
 			it("не берёт больше MAX_REVIEW букв на повторение", function()
 				local ids = {}
@@ -105,18 +114,21 @@ return function()
 				expect(#queue.review + #queue.warmup).to.equal(ReviewScheduler.MAX_REVIEW)
 			end)
 
-			it("добавляет освоенные буквы для уверенности, но не больше двух", function()
-				local progress = {
-					a = progressAt(MasteryRules.MASTERED, NOW + 10 * DAY, NOW - 5 * DAY),
-					u = progressAt(MasteryRules.MASTERED, NOW + 10 * DAY, NOW - 4 * DAY),
-					o = progressAt(MasteryRules.MASTERED, NOW + 10 * DAY, NOW - 3 * DAY),
-				}
-				local queue = ReviewScheduler.buildQueue(progress, { "a", "u", "o" }, NOW)
+			it(
+				"добавляет освоенные буквы для уверенности, но не больше двух",
+				function()
+					local progress = {
+						a = progressAt(MasteryRules.MASTERED, NOW + 10 * DAY, NOW - 5 * DAY),
+						u = progressAt(MasteryRules.MASTERED, NOW + 10 * DAY, NOW - 4 * DAY),
+						o = progressAt(MasteryRules.MASTERED, NOW + 10 * DAY, NOW - 3 * DAY),
+					}
+					local queue = ReviewScheduler.buildQueue(progress, { "a", "u", "o" }, NOW)
 
-				-- одна ушла в разогрев, ещё максимум две остаются в confident
-				expect(#queue.confident <= ReviewScheduler.MAX_CONFIDENT).to.equal(true)
-				expect(queue.warmup[1]).to.equal("a")
-			end)
+					-- одна ушла в разогрев, ещё максимум две остаются в confident
+					expect(#queue.confident <= ReviewScheduler.MAX_CONFIDENT).to.equal(true)
+					expect(queue.warmup[1]).to.equal("a")
+				end
+			)
 		end)
 	end)
 end

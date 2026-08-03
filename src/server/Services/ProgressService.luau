@@ -107,11 +107,7 @@ function ProgressService.buildQueue(player: Player): ReviewScheduler.Queue?
 	if not profile then
 		return nil
 	end
-	return ReviewScheduler.buildQueue(
-		profile.letters,
-		ProgressService.availableLetters(profile),
-		os.time()
-	)
+	return ReviewScheduler.buildQueue(profile.letters, ProgressService.availableLetters(profile), os.time())
 end
 
 export type AnswerOutcome = {

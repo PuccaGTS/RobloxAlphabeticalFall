@@ -16,7 +16,6 @@ local ShopUI = {}
 local player = Players.LocalPlayer
 
 local gui: ScreenGui? = nil
-local grid: ScrollingFrame? = nil
 local cards: { [string]: Frame } = {}
 local handlers: any = nil
 local lastSnapshot: any = nil
@@ -170,7 +169,6 @@ function ShopUI.build(callbacks)
 	scroll.CanvasSize = UDim2.new()
 	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	scroll.Parent = panel
-	grid = scroll
 
 	local layout = Instance.new("UIGridLayout")
 	layout.CellSize = UDim2.fromOffset(180, 210)

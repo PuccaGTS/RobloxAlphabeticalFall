@@ -101,7 +101,8 @@ function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
 	progressLabel = progress
 
 	-- Кнопка «динамик» — самая важная в игре, всегда в одном месте
-	local repeatButton = makeButton("Repeat", "🔊", UDim2.fromScale(0.12, 0.12), UDim2.fromScale(0.04, 0.72))
+	local repeatButton =
+		makeButton("Repeat", "🔊", UDim2.fromScale(0.12, 0.12), UDim2.fromScale(0.04, 0.72))
 	repeatButton.Parent = screen
 	repeatButton.Activated:Connect(callbacks.onRepeat)
 
@@ -112,11 +113,13 @@ function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
 
 	-- Дубли падов из хаба: ребёнок может не дойти до пада, а взрослому нужен быстрый
 	-- способ проверить обе механики. Уберём, когда хаб обрастёт навигацией.
-	local startButton = makeButton("Start", "Буквы", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.28, 0.85))
+	local startButton =
+		makeButton("Start", "Буквы", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.28, 0.85))
 	startButton.Parent = screen
 	startButton.Activated:Connect(callbacks.onStart)
 
-	local bridgeButton = makeButton("Bridge", "Слоги", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.52, 0.85))
+	local bridgeButton =
+		makeButton("Bridge", "Слоги", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.52, 0.85))
 	bridgeButton.Parent = screen
 	bridgeButton.Activated:Connect(callbacks.onBridge)
 

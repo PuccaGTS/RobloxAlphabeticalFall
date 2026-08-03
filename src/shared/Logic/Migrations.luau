@@ -37,11 +37,7 @@ Migrations.STEPS = STEPS
 
 	steps можно подменить — это нужно тестам и ничему больше.
 ]]
-function Migrations.apply(
-	profile: any,
-	targetVersion: number,
-	steps: { [number]: Step }?
-): (any, number)
+function Migrations.apply(profile: any, targetVersion: number, steps: { [number]: Step }?): (any, number)
 	local table_ = steps or STEPS
 	local applied = 0
 
@@ -93,7 +89,9 @@ function Migrations.fillDefaults(profile: any, now: number): Types.Profile
 			end
 		elseif typeof(profile[key]) ~= typeof(value) then
 			-- тип не совпал: данные повреждены, берём значение по умолчанию
-			warn(`[Migrations] поле "{key}" имело неверный тип, сброшено к значению по умолчанию`)
+			warn(
+				`[Migrations] поле "{key}" имело неверный тип, сброшено к значению по умолчанию`
+			)
 			profile[key] = value
 		end
 	end

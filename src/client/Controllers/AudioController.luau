@@ -257,9 +257,7 @@ end
 function AudioController.setVolume(groupName: string, volume: number)
 	ensureGroups()
 	baseVolume[groupName] = math.clamp(volume, 0, 1)
-	local factor = if ducked and (groupName == "Music" or groupName == "Ambient")
-		then DUCK_FACTOR
-		else 1
+	local factor = if ducked and (groupName == "Music" or groupName == "Ambient") then DUCK_FACTOR else 1
 	tweenGroup(groupName, baseVolume[groupName] * factor, 0.1)
 end
 

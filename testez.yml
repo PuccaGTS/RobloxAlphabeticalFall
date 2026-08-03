@@ -1,0 +1,56 @@
+---
+# Описание глобалей TestEZ для selene: без него линтер считает describe/it/expect
+# неизвестными переменными и заваливает ошибками все файлы тестов.
+base: roblox
+globals:
+  describe:
+    args:
+      - type: string
+      - type: function
+  describeFOCUS:
+    args:
+      - type: string
+      - type: function
+  describeSKIP:
+    args:
+      - type: string
+      - type: function
+  it:
+    args:
+      - type: string
+      - type: function
+  itFOCUS:
+    args:
+      - type: string
+      - type: function
+  itSKIP:
+    args:
+      - type: string
+      - type: function
+  itFIXME:
+    args:
+      - type: string
+      - type: function
+  expect:
+    args:
+      - type: any
+  beforeAll:
+    args:
+      - type: function
+  beforeEach:
+    args:
+      - type: function
+  afterAll:
+    args:
+      - type: function
+  afterEach:
+    args:
+      - type: function
+  FIXME:
+    args:
+      - required: false
+        type: string
+  FOCUS:
+    args: []
+  SKIP:
+    args: []

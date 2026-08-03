@@ -1,4 +1,5 @@
-std = "roblox"
+# roblox+testez: описание глобалей TestEZ лежит в testez.yml рядом с этим файлом
+std = "roblox+testez"
 
 [rules]
 global_usage = "warn"
