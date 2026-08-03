@@ -61,84 +61,88 @@ function SyllableBridge.Build(player: Player, letters: { string }, difficulty: n
 	local choiceCount = DifficultyCurve.pick(meta.params.vowelChoices, difficulty)
 	local missCooldown = DifficultyCurve.pick(meta.params.missCooldown, difficulty)
 
-	local consonants, vowels = splitByKind(letters)
-
-	-- Если гласных из очереди не хватает, добираем из уже пройденных островов:
-	-- без гласной слог не построить в принципе.
-	if #vowels < 2 then
-		for _, id in Letters.vowels() do
-			if not table.find(vowels, id) then
-				table.insert(vowels, id)
-			end
-			if #vowels >= math.max(2, choiceCount) then
-				break
-			end
-		end
-	end
-
-	assert(#vowels >= 1, "SyllableBridge: нужна хотя бы одна гласная")
-
 	local seed = math.floor(os.clock() * 1000) % 2 ^ 31
 	local random = Random.new(seed)
 
 	--[[
-		Левая половинка моста. Обычно это согласная (МА, ПУ), но на первом острове
-		согласных ещё нет вообще — там слоги строятся из двух гласных (АУ, УА).
-		Без этой ветки мост был бы недоступен, пока ребёнок не дойдёт до второго острова,
-		то есть ровно тогда, когда он больше всего нужен.
+		Собираем ВСЕ пары, которые реально существуют в справочнике слогов.
+
+		Раньше пары искались случайным перебором, и это ломалось: слоги из двух гласных
+		есть только для АУ, УА, ИА, АИ. Стоило очереди подсунуть, скажем, О и А —
+		валидных пар не оказывалось вовсе, и испытание падало с ошибкой.
+		Перечисление вместо угадывания не может не найти того, что есть.
 	]]
-	local lefts = if #consonants > 0 then consonants else vowels
-
-	local sections = {}
-	local index = 0
-	local guard = 0
-
-	while #sections < sectionCount and guard < sectionCount * 20 do
-		guard += 1
-
-		local leftId = lefts[(index % #lefts) + 1]
-		local targetVowel = vowels[random:NextInteger(1, #vowels)]
-
-		-- Ищем слог в справочнике: часть сочетаний запрещена методикой (ЖЫ, ШЫ и т.п.),
-		-- а из двух гласных существуют только осмысленные пары.
-		local syllableId = if leftId ~= targetVowel then leftId .. targetVowel else nil
-		local syllable = if syllableId then Syllables.get(syllableId) else nil
-
-		if syllable then
-			index += 1
-
-			local choices = { targetVowel }
-			for _, id in shuffled(vowels, random) do
-				if #choices >= choiceCount then
-					break
-				end
-				if id ~= targetVowel then
-					table.insert(choices, id)
+	local function collect(leftPool: { string }, vowelPool: { string })
+		local found = {}
+		for _, leftId in leftPool do
+			for _, vowelId in vowelPool do
+				if leftId ~= vowelId then
+					local syllable = Syllables.get(leftId .. vowelId)
+					if syllable then
+						table.insert(found, { left = leftId, vowel = vowelId, syllable = syllable })
+					end
 				end
 			end
-			choices = shuffled(choices, random)
-
-			local choiceData = {}
-			for _, id in choices do
-				table.insert(choiceData, { letterId = id, glyph = Letters.expect(id).glyph })
-			end
-
-			table.insert(sections, {
-				index = #sections + 1,
-				leftId = leftId,
-				leftGlyph = Letters.expect(leftId).glyph,
-				targetVowel = targetVowel,
-				syllableId = syllableId,
-				text = syllable.text,
-				vo = syllable.vo,
-				choices = choiceData,
-			})
-		else
-			index += 1
 		end
+		return found
 	end
 
-	assert(#sections > 0, "SyllableBridge: не удалось собрать ни одной секции")
+	local consonants, vowels = splitByKind(letters)
+
+	-- Левая половинка — согласная (МА, ПУ), а на первом острове согласных нет вообще,
+	-- и слог строится из двух гласных (АУ, УА). Иначе мост был бы недоступен ровно тогда,
+	-- когда он нужнее всего.
+	local lefts = if #consonants > 0 then consonants else vowels
+	local candidates = collect(lefts, vowels)
+
+	--[[
+		Если из букв очереди слог не складывается, расширяем набор до всех гласных.
+		Лучше дать ребёнку соседнюю букву того же острова, чем показать пустой мост.
+	]]
+	if #candidates == 0 then
+		vowels = Letters.vowels()
+		lefts = if #consonants > 0 then consonants else vowels
+		candidates = collect(lefts, vowels)
+	end
+
+	assert(#candidates > 0, "SyllableBridge: в справочнике нет ни одного подходящего слога")
+
+	local shuffledCandidates = shuffled(candidates, random)
+	local sections = {}
+
+	for position = 1, sectionCount do
+		-- Кандидатов может быть меньше, чем секций: тогда слоги повторяются,
+		-- и это не беда — повторение здесь работает на нас.
+		local candidate = shuffledCandidates[(position - 1) % #shuffledCandidates + 1]
+		local targetVowel = candidate.vowel
+
+		local choices = { targetVowel }
+		for _, id in shuffled(vowels, random) do
+			if #choices >= choiceCount then
+				break
+			end
+			if id ~= targetVowel then
+				table.insert(choices, id)
+			end
+		end
+		choices = shuffled(choices, random)
+
+		local choiceData = {}
+		for _, id in choices do
+			table.insert(choiceData, { letterId = id, glyph = Letters.expect(id).glyph })
+		end
+
+		table.insert(sections, {
+			index = position,
+			leftId = candidate.left,
+			leftGlyph = Letters.expect(candidate.left).glyph,
+			targetVowel = targetVowel,
+			syllableId = candidate.syllable.id,
+			text = candidate.syllable.text,
+			vo = candidate.syllable.vo,
+			choices = choiceData,
+		})
+	end
 
 	return {
 		challengeId = SyllableBridge.id,

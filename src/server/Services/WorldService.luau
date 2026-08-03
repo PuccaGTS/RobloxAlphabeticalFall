@@ -69,7 +69,9 @@ local function caption(parent: BasePart, text: string, height: number)
 	billboard.Size = UDim2.fromOffset(280, 90)
 	billboard.StudsOffset = Vector3.new(0, height, 0)
 	billboard.LightInfluence = 0
-	billboard.MaxDistance = 200
+	-- Близко — чтобы подписи всех падов и Башни не наслаивались друг на друга
+	-- в одну кашу, как только отойдёшь на середину площади.
+	billboard.MaxDistance = 55
 	billboard.Parent = parent
 
 	local label = Instance.new("TextLabel")

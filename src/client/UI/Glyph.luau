@@ -30,9 +30,16 @@ function Glyph.attach(part: BasePart, text: string, scale: number?, color: Color
 	billboard.Name = "GlyphBillboard"
 	billboard.Size = UDim2.fromScale(scale or 1, scale or 1)
 	billboard.SizeOffset = Vector2.new(0, 0)
-	billboard.AlwaysOnTop = false
+	--[[
+		Обязательно поверх всего.
+
+		Билборд висит в ЦЕНТРЕ детали, и без этого флага его загораживает сама деталь:
+		на экране остаётся просто цветной кубик без буквы. Подписи падов было видно
+		только потому, что они подняты над платформой через StudsOffset.
+	]]
+	billboard.AlwaysOnTop = true
 	billboard.LightInfluence = 0
-	billboard.MaxDistance = 300
+	billboard.MaxDistance = 250
 	billboard.Parent = part
 
 	local label = Instance.new("TextLabel")

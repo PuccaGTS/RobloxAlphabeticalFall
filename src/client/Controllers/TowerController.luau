@@ -89,7 +89,7 @@ local function buildSign(parent: Instance)
 	billboard.Size = UDim2.fromOffset(320, 120)
 	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
 	billboard.LightInfluence = 0
-	billboard.MaxDistance = 200
+	billboard.MaxDistance = 55
 	billboard.Parent = sign
 
 	local title = Instance.new("TextLabel")
