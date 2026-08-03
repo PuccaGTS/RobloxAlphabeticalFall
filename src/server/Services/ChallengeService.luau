@@ -188,6 +188,8 @@ local function onAction(player: Player, action: any)
 	RemoteDefs.event("ChallengeFeedback"):FireClient(player, {
 		itemIndex = result.itemIndex,
 		correct = result.correct,
+		-- сколько секунд «сачок опущен» после промаха
+		cooldown = result.cooldown or 0,
 		caught = state.caught,
 		targetCount = state.spec.targetCount,
 		vo = voKey,

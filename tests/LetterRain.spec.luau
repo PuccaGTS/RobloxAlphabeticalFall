@@ -135,6 +135,51 @@ return function()
 			expect(result.tappedLetterId).to.equal(spec.params.items[wrongIndex].letterId)
 		end)
 
+		it("после промаха ловля блокируется на время подсказки", function()
+			local spec = build()
+			local state = stateFor(spec)
+
+			local wrongIndex = firstIndexWhere(spec.params.items, function(item)
+				return not item.isTarget
+			end)
+			state.startedAt = os.clock() - spec.params.items[wrongIndex].spawnAt
+
+			local miss = LetterRain.Validate(state, { itemIndex = wrongIndex })
+			expect(miss.cooldown > 0).to.equal(true)
+			expect(state.blockedUntil > os.clock()).to.equal(true)
+
+			-- перебор не работает: следующий тап не засчитывается, пока идёт подсказка
+			local nextTargetIndex = firstIndexWhere(spec.params.items, function(item)
+				return item.isTarget
+			end)
+			local blocked = LetterRain.Validate(state, { itemIndex = nextTargetIndex })
+
+			expect(blocked.handled).to.equal(false)
+			expect(blocked.blocked).to.equal(true)
+			expect(state.caught).to.equal(0)
+		end)
+
+		it("после окончания паузы ловля снова работает", function()
+			local spec = build()
+			local state = stateFor(spec)
+			state.blockedUntil = os.clock() - 0.01
+
+			local result = LetterRain.Validate(state, { itemIndex = 1 })
+
+			expect(result.handled).to.equal(true)
+			expect(result.correct).to.equal(true)
+		end)
+
+		it("верный ответ паузу не ставит", function()
+			local spec = build()
+			local state = stateFor(spec)
+
+			local result = LetterRain.Validate(state, { itemIndex = 1 })
+
+			expect(result.cooldown).to.equal(0)
+			expect(state.blockedUntil).to.equal(nil)
+		end)
+
 		it("не принимает повторный тап по той же букве", function()
 			local spec = build()
 			local state = stateFor(spec)

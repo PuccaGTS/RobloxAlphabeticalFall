@@ -52,6 +52,7 @@ function LetterRain.Build(player: Player, letters: { string }, difficulty: numbe
 	local fallSpeed = DifficultyCurve.pick(meta.params.fallSpeed, difficulty)
 	local spawnInterval = DifficultyCurve.pick(meta.params.spawnInterval, difficulty)
 	local hintAfterSec = DifficultyCurve.pick(meta.params.hintAfterSec, difficulty)
+	local missCooldown = DifficultyCurve.pick(meta.params.missCooldown, difficulty)
 
 	local targetId = letters[1]
 	local distractorPool: { string } = {}
@@ -122,6 +123,7 @@ function LetterRain.Build(player: Player, letters: { string }, difficulty: numbe
 			fallHeight = FALL_HEIGHT,
 			lanes = LANES,
 			hintAfterSec = hintAfterSec,
+			missCooldown = missCooldown,
 			flightTime = FALL_HEIGHT / fallSpeed,
 		},
 	}
@@ -144,7 +146,15 @@ function LetterRain.Validate(state, action)
 		return { handled = false }
 	end
 
-	local elapsed = os.clock() - state.startedAt
+	local now = os.clock()
+
+	-- «Сачок опущен» после промаха: ловить нельзя, пока не отзвучит подсказка.
+	-- Это единственная плата за ошибку — временем, а не прогрессом.
+	if state.blockedUntil and now < state.blockedUntil then
+		return { handled = false, blocked = true }
+	end
+
+	local elapsed = now - state.startedAt
 	local flightTime = state.spec.params.flightTime
 	local appearedAt = item.spawnAt
 	local goneAt = item.spawnAt + flightTime
@@ -157,15 +167,19 @@ function LetterRain.Validate(state, action)
 	state.answered[action.itemIndex] = true
 
 	local correct = item.isTarget
+	local cooldown = 0
 	if correct then
 		state.caught += 1
 	else
 		state.missed += 1
+		cooldown = state.spec.params.missCooldown
+		state.blockedUntil = now + cooldown
 	end
 
 	return {
 		handled = true,
 		correct = correct,
+		cooldown = cooldown,
 		itemIndex = action.itemIndex,
 		-- Ответ засчитывается ЦЕЛЕВОЙ букве: испытание проверяет, узнаёт ли ребёнок именно её.
 		letterId = state.spec.params.targetLetter,

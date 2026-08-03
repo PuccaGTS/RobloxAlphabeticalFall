@@ -10,6 +10,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 
 local HUD = {}
 
@@ -113,6 +114,28 @@ function HUD.setStars(value: number)
 	if starsLabel then
 		starsLabel.Text = `⭐ {value}`
 	end
+end
+
+--[[
+	Пауза после промаха. Ребёнку нельзя показать «ты ошибся» — показываем,
+	что сейчас происходит подсказка: буква-цель увеличивается и подсвечивается,
+	то есть внимание уводится на правильный ответ, а не на ошибку.
+]]
+function HUD.setBlocked(blocked: boolean)
+	if not targetLabel then
+		return
+	end
+
+	local goalSize = if blocked then UDim2.fromScale(0.2, 0.23) else UDim2.fromScale(0.14, 0.16)
+	local goalPosition = if blocked then UDim2.fromScale(0.40, 0.02) else UDim2.fromScale(0.43, 0.03)
+
+	targetLabel.TextColor3 = if blocked then Color3.fromRGB(255, 214, 102) else Color3.fromRGB(255, 255, 255)
+
+	TweenService:Create(
+		targetLabel,
+		TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Size = goalSize, Position = goalPosition }
+	):Play()
 end
 
 function HUD.showTarget(glyph: string?, caught: number?, total: number?)

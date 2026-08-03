@@ -35,6 +35,9 @@ local parts: { [number]: BasePart } = {}
 local spawned: { [number]: boolean } = {}
 local origin: CFrame = CFrame.new()
 local heartbeat: RBXScriptConnection? = nil
+-- Пока «сачок опущен» после промаха, тапы не уходят на сервер и буквы притушены.
+local blockedUntil = 0
+local wasBlocked = false
 
 local function cleanup()
 	if heartbeat then
@@ -48,7 +51,10 @@ local function cleanup()
 	parts = {}
 	spawned = {}
 	spec = nil
+	blockedUntil = 0
+	wasBlocked = false
 	HUD.showTarget(nil)
+	HUD.setBlocked(false)
 end
 
 --[[
@@ -112,6 +118,11 @@ local function makeLetterPart(item: any): BasePart
 		if not spec then
 			return
 		end
+		-- Пока идёт пауза после промаха, тапы не отправляем: сервер их всё равно
+		-- не примет, а ребёнку важно услышать подсказку, а не «дотыкать» вслепую.
+		if os.clock() < blockedUntil then
+			return
+		end
 		RemoteDefs.event("ChallengeAction"):FireServer({ itemIndex = item.index })
 	end)
 
@@ -136,8 +147,10 @@ local function onHeartbeat()
 		return
 	end
 
-	local elapsed = os.clock() - startedAt
+	local now = os.clock()
+	local elapsed = now - startedAt
 	local params = spec.params
+	local blocked = now < blockedUntil
 
 	for _, item in params.items do
 		if not spawned[item.index] and elapsed >= item.spawnAt then
@@ -160,7 +173,19 @@ local function onHeartbeat()
 			part.CFrame = origin
 				* CFrame.new(laneOffset(item.lane, params.lanes), height, 0)
 				* CFrame.Angles(0, 0, math.sin(elapsed * 2 + index) * 0.15)
+
+			-- Пауза после промаха видна глазами: буквы притушены и не ловятся.
+			part.Transparency = if blocked then 0.65 else 0
+			local surface = part:FindFirstChildOfClass("SurfaceGui")
+			if surface then
+				surface.Enabled = not blocked
+			end
 		end
+	end
+
+	if blocked ~= wasBlocked then
+		wasBlocked = blocked
+		HUD.setBlocked(blocked)
 	end
 end
 
@@ -196,6 +221,10 @@ local function onFeedback(feedback: any)
 	end
 
 	HUD.showTarget(spec and spec.params.targetGlyph or nil, feedback.caught, feedback.targetCount)
+
+	if not feedback.correct and (feedback.cooldown or 0) > 0 then
+		blockedUntil = os.clock() + feedback.cooldown
+	end
 
 	-- Промах: называем букву, по которой ребёнок попал, потом снова цель.
 	-- «Это П. А нам нужна М» — так ошибка становится подсказкой, а не наказанием.
