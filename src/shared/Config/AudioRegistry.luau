@@ -14,6 +14,7 @@ local Letters = require(script.Parent.Letters)
 local Syllables = require(script.Parent.Syllables)
 local Words = require(script.Parent.Words)
 local Challenges = require(script.Parent.Challenges)
+local Islands = require(script.Parent.Islands)
 
 local AudioRegistry = {}
 
@@ -106,6 +107,19 @@ for _, wordId in Words.ids() do
 	end
 end
 
+-- Музыка и вступления островов. Ключи живут в Config/Islands, но играет их клиент
+-- через этот же реестр — иначе загруженным трекам некуда вписать id.
+-- Лупы готовит tools/audio/prepare_music.py, соответствие файлов и id — в
+-- assets/audio/MANIFEST.csv.
+for _, island in Islands.all do
+	if ids[island.music] == nil then
+		ids[island.music] = ""
+	end
+	if ids[island.voIntro] == nil then
+		ids[island.voIntro] = ""
+	end
+end
+
 AudioRegistry.ids = ids
 
 --[[
@@ -137,6 +151,11 @@ function AudioRegistry.requiredKeys(): { string }
 
 	for _, id in Challenges.ids() do
 		set[Challenges.expect(id).voInstruction] = true
+	end
+
+	for _, island in Islands.all do
+		set[island.music] = true
+		set[island.voIntro] = true
 	end
 
 	local keys: { string } = {}
