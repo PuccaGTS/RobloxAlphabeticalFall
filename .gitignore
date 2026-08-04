@@ -9,6 +9,7 @@
 *.aif
 *.aiff
 *.m4a
+music/
 
 # Проекты аудиоредакторов
 *.als
@@ -36,6 +37,11 @@
 *.rbxm
 *.rbxmx
 build/
+
+# === Python (скрипты подготовки аудио в tools/audio) ===
+__pycache__/
+*.pyc
+.venv/
 
 # === Зависимости и генерируемое ===
 Packages/
