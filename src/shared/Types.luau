@@ -83,6 +83,38 @@ export type Island = {
 	voIntro: string,
 }
 
+-- ===== Математика ================================================================
+
+--[[
+	Виды задач. В docs/16-MATH.md § 4 перечислены шесть, но таблица ступеней в § 2
+	содержит ещё «равные группы» и «умножение» (ступени 10 и 11) — они добавлены сюда.
+]]
+export type MathKind = "count" | "digit" | "compare" | "add" | "sub" | "compose" | "group" | "mul"
+
+export type MathStage = {
+	stage: number, -- 1..11, порядок изучения
+	id: string, -- "count_group"
+	title: string,
+	kind: MathKind,
+	min: number, -- границы чисел ступени
+	max: number,
+	showPips: boolean, -- показывать точки под цифрой: сначала количество, потом значок
+	objects: string?, -- что считаем: "berry", "apple"
+	choices: number, -- сколько проёмов в воротах по умолчанию
+}
+
+export type MathTask = {
+	id: string,
+	stage: number,
+	kind: MathKind,
+	prompt: string, -- "2 + 2" либо "" для устных заданий
+	vo: string, -- ключ озвучки задания
+	answer: number,
+	answers: { number }, -- варианты для проёмов, включая верный
+	objects: string?,
+	showPips: boolean,
+}
+
 -- ===== Прогресс игрока ===========================================================
 
 -- 0 незнакомая · 1 знакомая · 2 изученная · 3 освоенная
