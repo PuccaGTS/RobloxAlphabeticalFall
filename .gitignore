@@ -1,33 +1,55 @@
-# Roblox сборки
+# === Звук ===
+# Записи озвучки в репозиторий не кладём: они тяжёлые, меняются целиком и раздувают
+# историю навсегда. Хранить их надо в облаке, а в игру они попадают через Roblox:
+# загрузили на аккаунт группы, ID вписали в src/shared/Config/AudioRegistry.luau
+*.wav
+*.mp3
+*.ogg
+*.flac
+*.aif
+*.aiff
+*.m4a
+
+# Проекты аудиоредакторов
+*.als
+*.alp
+*.aup3
+*.rpp
+*.rpp-bak
+*.logicx
+
+# === Графика и модели ===
+*.fbx
+*.obj
+*.blend
+*.blend1
+*.psd
+*.ai
+*.tga
+*.exr
+
+# === Roblox ===
 *.rbxl
 *.rbxlx
 *.rbxl.lock
 *.rbxlx.lock
+*.rbxm
+*.rbxmx
 build/
 
-# Исходники ассетов (хранятся вне git, см. docs/10-CONTENT-PIPELINE.md)
-assets/audio/**/*.wav
-assets/audio/**/*.mp3
-assets/audio/**/*.ogg
-assets/models/**/*.fbx
-assets/art/**/*.psd
-assets/art/**/*.blend
-!assets/**/MANIFEST.csv
-!assets/**/README.md
-
-# Зависимости и генерируемые файлы
+# === Зависимости и генерируемое ===
 Packages/
 DevPackages/
 ServerPackages/
 sourcemap.json
 # wally.lock коммитим — он фиксирует версии зависимостей
 
-# Инструменты
+# === Инструменты ===
 .rokit/
 .aftman/
 ~/
 
-# Редакторы / ОС
+# === Редакторы и ОС ===
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
@@ -35,3 +57,7 @@ sourcemap.json
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Списки загруженных ассетов, наоборот, нужны в репозитории
+!assets/**/MANIFEST.csv
+!assets/**/README.md
