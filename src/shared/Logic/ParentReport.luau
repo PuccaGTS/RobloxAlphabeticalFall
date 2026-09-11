@@ -19,6 +19,7 @@ local Letters = require(script.Parent.Parent.Config.Letters)
 local Stages = require(script.Parent.Parent.Config.Stages)
 local MasteryRules = require(script.Parent.MasteryRules)
 local PlayLog = require(script.Parent.PlayLog)
+local Awards = require(script.Parent.Awards)
 
 local ParentReport = {}
 
@@ -154,22 +155,9 @@ local function confusableTip(profile: Types.Profile): Tip?
 	}
 end
 
---[[
-	Сколько букв ребёнок знает подряд от начала алфавита.
-
-	Считаем именно подряд, а не общее число: азбука — это последовательность,
-	и «знает А, Б, В, Г» проверяемо дома, а «знает четыре буквы где-то в середине» нет.
-]]
+-- Сколько букв ребёнок знает подряд от начала алфавита — общий счёт с постройками двора.
 local function lettersInOrder(profile: Types.Profile): number
-	local count = 0
-	for _, letterId in Letters.ordered() do
-		local progress = profile.letters[letterId]
-		if progress == nil or progress.mastery < MasteryRules.LEARNED then
-			break
-		end
-		count += 1
-	end
-	return count
+	return Awards.lettersInOrder(profile.letters)
 end
 
 --[[

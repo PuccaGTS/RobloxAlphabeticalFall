@@ -22,11 +22,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Base = require(Shared.Config.Base)
+local Letters = require(Shared.Config.Letters)
+local Stages = require(Shared.Config.Stages)
+local Awards = require(Shared.Logic.Awards)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
 local EconomyService = require(script.Parent.EconomyService)
 local ChallengeService = require(script.Parent.ChallengeService)
+local ProgressService = require(script.Parent.ProgressService)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 local BaseService = {}
@@ -328,6 +332,88 @@ local function buildFence(plot: Model, at: CFrame, level: number)
 	end
 end
 
+-- ===== Заработанное учёбой =======================================================
+
+--[[
+	Постройки, которые не купить (Logic/Awards, docs/17-CONTENT-PLAN.md § 5).
+	Стоят там, где двор свободен при любых уровнях дома: флаги — вдоль правого
+	забора, арка — над калиткой, шпиль — в правом заднем углу, напротив Башни.
+]]
+local FLAG_X = Base.PLOT_SIZE / 2 - 2.5
+local FLAG_STEP = 2.1
+local POLE_HEIGHT = 5
+
+local function buildFlags(plot: Model, at: CFrame, count: number)
+	for index = 1, count do
+		local stage = Stages.get(index)
+		if stage then
+			local z = (index - (Stages.count() + 1) / 2) * FLAG_STEP
+			local pole = part(
+				`FlagPole_{index}`,
+				Vector3.new(0.3, POLE_HEIGHT, 0.3),
+				at * CFrame.new(FLAG_X, FLOOR + POLE_HEIGHT / 2, z),
+				Color3.fromRGB(235, 235, 240),
+				plot
+			)
+			pole.CanCollide = false
+
+			-- Цвет флага — цвет первой буквы ступени: флаги разные, как и уровни.
+			local first = Letters.expect(stage.letters[1])
+			local cloth = part(
+				`Flag_{index}`,
+				Vector3.new(0.15, 1.2, 1.7),
+				at * CFrame.new(FLAG_X, FLOOR + POLE_HEIGHT - 0.7, z + 0.9),
+				first.color,
+				plot
+			)
+			cloth.CanCollide = false
+			caption(cloth, first.glyph, 1.4, 60)
+		end
+	end
+end
+
+local function buildArch(plot: Model, at: CFrame)
+	local gold = Color3.fromRGB(255, 214, 102)
+	-- Сразу за линией забора: у калитки внутри стоят табличка и пады улучшений.
+	local z = -Base.PLOT_SIZE / 2 - 1.5
+	for _, side in { -1, 1 } do
+		local leg = part(
+			`AlphabetArchLeg_{side}`,
+			Vector3.new(1, 7, 1),
+			at * CFrame.new(side * 4.6, FLOOR + 3.5, z),
+			gold,
+			plot
+		)
+		leg.Material = Enum.Material.Neon
+	end
+	local beam =
+		part("AlphabetArch", Vector3.new(10.2, 1.2, 1), at * CFrame.new(0, FLOOR + 7.6, z), gold, plot)
+	beam.Material = Enum.Material.Neon
+	caption(beam, "А Б В Г Д Е Ё Ж З И", 2.2, 320)
+end
+
+local function buildSpire(plot: Model, at: CFrame)
+	local gold = Color3.fromRGB(255, 214, 102)
+	local spot = at * CFrame.new(Base.PLOT_SIZE / 2 - 7, 0, Base.PLOT_SIZE / 2 - 7)
+	local spire = part("AlphabetSpire", Vector3.new(2, 16, 2), spot * CFrame.new(0, FLOOR + 8, 0), gold, plot)
+	spire.Material = Enum.Material.Neon
+	local star =
+		part("AlphabetSpireStar", Vector3.new(3, 3, 3), spot * CFrame.new(0, FLOOR + 17.5, 0), gold, plot)
+	star.Shape = Enum.PartType.Ball
+	star.Material = Enum.Material.Neon
+	caption(star, "33 из 33", 3, 280)
+end
+
+local function renderAwards(plot: Plot, earned: Awards.Earned)
+	buildFlags(plot.model, plot.cframe, earned.flags)
+	if earned.arch then
+		buildArch(plot.model, plot.cframe)
+	end
+	if earned.spire then
+		buildSpire(plot.model, plot.cframe)
+	end
+end
+
 -- ===== Пады улучшений ============================================================
 
 --[[
@@ -414,7 +500,7 @@ local function renderSign(plot: Plot, text: string)
 	caption(sign, text, 2)
 end
 
-local function renderPlot(plot: Plot, player: Player?, levels: { [string]: number }?)
+local function renderPlot(plot: Plot, player: Player?, profile: any?)
 	clearPlot(plot)
 
 	if not player then
@@ -425,8 +511,9 @@ local function renderPlot(plot: Plot, player: Player?, levels: { [string]: numbe
 		return
 	end
 
-	local base = Base.sanitize(levels)
+	local base = Base.sanitize(profile and profile.base)
 	renderBuildings(plot, base)
+	renderAwards(plot, Awards.of(profile))
 	renderSign(plot, `Дом: {player.DisplayName}`)
 
 	for index, categoryId in Base.ids() do
@@ -441,7 +528,7 @@ end
 	на башенку с фонтаном, — не проверка, а рабочий день. Из игры не вызывается:
 	это команда для консоли Studio, см. docs/HOW-TO-CHECK.md.
 ]]
-function BaseService.preview(index: number, levels: { [string]: number })
+function BaseService.preview(index: number, levels: { [string]: number }, earned: Awards.Earned?)
 	local plot = plots[index]
 	if not plot then
 		warn(`[Base] участка {index} нет`)
@@ -450,6 +537,9 @@ function BaseService.preview(index: number, levels: { [string]: number })
 
 	clearPlot(plot)
 	renderBuildings(plot, Base.sanitize(levels))
+	if earned then
+		renderAwards(plot, earned)
+	end
 	renderSign(plot, "Показ")
 end
 
@@ -521,7 +611,7 @@ function BaseService.refresh(player: Player)
 	if not plot or not profile then
 		return
 	end
-	renderPlot(plot, player, profile.base)
+	renderPlot(plot, player, profile)
 end
 
 function BaseService.assign(player: Player)
@@ -659,6 +749,20 @@ function BaseService.start()
 	end)
 
 	RemoteDefs.event("GoHome").OnServerEvent:Connect(BaseService.sendHome)
+
+	--[[
+		Заработанное учёбой появляется во дворе сразу. Пройден уровень — встал флаг;
+		освоена буква — могли появиться арка или шпиль. Перестройка отложена на кадр:
+		хук финиша срабатывает раньше, чем уровень записан в профиль.
+	]]
+	ChallengeService.onFinished(function(player: Player, spec: any, reason: string)
+		if reason == "completed" and spec.level then
+			task.defer(BaseService.refresh, player)
+		end
+	end)
+	ProgressService.onTransition(function(player: Player)
+		task.defer(BaseService.refresh, player)
+	end)
 
 	Players.PlayerAdded:Connect(function(player: Player)
 		task.spawn(function()
