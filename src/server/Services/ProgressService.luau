@@ -47,6 +47,17 @@ local function streaksFor(player: Player, challengeId: string): DifficultyCurve.
 	return streaks
 end
 
+--[[
+	Хуки на смену статуса буквы. Нужны питомцам: освоенная буква приносит
+	буквёнка. ProgressService при этом не знает про питомцев — питомцы знают
+	про прогресс, как туннели про испытания.
+]]
+local transitionHooks: { (player: Player, transition: MasteryRules.Transition) -> () } = {}
+
+function ProgressService.onTransition(hook: (player: Player, transition: MasteryRules.Transition) -> ())
+	table.insert(transitionHooks, hook)
+end
+
 local function progressFor(profile, letterId: string, now: number)
 	local existing = profile.letters[letterId]
 	if existing then
@@ -196,6 +207,10 @@ function ProgressService.applyAnswer(player: Player, answer): AnswerOutcome?
 				then "letter_mastered"
 				else "letter_learned"
 			outcome.starsAwarded += EconomyService.award(player, source, reward, transition.letterId)
+		end
+
+		for _, hook in transitionHooks do
+			task.spawn(hook, player, transition)
 		end
 	end
 

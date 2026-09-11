@@ -39,6 +39,8 @@ local EVENTS: { string } = {
 		снова можно (родитель поднял лимит), { state = "rest" } — пора передохнуть.
 	]]
 	"PlayTime",
+	"EquipPet", -- C→S  взять с собой буквёнка: id освоенной буквы (касание на Башне)
+	"PetGranted", -- S→C  буква освоена — прилетел новый буквёнок: id буквы
 }
 
 local FUNCTIONS: { string } = {
@@ -53,6 +55,7 @@ local RATE_LIMITS: { [string]: number } = {
 	BuyItem = 4,
 	EquipItem = 8,
 	BuildUpgrade = 4,
+	EquipPet = 2,
 	-- Родительский режим: вызовы редкие, лимит против перебора PIN скриптом.
 	-- Настоящая защита от перебора — пауза после пяти ошибок (Logic/ParentGate).
 	ParentAuth = 2,

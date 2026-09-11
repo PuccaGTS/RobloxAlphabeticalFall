@@ -25,6 +25,8 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
+local MasteryRules = require(Shared.Logic.MasteryRules)
+local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local AudioController = require(script.Parent.AudioController)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
@@ -66,6 +68,16 @@ local function buildSegment(letterId: string, index: number): BasePart
 
 	click.MouseClick:Connect(function()
 		AudioController.speak(letter.vo.name)
+
+		--[[
+			Освоенная буква — это ещё и буквёнок. Коснулся её на Башне — её буквёнок
+			полетел с тобой. Выбор без меню и без чтения: ребёнок показывает букву,
+			а не ищет её в списке. Сервер проверит, что буква и правда освоена.
+		]]
+		local mastery = if lastSnapshot then lastSnapshot.mastery[letterId] or 0 else 0
+		if mastery >= MasteryRules.MASTERED then
+			RemoteDefs.event("EquipPet"):FireServer(letterId)
+		end
 		-- Отклик обязателен: без него тап по букве ощущается как «ничего не произошло»,
 		-- особенно пока озвучки нет.
 		local original = part.Size

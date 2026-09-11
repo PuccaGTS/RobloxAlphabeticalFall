@@ -29,6 +29,7 @@ local TunnelService = require(Services.TunnelService)
 local ParentService = require(Services.ParentService)
 local TutorialService = require(Services.TutorialService)
 local PlayLimitService = require(Services.PlayLimitService)
+local PetService = require(Services.PetService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -76,12 +77,7 @@ BaseService.start() -- после мира: участки встают вокр
 ParentService.start()
 TutorialService.start() -- подписывается на хуки испытаний и магазина
 PlayLimitService.start() -- сторож старта испытаний: время на сегодня
+PetService.start() -- подписывается на смену статусов букв
 ProfileService.start() -- последним: он сразу начинает принимать игроков
-
---[[
-	TODO (веха 1, docs/12-ROADMAP.md):
-	  Испытание «Эхо-буква» по тому же контракту, что LetterRain
-	  Питомцы-буквята: выдача за статус «освоенная», следование за игроком
-]]
 
 print("[AlphabetFall] сервер запущен")

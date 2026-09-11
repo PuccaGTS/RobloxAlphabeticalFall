@@ -49,7 +49,11 @@ AlphabetFall/
 │   │       ├── ChallengeService.luau    -- запуск/валидация испытаний
 │   │       ├── EconomyService.luau      -- ⭐ начисления и траты
 │   │       ├── ShopService.luau         -- покупки, инвентарь
-│   │       ├── CosmeticsService.luau    -- надевание аксессуаров, питомцы
+│   │       ├── CosmeticsService.luau    -- надевание аксессуаров
+│   │       ├── PetService.luau          -- буквята: кто за кем летает (атрибут PetLetter)
+│   │       ├── ParentService.luau       -- родительский режим: PIN, отчёт, настройки
+│   │       ├── PlayLimitService.luau    -- лимит времени в день, напоминание об отдыхе
+│   │       ├── TutorialService.luau     -- обучение первых минут
 │   │       ├── WorldService.luau        -- площадь: порталы, пады занятий, магазин
 │   │       ├── BaseService.luau         -- участки игроков: дома и их улучшения
 │   │       ├── TunnelService.luau       -- геометрия забегов и сохранки

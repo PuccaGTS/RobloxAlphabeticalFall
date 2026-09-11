@@ -17,6 +17,7 @@ local ChallengeController = require(Controllers.ChallengeController)
 local TowerController = require(Controllers.TowerController)
 local PortalSignController = require(Controllers.PortalSignController)
 local TutorialController = require(Controllers.TutorialController)
+local PetController = require(Controllers.PetController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -28,6 +29,7 @@ SfxController.init()
 ChallengeController.init()
 TowerController.init()
 TutorialController.init()
+PetController.init()
 
 ShopUI.build({
 	onBuy = function(itemId: string)
@@ -125,6 +127,20 @@ RemoteDefs.event("PlaySfx").OnClientEvent:Connect(function(key: string)
 	if typeof(key) == "string" then
 		SfxController.play(key)
 	end
+end)
+
+--[[
+	Буква освоена — прилетел буквёнок. Главная награда обучения, и её обязаны
+	заметить: буква крупно на экране, звон награды. Имя буквы произносит сервер.
+]]
+RemoteDefs.event("PetGranted").OnClientEvent:Connect(function(letterId: string)
+	local letter = typeof(letterId) == "string" and Letters.get(letterId)
+	if not letter then
+		return
+	end
+	HUD.showIntro(letter.glyph)
+	HUD.toast(`Новый друг — буквёнок {letter.glyph}!`, 4)
+	SfxController.play("reward")
 end)
 
 -- Объект в мире просит открыть экран (пад магазина в хабе).
