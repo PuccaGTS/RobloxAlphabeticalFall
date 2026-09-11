@@ -19,6 +19,12 @@
       },
       "ServerChallenges": {
         "$path": "src/server/Challenges"
+      },
+      "ServerWorld": {
+        "$path": "src/server/World"
+      },
+      "Assets": {
+        "$path": { "optional": "assets/models" }
       }
     },
 
