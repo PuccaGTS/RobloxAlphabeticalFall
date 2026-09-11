@@ -26,6 +26,7 @@ local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
 local EconomyService = require(script.Parent.EconomyService)
+local ChallengeService = require(script.Parent.ChallengeService)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 local BaseService = {}
@@ -551,6 +552,43 @@ function BaseService.assign(player: Player)
 	RemoteDefs.event("BaseAssigned"):FireClient(player, (plot.cframe * TOWER_SPOT).Position)
 end
 
+--[[
+	Точка перед своим домом: у края участка со стороны площади, лицом к фасаду.
+	Не на самом участке — там пады улучшений, и ребёнка не должно ставить
+	прямо на пад покупки.
+]]
+function BaseService.homeCFrame(player: Player): CFrame?
+	local plot = BaseService.plotOf(player)
+	if not plot then
+		return nil
+	end
+	local at = (plot.cframe * CFrame.new(0, FLOOR + 3, -Base.PLOT_SIZE / 2 - 5)).Position
+	local center = plot.cframe.Position
+	return CFrame.lookAt(at, Vector3.new(center.X, at.Y, center.Z))
+end
+
+--[[
+	Кнопка 🏠. Два шага, и оба нужны: идёт испытание — оно заканчивается как
+	«вышел домой» (сохранка остаётся, docs/14-TUNNEL-MODE.md § 7), а сам ребёнок
+	оказывается у своего дома, а не на входе в портал. «Домик» обязан работать
+	всегда и из любого места: застрять в игре нельзя (docs/08-UX-UI.md § 2).
+]]
+function BaseService.sendHome(player: Player)
+	if not RateLimiter.allow(player, "GoHome", RemoteDefs.RATE_LIMITS.GoHome) then
+		return
+	end
+
+	if ChallengeService.isBusy(player) then
+		ChallengeService.abort(player)
+	end
+
+	local home = BaseService.homeCFrame(player)
+	local character = player.Character
+	if home and character then
+		character:PivotTo(home)
+	end
+end
+
 function BaseService.release(player: Player)
 	local index = byPlayer[player]
 	byPlayer[player] = nil
@@ -619,6 +657,8 @@ function BaseService.start()
 	RemoteDefs.event("BuildUpgrade").OnServerEvent:Connect(function(player: Player, categoryId: any)
 		BaseService.upgrade(player, categoryId)
 	end)
+
+	RemoteDefs.event("GoHome").OnServerEvent:Connect(BaseService.sendHome)
 
 	Players.PlayerAdded:Connect(function(player: Player)
 		task.spawn(function()

@@ -58,6 +58,10 @@ HUD.build({
 	onMath = function()
 		ChallengeController.start("math_gates")
 	end,
+	onHome = function()
+		SfxController.play("tap")
+		RemoteDefs.event("GoHome"):FireServer()
+	end,
 	onParent = function()
 		SfxController.play("tap")
 		ParentUI.open()

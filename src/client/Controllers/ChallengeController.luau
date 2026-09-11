@@ -22,6 +22,7 @@ local AudioController = require(script.Parent.AudioController)
 local SfxController = require(script.Parent.SfxController)
 local LadderController = require(script.Parent.LadderController)
 local HUD = require(script.Parent.Parent.UI.HUD)
+local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
 
 local ChallengeController = {}
@@ -46,6 +47,8 @@ local activeChallengeId: string? = nil
 -- Буква-цель отдельно от spec: у туннеля геометрию строит сервер, и spec на клиенте
 -- не хранится, но HUD всё равно должен показывать, что искать.
 local activeTargetGlyph: string? = nil
+-- Какое испытание закончилось последним: его и запускает кнопка «Ещё раз».
+local lastEndedId: string? = nil
 
 local function cleanup()
 	if heartbeat then
@@ -382,6 +385,7 @@ local function onEnd(result: any)
 	LadderController.stop()
 	activeChallengeId = nil
 	activeTargetGlyph = nil
+	lastEndedId = result.challengeId
 
 	--[[
 		Финиш звучит всегда, награда — только если она была. Молчаливый конец
@@ -395,18 +399,17 @@ local function onEnd(result: any)
 		end)
 	end
 
-	local stars = string.rep("⭐", math.clamp(result.stars or 1, 1, 3))
 	--[[
 		Пройденный уровень называется по имени ступени: «Первые три пройдены».
 		Ребёнок прочитать это не сможет, а вот родитель рядом — сможет, и именно
 		ему важно видеть, что путь продвинулся.
 	]]
 	local stage = if result.levelCleared then Stages.get(result.levelCleared) else nil
-	local cleared = if stage then `Уровень «{stage.title}» пройден!   ` else ""
-	if (result.stars_awarded or 0) > 0 then
-		HUD.toast(`{cleared}{stars}   +{result.stars_awarded}`, 4)
-	else
-		HUD.toast(`{cleared}{stars}   Попробуем ещё?`, 4)
+	local cleared = if stage then `Уровень «{stage.title}» пройден!` else nil
+
+	-- Нажал 🏠 посреди испытания — он уже ушёл, и итог ему показывать незачем.
+	if result.reason ~= "aborted" then
+		ResultScreen.show(result.stars or 1, result.stars_awarded or 0, cleared)
 	end
 	print(
 		string.format(
@@ -424,6 +427,20 @@ function ChallengeController.start(challengeId: string)
 end
 
 function ChallengeController.init()
+	ResultScreen.init({
+		onAgain = function()
+			if lastEndedId then
+				ChallengeController.start(lastEndedId)
+			end
+		end,
+		onHome = function()
+			RemoteDefs.event("GoHome"):FireServer()
+		end,
+		onStar = function()
+			SfxController.play("correct")
+		end,
+	})
+
 	RemoteDefs.event("ChallengeSpec").OnClientEvent:Connect(onSpec)
 	RemoteDefs.event("ChallengeFeedback").OnClientEvent:Connect(onFeedback)
 	RemoteDefs.event("ChallengeEnd").OnClientEvent:Connect(onEnd)

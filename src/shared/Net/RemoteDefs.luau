@@ -41,6 +41,11 @@ local EVENTS: { string } = {
 	"PlayTime",
 	"EquipPet", -- C→S  взять с собой буквёнка: id освоенной буквы (касание на Башне)
 	"PetGranted", -- S→C  буква освоена — прилетел новый буквёнок: id буквы
+	--[[
+		C→S  кнопка 🏠: выйти из испытания, если оно идёт, и оказаться у своего дома.
+		Прогресс до последней сохранки не теряется (docs/14-TUNNEL-MODE.md § 7).
+	]]
+	"GoHome",
 }
 
 local FUNCTIONS: { string } = {
@@ -56,6 +61,7 @@ local RATE_LIMITS: { [string]: number } = {
 	EquipItem = 8,
 	BuildUpgrade = 4,
 	EquipPet = 2,
+	GoHome = 1,
 	-- Родительский режим: вызовы редкие, лимит против перебора PIN скриптом.
 	-- Настоящая защита от перебора — пауза после пяти ошибок (Logic/ParentGate).
 	ParentAuth = 2,

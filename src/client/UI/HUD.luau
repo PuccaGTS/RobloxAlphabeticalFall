@@ -129,6 +129,19 @@ function HUD.build(callbacks: { [string]: () -> () })
 	mathButton.Activated:Connect(callbacks.onMath)
 
 	--[[
+		«Домик»: одинаковый на всех экранах и всегда на месте (docs/08-UX-UI.md § 2).
+		Из испытания выводит без потерь — сохранка остаётся, — и из любого места
+		приводит к своему дому. Застрять в игре ребёнок не должен никогда.
+	]]
+	local homeButton = makeButton("Home", "🏠", UDim2.fromScale(0.09, 0.11), UDim2.fromScale(0.89, 0.13))
+	homeButton.Parent = screen
+	homeButton.Activated:Connect(callbacks.onHome)
+
+	local homeRatio = Instance.new("UIAspectRatioConstraint")
+	homeRatio.AspectRatio = 1
+	homeRatio.Parent = homeButton
+
+	--[[
 		Вход для родителей: маленький и в углу, чтобы ребёнок не тыкал в него
 		первым делом. Ребёнку он всё равно ничего не откроет — дальше взрослый
 		вопрос и PIN (docs/13-PARENT-MODE.md § 1).
