@@ -161,8 +161,6 @@ export type Zone = {
 	why: string,
 }
 
-local PAD_DISTANCE = 38 -- тот же радиус полукруга занятий, что в WorldService
-
 local ZONES: { Zone } = {
 	{ center = Vector2.new(0, 26), radius = 14, why = "точка появления" },
 	{ center = Vector2.new(-16, -6), radius = 16, why = "портал мира букв" },
@@ -179,11 +177,10 @@ local ZONES: { Zone } = {
 	что и сами пады. Дублировать координаты числами значило бы получить декор,
 	стоящий на паде, ровно в тот день, когда полукруг чуть сдвинут.
 ]]
-local PAD_SLOTS = 4
-for slot = 1, PAD_SLOTS do
-	local angle = math.pi * (0.15 + 0.7 * (slot - 1) / (PAD_SLOTS - 1))
+for slot = 1, Base.PAD_SLOTS do
+	local position = Base.padPosition(slot)
 	table.insert(ZONES, {
-		center = Vector2.new(math.cos(angle) * PAD_DISTANCE, math.sin(angle) * PAD_DISTANCE),
+		center = Vector2.new(position.X, position.Z),
 		radius = 12,
 		why = `пад занятия {slot}`,
 	})

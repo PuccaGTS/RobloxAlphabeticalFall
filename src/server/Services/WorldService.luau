@@ -41,7 +41,6 @@ local DecorService = require(script.Parent.DecorService)
 local WorldService = {}
 
 local PLAZA_RADIUS = Base.PLAZA_RADIUS
-local PAD_DISTANCE = 38
 local TOUCH_DEBOUNCE = 2
 
 --[[
@@ -85,7 +84,7 @@ local PORTALS = {
 	ребёнок не осилит. Ступень выбирает не он, а прогресс: любое занятие берёт
 	буквы из очереди повторений (docs/14-TUNNEL-MODE.md § 3.2).
 
-	Все четыре открыты с самого начала. Причина не косметическая: для статуса
+	Все открыты с самого начала. Причина не косметическая: для статуса
 	«изученная» буква обязана быть успешно пройдена в ДВУХ разных типах испытаний
 	(docs/02-LEARNING.md § 8). Запри половину — и прогресс упрётся в тупик
 	на четвёртой минуте.
@@ -108,6 +107,20 @@ local PADS = {
 		caption = "🪜 Алфавитная лестница",
 		action = "Подниматься",
 		color = Color3.fromRGB(190, 150, 230),
+	},
+	-- Спокойное занятие: пузыри плывут медленно, успеть можно всё.
+	{
+		challengeId = "bubbles",
+		caption = "🫧 Пузыри",
+		action = "Лопать",
+		color = Color3.fromRGB(140, 215, 230),
+	},
+	-- Единственное занятие на начертание: какая буква написана правильно.
+	{
+		challengeId = "mirror",
+		caption = "🪞 Зеркало",
+		action = "Смотреть",
+		color = Color3.fromRGB(215, 195, 240),
 	},
 }
 
@@ -290,15 +303,14 @@ local function buildPortal(hub: Folder, portal: any)
 	end, CFrame.lookAt(front, Vector3.new(position.X, front.Y, position.Z)))
 end
 
-local function buildChallengePad(hub: Folder, pad: any, slot: number, slots: number)
+local function buildChallengePad(hub: Folder, pad: any, slot: number)
 	-- Пады расставлены по кругу с равным шагом: магазин занимает свой слот,
 	-- иначе два пада встают в одну точку и подсказки накладываются друг на друга.
 	--[[
 		Занятия стоят полукругом ПЕРЕД порталами, а не вокруг них: порталы должны
 		быть видны от точки появления, и загораживать их падами нельзя.
 	]]
-	local angle = math.pi * (0.15 + 0.7 * (slot - 1) / math.max(1, slots - 1))
-	local position = Vector3.new(math.cos(angle) * PAD_DISTANCE, 1.5, math.sin(angle) * PAD_DISTANCE)
+	local position = Base.padPosition(slot) + Vector3.new(0, 1.5, 0)
 
 	local meta = Challenges.expect(pad.challengeId)
 
@@ -541,17 +553,20 @@ function WorldService.build()
 	spawn.Parent = hub
 
 	local slots = #PADS + 1 -- занятия + магазин
+	assert(
+		slots == Base.PAD_SLOTS,
+		`WorldService: падов {slots}, а мест в полукруге {Base.PAD_SLOTS}`
+	)
 
 	for slot, pad in PADS do
-		buildChallengePad(hub, pad, slot, slots)
+		buildChallengePad(hub, pad, slot)
 	end
 
 	-- Магазин занимает последний слот полукруга: потратить перед выходом в мир.
-	local shopAngle = math.pi * (0.15 + 0.7 * (slots - 1) / math.max(1, slots - 1))
 	local shopPad = part(
 		"ShopPad",
 		Vector3.new(12, 1, 12),
-		CFrame.new(math.cos(shopAngle) * PAD_DISTANCE, 1.5, math.sin(shopAngle) * PAD_DISTANCE),
+		CFrame.new(Base.padPosition(slots) + Vector3.new(0, 1.5, 0)),
 		Color3.fromRGB(255, 190, 120),
 		hub
 	)

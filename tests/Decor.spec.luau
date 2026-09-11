@@ -166,9 +166,9 @@ return function()
 		it(
 			"крупный предмет не влезает там, где влезает мелкий",
 			function()
-				-- В шаге от запретной зоны спавна: цветок помещается, фонтан уже нет
-				expect(Decor.isClear(0, 42, 1)).to.equal(true)
-				expect(Decor.isClear(0, 42, 8)).to.equal(false)
+				-- В шаге от запретной зоны спавна, сбоку от падов: цветок помещается, фонтан уже нет
+				expect(Decor.isClear(-15.5, 20, 1)).to.equal(true)
+				expect(Decor.isClear(-15.5, 20, 8)).to.equal(false)
 			end
 		)
 

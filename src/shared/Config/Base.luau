@@ -35,6 +35,25 @@ Base.RING_RADIUS = math.ceil(Base.PLOT_COUNT * (Base.PLOT_SIZE + Base.PLOT_GAP) 
 
 -- Площадь в центре: порталы, магазин и пады занятий.
 Base.PLAZA_RADIUS = 54
+
+--[[
+	Пады занятий и магазин стоят полукругом перед порталами, со стороны точки
+	появления. Раскладка живёт здесь, а не в WorldService: по ней же декор
+	держит пады свободными (Config/Decor), и два числа об одном полукруге
+	однажды уже разошлись бы.
+
+	Мест шесть: пять занятий и магазин последним, чтобы потратить перед выходом
+	в мир. Радиус и дуга подобраны так, чтобы между падами оставался проход.
+]]
+Base.PAD_DISTANCE = 42
+Base.PAD_SLOTS = 6
+local PAD_ARC_FROM = 0.12
+local PAD_ARC_SPAN = 0.76
+
+function Base.padPosition(slot: number): Vector3
+	local angle = math.pi * (PAD_ARC_FROM + PAD_ARC_SPAN * (slot - 1) / math.max(1, Base.PAD_SLOTS - 1))
+	return Vector3.new(math.cos(angle) * Base.PAD_DISTANCE, 0, math.sin(angle) * Base.PAD_DISTANCE)
+end
 Base.GROUND_SIZE = (Base.RING_RADIUS + Base.PLOT_SIZE) * 2
 
 --[[
