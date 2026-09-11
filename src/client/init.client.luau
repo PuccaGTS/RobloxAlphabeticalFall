@@ -18,6 +18,7 @@ local TowerController = require(Controllers.TowerController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
+local ParentUI = require(UI.ParentUI)
 
 AudioController.init()
 SfxController.init()
@@ -51,7 +52,13 @@ HUD.build({
 	onMath = function()
 		ChallengeController.start("math_gates")
 	end,
+	onParent = function()
+		SfxController.play("tap")
+		ParentUI.open()
+	end,
 })
+
+ParentUI.build()
 
 --[[
 	Срез профиля от сервера: единственный источник состояния для интерфейса.

@@ -26,6 +26,7 @@ local ShopService = require(Services.ShopService)
 local WorldService = require(Services.WorldService)
 local BaseService = require(Services.BaseService)
 local TunnelService = require(Services.TunnelService)
+local ParentService = require(Services.ParentService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -70,6 +71,7 @@ CosmeticsService.start()
 ShopService.start()
 WorldService.start()
 BaseService.start() -- после мира: участки встают вокруг уже построенной площади
+ParentService.start()
 ProfileService.start() -- последним: он сразу начинает принимать игроков
 
 --[[

@@ -41,7 +41,7 @@ local function makeButton(name: string, text: string, size: UDim2, position: UDi
 	return button
 end
 
-function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
+function HUD.build(callbacks: { [string]: () -> () })
 	if gui then
 		return
 	end
@@ -127,6 +127,18 @@ function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
 		makeButton("Math", "Числа", UDim2.fromScale(0.18, 0.1), UDim2.fromScale(0.61, 0.85))
 	mathButton.Parent = screen
 	mathButton.Activated:Connect(callbacks.onMath)
+
+	--[[
+		Вход для родителей: маленький и в углу, чтобы ребёнок не тыкал в него
+		первым делом. Ребёнку он всё равно ничего не откроет — дальше взрослый
+		вопрос и PIN (docs/13-PARENT-MODE.md § 1).
+	]]
+	-- Отступ сверху в пикселях: левый верхний угол занимает меню самого Roblox.
+	local parentButton = makeButton("Parent", "⚙", UDim2.fromOffset(48, 48), UDim2.new(0, 12, 0, 72))
+	parentButton.BackgroundColor3 = Color3.fromRGB(60, 64, 82)
+	parentButton.TextColor3 = Color3.fromRGB(200, 205, 220)
+	parentButton.Parent = screen
+	parentButton.Activated:Connect(callbacks.onParent)
 
 	-- Сообщение поверх всего: без него любой отказ выглядит как «игра сломалась»
 	local toast = Instance.new("TextLabel")

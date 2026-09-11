@@ -48,6 +48,10 @@ local RATE_LIMITS: { [string]: number } = {
 	BuyItem = 4,
 	EquipItem = 8,
 	BuildUpgrade = 4,
+	-- Родительский режим: вызовы редкие, лимит против перебора PIN скриптом.
+	-- Настоящая защита от перебора — пауза после пяти ошибок (Logic/ParentGate).
+	ParentAuth = 2,
+	GetParentReport = 2,
 }
 
 local RemoteDefs = {}

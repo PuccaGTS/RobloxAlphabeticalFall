@@ -172,7 +172,8 @@ export type ChallengeModule = {
 | `BuyItem` | C→S | покупка (id предмета) |
 | `EquipItem` | C→S | надеть/снять |
 | `PlayVO` | S→C | попросить клиент проиграть реплику по vo_key |
-| `ParentAuth` | C→S | вход в родительский режим (PIN) |
+| `ParentAuth` | C→S | вход в родительский режим: status / set / enter / reset / leave |
+| `GetParentReport` | C→S | отчёт о прогрессе — только после входа по PIN |
 
 **Rate limiting на каждом Remote** (например, `ChallengeAction` ≤ 20/с) —
 защита от спама и от лагов клиента.
