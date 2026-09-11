@@ -56,9 +56,9 @@ end
 	зависит повторяемость забега по сиду, на которой держится сохранка.
 
 	Ряды букв на дорожке (docs/14-TUNNEL-MODE.md § 4.2) — по желанию: makeRow(gate,
-	random) отдаёт буквы ряда для отрезка перед этими воротами. Ряд встаёт только
-	в просвет между препятствиями, где пол целый и ничего не качается, и никогда —
-	в зону перед воротами: пока ребёнок решает, от него ничего не требуется.
+	random) отдаёт буквы ряда для отрезка перед этими воротами. Ряд получает свою
+	клетку на целом полу перед одним из препятствий и никогда не встаёт в зону
+	перед воротами: пока ребёнок решает, от него ничего не требуется.
 
 	У рядов свой генератор (rowRandom). Добавь их в общий — и сдвинулась бы вся
 	последовательность, а с ней ворота и препятствия уже сохранённых забегов.
@@ -94,23 +94,46 @@ function CourseLayout.layout(
 	local z = Tunnel.START_RUNWAY
 
 	for index = 1, plan.gateCount do
-		local segment = Tunnel.segmentLength(plan.obstacleCount)
+		local rowRandom = plan.rowRandom
+		local makeRow = plan.makeRow
 
-		--[[
-			Просветы под ряды букв: перед каждым препятствием отрезка, ровно
-			на полшага от него. Самый длинный элемент короче шага полосы, так что
-			просвет всегда на целом полу. За последним препятствием ряда нет:
-			дальше начинается зона ворот.
-		]]
-		local slots: { number } = {}
-		for step = 1, plan.obstacleCount do
-			table.insert(slots, z + Tunnel.CLEARANCE_AFTER_GATE + (step - 1) * Tunnel.OBSTACLE_PITCH)
+		-- Перед какими препятствиями встанет ряд букв. Решает свой генератор рядов.
+		local rowBefore: { [number]: boolean } = {}
+		local rowCount = 0
+		if makeRow and rowRandom and #catalog > 0 then
+			local steps: { number } = {}
+			for step = 1, plan.obstacleCount do
+				table.insert(steps, step)
+			end
+			rowCount = math.min(plan.rowsPerSegment or 0, #steps)
+			for order, step in CourseLayout.shuffled(steps, rowRandom) do
+				if order > rowCount then
+					break
+				end
+				rowBefore[step] = true
+			end
 		end
 
-		if #catalog > 0 then
-			local movingUsed = 0
+		local segment = Tunnel.segmentLength(plan.obstacleCount, rowCount)
 
-			for step = 1, plan.obstacleCount do
+		--[[
+			Отрезок режется на клетки: клетка ряда букв (если он здесь есть), потом
+			клетка препятствия, и так по порядку. Элемент встаёт в свою клетку
+			с отступом и кончается до её конца (Tunnel.obstacleLength), так что
+			соседи не касаются, плитки с буквами висят над целым полом, а до ворот
+			остаётся вся зона решения.
+		]]
+		local cursor = z + Tunnel.CLEARANCE_AFTER_GATE
+		local rowZs: { number } = {}
+		local movingUsed = 0
+
+		for step = 1, plan.obstacleCount do
+			if rowBefore[step] then
+				table.insert(rowZs, cursor + Tunnel.ROW_PLACE)
+				cursor += Tunnel.ROW_PITCH
+			end
+
+			if #catalog > 0 then
 				local pool = if movingUsed >= Tunnel.MAX_MOVING_PER_SEGMENT and #calm > 0
 					then calm
 					else catalog
@@ -126,16 +149,22 @@ function CourseLayout.layout(
 				end
 
 				local obstacle = Obstacles.expect(id)
+				local lane = 0 -- элемент во всю ширину дорожкой не помечается
+				if obstacle.lanes < Tunnel.LANE_COUNT then
+					lane = if obstacle.edge
+						then (if random:NextInteger(1, 2) == 1 then 1 else Tunnel.LANE_COUNT)
+						else random:NextInteger(1, Tunnel.LANE_COUNT)
+				end
+
 				table.insert(obstacles, {
 					id = id,
 					kind = obstacle.kind,
-					z = z + Tunnel.CLEARANCE_AFTER_GATE + (step - 0.5) * Tunnel.OBSTACLE_PITCH,
-					-- Элемент во всю ширину дорожкой не помечается: lane = 0.
-					lane = if obstacle.lanes >= Tunnel.LANE_COUNT
-						then 0
-						else random:NextInteger(1, Tunnel.LANE_COUNT),
+					z = cursor + Tunnel.OBSTACLE_LEAD,
+					lane = lane,
 				})
 			end
+
+			cursor += Tunnel.OBSTACLE_PITCH
 		end
 
 		z += segment
@@ -145,18 +174,8 @@ function CourseLayout.layout(
 		gate.z = z
 		table.insert(gates, gate)
 
-		local rowRandom = plan.rowRandom
-		local makeRow = plan.makeRow
-		if makeRow and rowRandom and #catalog > 0 then
-			local count = math.min(plan.rowsPerSegment or 0, #slots)
-			local chosen = CourseLayout.shuffled(slots, rowRandom)
-			local picked: { number } = {}
-			for slot = 1, count do
-				table.insert(picked, chosen[slot])
-			end
-			table.sort(picked)
-
-			for _, rowZ in picked do
+		if makeRow and rowRandom then
+			for _, rowZ in rowZs do
 				local lanes = CourseLayout.lanes(rowRandom)
 				local items = makeRow(gate, rowRandom)
 				for slot, item in items do

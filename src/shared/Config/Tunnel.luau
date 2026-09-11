@@ -27,12 +27,26 @@ Tunnel.FINISH_RUNWAY = 35
 	остаётся достаточно длинным, чтобы ворота были видны заранее.
 ]]
 Tunnel.MIN_GATE_SPACING = 55
-Tunnel.OBSTACLE_PITCH = 18 -- шаг между элементами полосы; длиннее самого длинного из них
+--[[
+	Отрезок между воротами режется на клетки. В клетке препятствия элемент
+	начинается с отступом OBSTACLE_LEAD и обязан кончиться до конца клетки —
+	так соседние элементы не касаются друг друга, а у платформы, которая
+	отъезжает назад от своей ямы, есть куда отъехать. Длины элементов —
+	Tunnel.obstacleLength, и тест держит, что каждый влезает в клетку.
+
+	Ряд букв (docs/14-TUNNEL-MODE.md § 4.2) получает свою клетку на целом полу:
+	раньше ряды вставали между препятствиями, и плитка могла повиснуть над
+	ямой у балки или утонуть в ступенях.
+]]
+Tunnel.OBSTACLE_PITCH = 20
+Tunnel.OBSTACLE_LEAD = 3
+Tunnel.ROW_PITCH = 8 -- клетка ряда букв; плитка стоит в её середине
 Tunnel.CLEARANCE_AFTER_GATE = 10 -- сколько ровного пола сразу за воротами
 Tunnel.CLEARANCE_BEFORE_GATE = 14 -- ворота видно заранее, и под ними ничего не крутится
 Tunnel.CHECKPOINT_OFFSET = 6 -- насколько сохранка стоит дальше своих ворот
 Tunnel.COLLECT_HEIGHT = 2.5 -- на какой высоте висит буква на дорожке: по пояс ребёнку
 Tunnel.COLLECT_SIZE = 2.6 -- сторона плитки с буквой
+Tunnel.ROW_PLACE = 3 -- где в клетке ряда стоит плитка: подальше от платформы следующей клетки
 
 -- Куда ставится туннель игрока. У каждого он свой, поэтому разносим по оси X.
 Tunnel.PLOT_SPACING = 500
@@ -55,7 +69,9 @@ Tunnel.PARAMS = {
 	collect = { 1, 1, 1, 2, 2 },
 	choices = { 2, 2, 3, 3, 4 }, -- сколько проёмов в воротах
 	obstacles = { 1, 1, 2, 2, 3 }, -- элементов между воротами
-	obstacleTier = { 1, 1, 2, 2, 2 }, -- средние элементы — не с первого дня
+	-- Средние элементы — не с первого дня, сложные — только уверенным.
+	-- У уровня мира букв свой потолок ряда (Config/Levels): первые уровни только базовые.
+	obstacleTier = { 1, 1, 2, 2, 3 },
 	-- Замедление после неверных ворот: ошибка стоит времени, а не прогресса.
 	missSlowSeconds = { 1.6, 1.4, 1.2, 1.1, 1.0 },
 	missSlowFactor = { 0.45, 0.45, 0.5, 0.5, 0.55 },
@@ -65,8 +81,10 @@ Tunnel.COURSE_PARAMS = {
 	gates = { 2, 2, 3, 3, 3 },
 	collect = { 1, 2, 2, 2, 3 },
 	choices = { 2, 2, 3, 3, 4 },
-	obstacles = { 3, 4, 4, 5, 6 },
-	obstacleTier = { 1, 1, 2, 2, 2 },
+	-- Полоса обязана оставаться паркурнее туннеля: даже поздние уровни мира букв
+	-- с их 4–6 элементами на отрезке не должны её догонять.
+	obstacles = { 4, 5, 6, 7, 8 },
+	obstacleTier = { 1, 1, 2, 2, 3 },
 	missSlowSeconds = { 1.6, 1.4, 1.2, 1.1, 1.0 },
 	missSlowFactor = { 0.45, 0.45, 0.5, 0.5, 0.55 },
 }
@@ -155,6 +173,28 @@ Tunnel.ICE_LENGTH = 12
 Tunnel.ICE_FRICTION = 0.08
 
 --[[
+	Третий ряд и новые элементы (docs/19-OBSTACLES.md § 3.2.1). Правила те же:
+	медленно, обойти можно всегда, падение стоит секунд.
+]]
+-- Кочки: яма в одну дорожку и камни через неё. Шаг между камнями — простой прыжок.
+Tunnel.STONES_SPAN = 12
+Tunnel.STONE_SIZE = 3
+Tunnel.STONE_COUNT = 3
+
+-- Бревно: крутится на месте поперёк дорожки. Высотой с барьер — перепрыгивается.
+Tunnel.ROLLER_DIAMETER = 2.5
+Tunnel.ROLLER_SECONDS = 2 -- пол-оборота; бревно круглое, крутится только на вид
+
+-- Поршень: мягкий блок выезжает из стены в крайнюю дорожку и уезжает обратно.
+Tunnel.PISTON_DEPTH = 3 -- толщина вдоль бега
+Tunnel.PISTON_HEIGHT = 5
+Tunnel.PISTON_SECONDS = 4 -- в одну сторону; медленнее, чем ребёнок идёт пешком
+
+-- Гребёнка: стена поперёк коридора с узкой щелью в каждой дорожке.
+Tunnel.COMB_THICKNESS = 1.5
+Tunnel.COMB_SLOT = 4 -- ширина щели: пройти можно, но прицелиться надо
+
+--[[
 	Сколько «живых» элементов (маятник, платформа, плиты) может стоять на одном
 	отрезке. Больше двух — и отрезок превращается в аттракцион на реакцию,
 	а буквы за ним теряются (docs/19-OBSTACLES.md § 3.3).
@@ -171,12 +211,45 @@ function Tunnel.laneOffset(lane: number): number
 	return (lane - (Tunnel.LANE_COUNT + 1) / 2) * Tunnel.LANE_WIDTH
 end
 
--- Длина отрезка между воротами при заданном числе препятствий на нём.
-function Tunnel.segmentLength(obstacleCount: number): number
+-- Длина отрезка между воротами при заданном числе препятствий и рядов букв на нём.
+function Tunnel.segmentLength(obstacleCount: number, rowCount: number?): number
 	local needed = Tunnel.CLEARANCE_AFTER_GATE
 		+ obstacleCount * Tunnel.OBSTACLE_PITCH
+		+ (rowCount or 0) * Tunnel.ROW_PITCH
 		+ Tunnel.CLEARANCE_BEFORE_GATE
 	return math.max(needed, Tunnel.MIN_GATE_SPACING)
+end
+
+--[[
+	Сколько элемент занимает вдоль бега, от своей точки z вперёд. Единственное
+	место, где это записано: по нему режутся дыры в полу, по нему тест проверяет,
+	что элемент влезает в свою клетку, и что буквы рядом не висят над ямой.
+]]
+local LENGTHS: { [string]: number } = {
+	barrier = Tunnel.BARRIER_LENGTH,
+	gap = Tunnel.GAP_LENGTH,
+	arch = 1.5,
+	beam = Tunnel.BEAM_LENGTH,
+	steps = Tunnel.STEP_COUNT * 2 * Tunnel.STEP_RUN,
+	pendulum = Tunnel.PENDULUM_BALL,
+	-- Платформа отъезжает на PLATFORM_LEAD назад от ямы: это место даёт OBSTACLE_LEAD.
+	platform = Tunnel.PLATFORM_TRAVEL + Tunnel.PLATFORM_LENGTH - Tunnel.PLATFORM_LEAD,
+	fading = Tunnel.FADE_SPAN,
+	trampoline = Tunnel.TRAMPOLINE_LENGTH,
+	ice = Tunnel.ICE_LENGTH,
+	stones = Tunnel.STONES_SPAN,
+	roller = Tunnel.ROLLER_DIAMETER,
+	pistons = Tunnel.PISTON_DEPTH,
+	comb = Tunnel.COMB_THICKNESS,
+}
+
+function Tunnel.obstacleLength(kind: string): number?
+	return LENGTHS[kind]
+end
+
+-- Насколько элемент заходит назад от своей точки z. Есть только у платформы.
+function Tunnel.obstacleLead(kind: string): number
+	return if kind == "platform" then Tunnel.PLATFORM_LEAD else 0
 end
 
 return Tunnel

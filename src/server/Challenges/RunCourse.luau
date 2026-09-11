@@ -162,8 +162,18 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 		if level then
 			choiceCount = math.min(choiceCount, level.maxChoices)
 		end
-		local obstacleCount = DifficultyCurve.pick(params.obstacles, difficulty)
+		--[[
+			Паркур уровня растёт вместе с путём (docs/19-OBSTACLES.md § 3.3): сколько
+			элементов и какого ряда, решает уровень, а сложность двигает внутри его рамок.
+			Свободный забег (полоса препятствий на паде) живёт по одной сложности.
+		]]
+		local obstacleCount = if level
+			then Levels.obstacleCount(level.index, difficulty)
+			else DifficultyCurve.pick(params.obstacles, difficulty)
 		local obstacleTier = DifficultyCurve.pick(params.obstacleTier, difficulty)
+		if level then
+			obstacleTier = Levels.obstacleTier(level.index, obstacleTier)
+		end
 		local slowSeconds = DifficultyCurve.pick(params.missSlowSeconds, difficulty)
 		local slowFactor = DifficultyCurve.pick(params.missSlowFactor, difficulty)
 

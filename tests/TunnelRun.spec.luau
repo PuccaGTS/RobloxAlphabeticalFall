@@ -167,9 +167,89 @@ return function()
 			end
 		end)
 
-		it("на высокой сложности средний ряд разрешён", function()
-			expect(DifficultyCurve.pick(Tunnel.PARAMS.obstacleTier, 5)).to.equal(2)
-			expect(DifficultyCurve.pick(Tunnel.COURSE_PARAMS.obstacleTier, 5)).to.equal(2)
+		it(
+			"на высокой сложности разрешены средний и сложный ряды",
+			function()
+				expect(DifficultyCurve.pick(Tunnel.PARAMS.obstacleTier, 4)).to.equal(2)
+				expect(DifficultyCurve.pick(Tunnel.PARAMS.obstacleTier, 5)).to.equal(3)
+				expect(DifficultyCurve.pick(Tunnel.COURSE_PARAMS.obstacleTier, 5)).to.equal(3)
+			end
+		)
+
+		--[[
+			Элемент целиком помещается между воротами и не заходит в зону решения
+			ни одним краем: раньше проверялось только начало элемента, и длинные
+			ступени кончались в семи студах от ворот вместо четырнадцати.
+		]]
+		it(
+			"элемент целиком между воротами, с зоной решения по обе стороны",
+			function()
+				for difficulty = 1, 5 do
+					for _, spec in
+						{
+							build(nil, difficulty, 11),
+							ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty),
+						}
+					do
+						for _, obstacle in spec.params.obstacles do
+							local from = obstacle.z - Tunnel.obstacleLead(obstacle.kind)
+							local to = obstacle.z + Tunnel.obstacleLength(obstacle.kind)
+							for _, gate in spec.params.gates do
+								if gate.z > obstacle.z then
+									expect(to <= gate.z - Tunnel.CLEARANCE_BEFORE_GATE + 0.001).to.equal(true)
+									break
+								end
+							end
+							for index = #spec.params.gates, 1, -1 do
+								local gate = spec.params.gates[index]
+								if gate.z < obstacle.z then
+									expect(from >= gate.z + Tunnel.CLEARANCE_AFTER_GATE - 0.001).to.equal(
+										true
+									)
+									break
+								end
+							end
+						end
+					end
+				end
+			end
+		)
+
+		it("соседние элементы не касаются друг друга", function()
+			for difficulty = 1, 5 do
+				local spec = ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty)
+				for index = 2, #spec.params.obstacles do
+					local previous = spec.params.obstacles[index - 1]
+					local current = spec.params.obstacles[index]
+					local previousEnd = previous.z + Tunnel.obstacleLength(previous.kind)
+					local currentStart = current.z - Tunnel.obstacleLead(current.kind)
+					expect(currentStart > previousEnd).to.equal(true)
+				end
+			end
+		end)
+
+		it("поршень встаёт только в крайнюю дорожку", function()
+			for difficulty = 1, 5 do
+				for _, spec in
+					{ build(nil, difficulty, 11), ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty) }
+				do
+					for _, obstacle in spec.params.obstacles do
+						if Obstacles.expect(obstacle.id).edge then
+							expect(obstacle.lane == 1 or obstacle.lane == Tunnel.LANE_COUNT).to.equal(true)
+						end
+					end
+				end
+			end
+		end)
+
+		it("первые уровни — без движущихся элементов", function()
+			for level = 1, 4 do
+				for difficulty = 1, 5 do
+					for _, obstacle in build(Letters.ordered(), difficulty, level).params.obstacles do
+						expect(Obstacles.expect(obstacle.id).tier).to.equal(1)
+					end
+				end
+			end
 		end)
 
 		--[[
@@ -692,13 +772,20 @@ return function()
 			end
 		)
 
+		--[[
+			Плитка стоит над целым полом: ни одним краем не над элементом. Раньше
+			проверялось расстояние до начала элемента, и плитка могла повиснуть
+			над ямой у балки или утонуть в ступенях.
+		]]
 		it("ряд не стоит на препятствии", function()
+			local half = Tunnel.COLLECT_SIZE / 2
 			for _, spec in allSpecs() do
 				for _, row in spec.params.rows do
 					for _, obstacle in spec.params.obstacles do
-						expect(math.abs(obstacle.z - row.z) >= Tunnel.OBSTACLE_PITCH / 2 - 0.001).to.equal(
-							true
-						)
+						local from = obstacle.z - Tunnel.obstacleLead(obstacle.kind)
+						local to = obstacle.z + Tunnel.obstacleLength(obstacle.kind)
+						local clear = row.z + half < from or row.z - half > to
+						expect(clear).to.equal(true)
 					end
 				end
 			end

@@ -138,6 +138,8 @@ local function laneHoles(obstacles: { any }): { { { from: number, to: number } }
 			table.insert(holes[obstacle.lane], { from = obstacle.z, to = obstacle.z + Tunnel.PLATFORM_SPAN })
 		elseif obstacle.kind == "fading" and obstacle.lane >= 1 then
 			table.insert(holes[obstacle.lane], { from = obstacle.z, to = obstacle.z + Tunnel.FADE_SPAN })
+		elseif obstacle.kind == "stones" and obstacle.lane >= 1 then
+			table.insert(holes[obstacle.lane], { from = obstacle.z, to = obstacle.z + Tunnel.STONES_SPAN })
 		elseif obstacle.kind == "beam" then
 			for lane = 1, Tunnel.LANE_COUNT do
 				table.insert(holes[lane], { from = obstacle.z, to = obstacle.z + Tunnel.BEAM_LENGTH })
@@ -708,6 +710,119 @@ local OBSTACLE_BUILDERS: { [string]: (Model, CFrame, any, number) -> () } = {
 		slab.Material = Enum.Material.Ice
 		slab.Transparency = 0.15
 		slab.CustomPhysicalProperties = PhysicalProperties.new(0.7, Tunnel.ICE_FRICTION, 0.2, 1, 1)
+	end,
+
+	--[[
+		Кочки: яма в одну дорожку и три камня через неё. Камни чуть выше пола,
+		чтобы по ним хотелось прыгать, а не просто идти; щели между ними
+		перешагиваются. Промахнулся — мягкое дно и сохранка.
+	]]
+	stones = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		for _, edge in { obstacle.z, obstacle.z + Tunnel.STONES_SPAN } do
+			local marker = build(
+				`StonesEdge_{index}_{math.floor(edge)}`,
+				Vector3.new(Tunnel.LANE_WIDTH, 0.4, 0.8),
+				origin * CFrame.new(x, 0.2, -edge),
+				Color3.fromRGB(250, 210, 120),
+				model
+			)
+			marker.CanCollide = false
+		end
+
+		local step = Tunnel.STONES_SPAN / Tunnel.STONE_COUNT
+		for stone = 1, Tunnel.STONE_COUNT do
+			local part = build(
+				`Stone_{index}_{stone}`,
+				Vector3.new(Tunnel.STONE_SIZE, 1.4, Tunnel.STONE_SIZE),
+				origin * CFrame.new(x, 0.1, -(obstacle.z + (stone - 0.5) * step)),
+				Color3.fromRGB(165, 160, 150),
+				model
+			)
+			part.Material = Enum.Material.Slate
+		end
+	end,
+
+	--[[
+		Сложный ряд (docs/19-OBSTACLES.md § 3.2.1): бревно, поршень, гребёнка.
+		Встречаются на поздних уровнях и у уверенных; правила всё те же.
+	]]
+
+	--[[
+		Бревно поперёк дорожки: крутится на месте, высотой с барьер. Бревно
+		круглое, так что вращение только на вид — толкать оно не толкает,
+		а прыгать через крутящееся веселее, чем через стоящее.
+	]]
+	roller = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local at = origin
+			* CFrame.new(Tunnel.laneOffset(obstacle.lane), Tunnel.ROLLER_DIAMETER / 2, -obstacle.z)
+		local log = build(
+			`Roller_{index}`,
+			Vector3.new(Tunnel.LANE_WIDTH - 1, Tunnel.ROLLER_DIAMETER, Tunnel.ROLLER_DIAMETER),
+			at,
+			Color3.fromRGB(160, 110, 70),
+			model
+		)
+		log.Shape = Enum.PartType.Cylinder -- ось цилиндра — X, то есть поперёк дорожки
+		log.Material = Enum.Material.Wood
+
+		local info =
+			TweenInfo.new(Tunnel.ROLLER_SECONDS, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1)
+		TweenService:Create(log, info, { CFrame = at * CFrame.Angles(math.pi, 0, 0) }):Play()
+	end,
+
+	--[[
+		Поршень: мягкий блок медленно выезжает из стены в крайнюю дорожку
+		и уезжает обратно. Выезжает за четыре секунды — это не ловушка,
+		а «подожди или обойди». Средней дорожки поршень не касается никогда.
+	]]
+	pistons = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local side = if obstacle.lane == 1 then -1 else 1
+		local width = Tunnel.LANE_WIDTH - 1
+		local y = Tunnel.PISTON_HEIGHT / 2
+
+		local hidden = origin * CFrame.new(side * (Tunnel.WIDTH / 2 + width / 2), y, -obstacle.z)
+		local shown = origin * CFrame.new(Tunnel.laneOffset(obstacle.lane), y, -obstacle.z)
+
+		local block = build(
+			`Piston_{index}`,
+			Vector3.new(width, Tunnel.PISTON_HEIGHT, Tunnel.PISTON_DEPTH),
+			hidden,
+			Color3.fromRGB(240, 150, 170),
+			model
+		)
+
+		-- Заметный край на полу: здесь что-то выезжает.
+		local marker = build(
+			`PistonMark_{index}`,
+			Vector3.new(Tunnel.LANE_WIDTH, 0.1, Tunnel.PISTON_DEPTH + 1),
+			origin * CFrame.new(Tunnel.laneOffset(obstacle.lane), 0.05, -obstacle.z),
+			Color3.fromRGB(250, 210, 120),
+			model
+		)
+		marker.CanCollide = false
+
+		swing(block, shown, Tunnel.PISTON_SECONDS)
+	end,
+
+	--[[
+		Гребёнка: стена поперёк коридора с узкой щелью в каждой дорожке.
+		Путь не перекрыт — щель есть везде, — но в неё надо прицелиться.
+	]]
+	comb = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local tooth = (Tunnel.LANE_WIDTH - Tunnel.COMB_SLOT) / 2
+		for lane = 1, Tunnel.LANE_COUNT do
+			for _, side in { -1, 1 } do
+				local x = Tunnel.laneOffset(lane) + side * (Tunnel.COMB_SLOT / 2 + tooth / 2)
+				build(
+					`Comb_{index}_{lane}_{side}`,
+					Vector3.new(tooth, Tunnel.HEIGHT, Tunnel.COMB_THICKNESS),
+					origin * CFrame.new(x, Tunnel.HEIGHT / 2, -obstacle.z),
+					Color3.fromRGB(130, 180, 150),
+					model
+				)
+			end
+		end
 	end,
 }
 

@@ -24,6 +24,7 @@
 ]]
 
 local Types = require(script.Parent.Parent.Types)
+local DifficultyCurve = require(script.Parent.Parent.Logic.DifficultyCurve)
 local Letters = require(script.Parent.Letters)
 local Stages = require(script.Parent.Stages)
 
@@ -39,23 +40,34 @@ export type Level = {
 		(docs/14-TUNNEL-MODE.md § 5), и четвёртому проёму негде встать.
 	]]
 	maxChoices: number,
+	--[[
+		Паркур уровня (docs/19-OBSTACLES.md § 3.3): сколько элементов на отрезке
+		и до какого ряда. Первые уровни — один-два базовых и ничего движущегося:
+		ребёнок учит буквы, а не выживает. К концу пути отрезок длинный,
+		и в нём встречается всё, что игра умеет.
+	]]
+	obstacles: { number }, -- { меньше, больше }: точное число добавляет сложность
+	maxTier: number,
 }
 
 local Levels = {}
 
 Levels.all = {
-	{ index = 1, segments = 4, maxChoices = 2 },
-	{ index = 2, segments = 4, maxChoices = 3 },
-	{ index = 3, segments = 5, maxChoices = 3 },
-	{ index = 4, segments = 5, maxChoices = 3 },
-	{ index = 5, segments = 5, maxChoices = 3 },
-	{ index = 6, segments = 5, maxChoices = 3 },
-	{ index = 7, segments = 6, maxChoices = 3 },
-	{ index = 8, segments = 6, maxChoices = 3 },
-	{ index = 9, segments = 6, maxChoices = 3 },
-	{ index = 10, segments = 6, maxChoices = 3 },
-	{ index = 11, segments = 6, maxChoices = 3 },
+	{ index = 1, segments = 4, maxChoices = 2, obstacles = { 1, 2 }, maxTier = 1 },
+	{ index = 2, segments = 4, maxChoices = 3, obstacles = { 1, 2 }, maxTier = 1 },
+	{ index = 3, segments = 5, maxChoices = 3, obstacles = { 2, 3 }, maxTier = 1 },
+	{ index = 4, segments = 5, maxChoices = 3, obstacles = { 2, 3 }, maxTier = 1 },
+	{ index = 5, segments = 5, maxChoices = 3, obstacles = { 2, 4 }, maxTier = 2 },
+	{ index = 6, segments = 5, maxChoices = 3, obstacles = { 3, 4 }, maxTier = 2 },
+	{ index = 7, segments = 6, maxChoices = 3, obstacles = { 3, 4 }, maxTier = 2 },
+	{ index = 8, segments = 6, maxChoices = 3, obstacles = { 3, 5 }, maxTier = 2 },
+	{ index = 9, segments = 6, maxChoices = 3, obstacles = { 4, 5 }, maxTier = 3 },
+	{ index = 10, segments = 6, maxChoices = 3, obstacles = { 4, 6 }, maxTier = 3 },
+	{ index = 11, segments = 6, maxChoices = 3, obstacles = { 4, 6 }, maxTier = 3 },
 } :: { Level }
+
+-- Сколько элементов добавляет адаптивная сложность к нижней границе уровня.
+Levels.OBSTACLE_BONUS = { 0, 0, 1, 1, 2 }
 
 --[[
 	До какого уровня похожие по начертанию буквы (Б/В, И/Й, Е/Ё) не встают в одни
@@ -83,6 +95,22 @@ function Levels.expect(index: number): Level
 	local level = Levels.get(index)
 	assert(level, `Levels: нет уровня {index}`)
 	return level
+end
+
+--[[
+	Сколько элементов паркура на отрезке уровня. Нижняя граница — от уровня,
+	надбавка — от адаптивной сложности, и выше верхней границы не бывает:
+	уверенный ребёнок на первом уровне получит два барьера, а не шесть.
+]]
+function Levels.obstacleCount(index: number, difficulty: number): number
+	local level = Levels.expect(index)
+	local bonus = DifficultyCurve.pick(Levels.OBSTACLE_BONUS, difficulty)
+	return math.clamp(level.obstacles[1] + bonus, level.obstacles[1], level.obstacles[2])
+end
+
+-- До какого ряда элементы: сложность разрешает, уровень ограничивает.
+function Levels.obstacleTier(index: number, difficultyTier: number): number
+	return math.min(difficultyTier, Levels.expect(index).maxTier)
 end
 
 function Levels.stage(index: number): Types.Stage

@@ -190,7 +190,17 @@ return function()
 					tier2 += 1
 				end
 			end
-			expect(tier2).to.equal(5)
+			expect(tier2).to.equal(6)
+		end)
+
+		it("сложный ряд заведён", function()
+			local tier3 = 0
+			for _, id in Obstacles.ids() do
+				if Obstacles.expect(id).tier == 3 then
+					tier3 += 1
+				end
+			end
+			expect(tier3 >= 3).to.equal(true)
 		end)
 
 		--[[
@@ -214,21 +224,37 @@ return function()
 			Длина элемента вдоль бега не больше шага полосы: иначе соседние элементы
 			налезают друг на друга и отрезок превращается в кашу.
 		]]
-		it("ни один элемент не длиннее шага полосы", function()
-			local lengths = {
-				gap = Tunnel.GAP_LENGTH,
-				beam = Tunnel.BEAM_LENGTH,
-				steps = Tunnel.STEP_COUNT * 2 * Tunnel.STEP_RUN,
-				platform = Tunnel.PLATFORM_TRAVEL + Tunnel.PLATFORM_LENGTH,
-				fading = Tunnel.FADE_SPAN,
-				trampoline = Tunnel.TRAMPOLINE_LENGTH,
-				ice = Tunnel.ICE_LENGTH,
-			}
-			for id, length in lengths do
-				expect(Obstacles.get(id)).to.be.ok()
-				expect(length <= Tunnel.OBSTACLE_PITCH).to.equal(true)
+		it("каждый элемент влезает в свою клетку", function()
+			for _, id in Obstacles.ids() do
+				local kind = Obstacles.expect(id).kind
+				local length = Tunnel.obstacleLength(kind)
+				if length == nil then
+					error(`у элемента {id} не записана длина`)
+				end
+				-- Назад элемент заходит не дальше отступа, вперёд — не дальше конца клетки.
+				expect(Tunnel.obstacleLead(kind) <= Tunnel.OBSTACLE_LEAD).to.equal(true)
+				expect(Tunnel.OBSTACLE_LEAD + length <= Tunnel.OBSTACLE_PITCH).to.equal(true)
 			end
 		end)
+
+		it(
+			"поршень выезжает медленнее, чем ребёнок идёт, и только в крайнюю дорожку",
+			function()
+				local travel = Tunnel.WIDTH / 2
+					+ (Tunnel.LANE_WIDTH - 1) / 2
+					- Tunnel.laneOffset(Tunnel.LANE_COUNT)
+				expect(travel / Tunnel.PISTON_SECONDS < Tunnel.WALK_SPEED / 4).to.equal(true)
+				expect(Obstacles.expect("pistons").edge).to.equal(true)
+			end
+		)
+
+		it(
+			"в гребёнке щель в каждой дорожке, и в неё проходит ребёнок",
+			function()
+				expect(Tunnel.COMB_SLOT >= 3.5).to.equal(true)
+				expect(Tunnel.COMB_SLOT < Tunnel.LANE_WIDTH).to.equal(true)
+			end
+		)
 
 		--[[
 			Исчезающие плиты не должны гаснуть две подряд: иначе дорожка на время

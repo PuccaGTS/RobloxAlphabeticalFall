@@ -52,6 +52,34 @@ return function()
 			end
 		)
 
+		-- docs/19-OBSTACLES.md § 3.3: первые уровни — без движущихся, дальше паркура больше.
+		it("паркур растёт вместе с путём", function()
+			for index = 1, Levels.CONFUSABLES_APART_UNTIL do
+				expect(Levels.expect(index).maxTier).to.equal(1)
+			end
+			for index = 2, Levels.count() do
+				local previous = Levels.all[index - 1]
+				local level = Levels.all[index]
+				expect(level.maxTier >= previous.maxTier).to.equal(true)
+				expect(level.obstacles[1] >= previous.obstacles[1]).to.equal(true)
+				expect(level.obstacles[2] >= level.obstacles[1]).to.equal(true)
+			end
+			expect(Levels.all[Levels.count()].maxTier).to.equal(3)
+		end)
+
+		it(
+			"сложность двигает паркур только внутри рамок уровня",
+			function()
+				for _, level in Levels.all do
+					for difficulty = 1, 5 do
+						local count = Levels.obstacleCount(level.index, difficulty)
+						expect(count >= level.obstacles[1] and count <= level.obstacles[2]).to.equal(true)
+						expect(Levels.obstacleTier(level.index, 3) <= level.maxTier).to.equal(true)
+					end
+				end
+			end
+		)
+
 		-- Отрезков должно хватать на все новые буквы ступени, иначе одна из них не прозвучит.
 		it("отрезков не меньше, чем новых букв на ступени", function()
 			for _, level in Levels.all do
