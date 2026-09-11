@@ -1,14 +1,26 @@
 --!nonstrict
 --[[
-	Хаб «Площадь Башни».
+	Хаб: большая площадь с двумя порталами в центре, занятиями вокруг них
+	и кольцом участков по краю (docs/14-TUNNEL-MODE.md § 3.1, docs/15-HOME-BASE.md § 2).
+
+	Устройство мира читается телом, а не текстом:
+	  · в центре два портала — «Мир букв» и «Мир математики». Два входа ребёнок
+	    различает по цвету и месту, а список уровней требует чтения и выбора,
+	    которых он не умеет. Больше двух порталов — это уже меню;
+	  · вокруг порталов — площадка занятий и магазин: то, что делают между забегами;
+	  · по краю — двадцать участков с домами детей. Сервер вмещает двадцать игроков,
+	    и каждому гарантирован свой участок.
+
+	Сами участки строит BaseService: у них своя жизнь, они появляются и гаснут
+	вместе с игроками, а площадь стоит всегда.
 
 	Строится кодом, а не руками в Studio: пока нет арта, геометрию проще держать
 	в репозитории, чем в .rbxl, который не читается в диффе и конфликтует при слиянии.
 	Когда появятся модели, этот сервис заменится на загрузку готовой сцены.
 
 	Башня прогресса здесь НЕ строится: она у каждого игрока своя (у одного буква
-	освоена, у другого нет), а один общий объект в мире так не умеет.
-	Её собирает клиент — src/client/Controllers/TowerController.luau.
+	освоена, у другого нет), а один общий объект в мире так не умеет. Её собирает
+	клиент на участке хозяина — src/client/Controllers/TowerController.luau.
 ]]
 
 local Lighting = game:GetService("Lighting")
@@ -16,31 +28,87 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Islands = require(Shared.Config.Islands)
+local Challenges = require(Shared.Config.Challenges)
 local Letters = require(Shared.Config.Letters)
+local Base = require(Shared.Config.Base)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
 local ProgressService = require(script.Parent.ProgressService)
 local ChallengeService = require(script.Parent.ChallengeService)
+local DecorService = require(script.Parent.DecorService)
 
 local WorldService = {}
 
-local HUB_RADIUS = 52
-local PAD_DISTANCE = 34
+local PLAZA_RADIUS = Base.PLAZA_RADIUS
+local PAD_DISTANCE = 38
 local TOUCH_DEBOUNCE = 2
 
 --[[
-	Все острова ведут в «Буквопад», а «Мост слогов» стоит отдельным падом и открыт
-	с самого начала. Причина не косметическая: для статуса «изученная» буква обязана
-	быть успешно пройдена в ДВУХ разных типах испытаний (docs/02-LEARNING.md § 9).
-	Если бы мост открывался только на втором острове, а второй остров требовал
-	изученных букв первого, прогресс упирался бы в тупик на четвёртой минуте.
+	Два портала — два мира, и у каждого свой путь и свои сохранки.
+
+	Портал не спрашивает, куда идти: он продолжает путь своего мира. В мире букв
+	это забег — начатый с начала или продолженный с последней арки, если ребёнок
+	вышел из игры посреди туннеля (docs/14-TUNNEL-MODE.md § 3.2).
+
+	Оба мира открыты. Математический ждал ворот с числами и дождался: за порталом
+	тот же коридор с проёмами, только над ними числа, а задача меняется у каждых
+	ворот (docs/16-MATH.md § 3.1).
+
+	Ни один мир не запирает другой: ребёнок вправе любить счёт и не любить буквы,
+	и наоборот (docs/16-MATH.md § 6).
 ]]
-local ISLAND_CHALLENGE = {
-	[1] = "letter_rain",
-	[2] = "letter_rain",
-	[3] = "letter_rain",
+local PORTALS = {
+	{
+		id = "letters",
+		challengeId = "tunnel_run",
+		caption = "📖 МИР БУКВ",
+		action = "Войти",
+		color = Color3.fromRGB(110, 165, 235),
+		offset = -16,
+	},
+	{
+		id = "math",
+		challengeId = "math_gates",
+		caption = "🔢 МИР МАТЕМАТИКИ",
+		action = "Войти",
+		color = Color3.fromRGB(235, 165, 95),
+		offset = 16,
+	},
+}
+
+--[[
+	Пады площади: четыре занятия и магазин.
+
+	Падов по одному на испытание, а не по одному на ступень алфавита. Ступеней
+	одиннадцать, и одиннадцать порталов по кругу — это меню, которое нечитающий
+	ребёнок не осилит. Ступень выбирает не он, а прогресс: любое занятие берёт
+	буквы из очереди повторений (docs/14-TUNNEL-MODE.md § 3.2).
+
+	Все четыре открыты с самого начала. Причина не косметическая: для статуса
+	«изученная» буква обязана быть успешно пройдена в ДВУХ разных типах испытаний
+	(docs/02-LEARNING.md § 8). Запри половину — и прогресс упрётся в тупик
+	на четвёртой минуте.
+]]
+local PADS = {
+	{
+		challengeId = "obstacle_course",
+		caption = "🏃 Полоса препятствий",
+		action = "Прыгать",
+		color = Color3.fromRGB(250, 200, 120),
+	},
+	{
+		challengeId = "letter_rain",
+		caption = "🌧 Буквопад",
+		action = "Ловить",
+		color = Color3.fromRGB(120, 170, 230),
+	},
+	{
+		challengeId = "alphabet_ladder",
+		caption = "🪜 Алфавитная лестница",
+		action = "Подниматься",
+		color = Color3.fromRGB(190, 150, 230),
+	},
 }
 
 local lastTouch: { [Player]: number } = {}
@@ -135,86 +203,127 @@ local function makeActivator(pad: BasePart, actionText: string, objectText: stri
 	end)
 end
 
-local function buildIslandPad(hub: Folder, island, slot: number, slots: number)
-	-- Пады расставлены по кругу с равным шагом. Мост и магазин занимают свои слоты,
-	-- иначе два пада встают в одну точку и подсказки накладываются друг на друга.
-	local angle = (slot - 1) / slots * math.pi * 2
-	local position = Vector3.new(math.cos(angle) * PAD_DISTANCE, 1.5, math.sin(angle) * PAD_DISTANCE)
+--[[
+	Портал мира: высокая арка в центре площади.
 
-	local pad = part(
-		`Portal_{island.index}`,
-		Vector3.new(14, 1, 14),
-		CFrame.new(position),
-		Color3.fromRGB(120, 170, 230),
-		hub
-	)
-	caption(pad, `{island.index}. {island.title}`, 5)
+	Портал крупнее пада занятия и стоит отдельно: это вход в мир, а не кнопка.
 
-	-- Арка над падом, чтобы портал читался как вход, а не как плитка на полу
+	Заколоченного портала здесь больше нет: пока ворота с числами не были построены,
+	мир математики стоял забитым досками, и та ветка кода вместе с подписью «скоро»
+	убрана — оба мира открыты. Понадобится снова — восстанавливается из истории,
+	держать в сервисе неиспользуемую ветку незачем.
+]]
+local function buildPortal(hub: Folder, portal: any)
+	local position = Vector3.new(portal.offset, 1.5, -6)
+	local color = portal.color
+
+	local platform = part(`Portal_{portal.id}`, Vector3.new(18, 1, 18), CFrame.new(position), color, hub)
+	caption(platform, portal.caption, 12)
+
 	part(
-		`PortalArch_{island.index}`,
-		Vector3.new(14, 1.2, 1.2),
-		CFrame.new(position + Vector3.new(0, 9, 0)),
-		Color3.fromRGB(90, 140, 210),
+		`PortalArch_{portal.id}`,
+		Vector3.new(18, 2, 2),
+		CFrame.new(position + Vector3.new(0, 16, 0)),
+		color,
 		hub
 	)
-	part(
-		`PortalLeft_{island.index}`,
-		Vector3.new(1.2, 9, 1.2),
-		CFrame.new(position + Vector3.new(-6.4, 4.5, 0)),
-		Color3.fromRGB(90, 140, 210),
-		hub
-	)
-	part(
-		`PortalRight_{island.index}`,
-		Vector3.new(1.2, 9, 1.2),
-		CFrame.new(position + Vector3.new(6.4, 4.5, 0)),
-		Color3.fromRGB(90, 140, 210),
-		hub
-	)
-
-	local challengeId = ISLAND_CHALLENGE[island.index] or "letter_rain"
-
-	makeActivator(pad, "Играть", island.title, function(player: Player)
-		local profile = ProfileService.get(player)
-		if not profile then
-			return
-		end
-
-		local state = profile.islands[island.index]
-		if not state or not state.unlocked then
-			-- Закрытый остров не отказывает молча: говорим, что нужно ещё поучиться.
-			RemoteDefs.event("OpenUI"):FireClient(player, "locked_island")
-			return
-		end
-
-		ChallengeService.startFor(player, challengeId)
-	end)
-end
-
--- Декор: цветные клумбы и парящие буквы. Мир должен выглядеть местом, а не полигоном.
-local function buildDecor(hub: Folder)
-	local palette = {
-		Color3.fromRGB(240, 130, 130),
-		Color3.fromRGB(250, 200, 110),
-		Color3.fromRGB(140, 210, 150),
-		Color3.fromRGB(140, 180, 240),
-		Color3.fromRGB(200, 150, 230),
-	}
-
-	for i = 1, 12 do
-		local angle = (i - 1) / 12 * math.pi * 2
-		local radius = HUB_RADIUS - 6
-		local position = Vector3.new(math.cos(angle) * radius, 1.6, math.sin(angle) * radius)
-
+	for _, side in { -1, 1 } do
 		part(
-			`Bush_{i}`,
-			Vector3.new(5, 2.2, 5),
-			CFrame.new(position) * CFrame.Angles(0, angle, 0),
-			palette[(i - 1) % #palette + 1],
+			`PortalLeg_{portal.id}_{side}`,
+			Vector3.new(2, 16, 2),
+			CFrame.new(position + Vector3.new(side * 8, 8, 0)),
+			color,
 			hub
 		)
 	end
+
+	-- Светящееся полотно портала: вход должен быть виден с любой точки площади.
+	local veil = part(
+		`PortalVeil_{portal.id}`,
+		Vector3.new(14, 14, 0.6),
+		CFrame.new(position + Vector3.new(0, 8, 0)),
+		color,
+		hub
+	)
+	veil.CanCollide = false
+	veil.Material = Enum.Material.Neon
+	veil.Transparency = 0.35
+
+	--[[
+		Вход в мир. Испытание само решит, начать забег заново или продолжить
+		с последней арки: незаконченный забег лежит в профиле (Types.SavedRun).
+		Сохранки у миров свои — ключ забега это его испытание.
+	]]
+	makeActivator(
+		platform,
+		portal.action,
+		Challenges.expect(portal.challengeId).title,
+		function(player: Player)
+			if not ProfileService.get(player) then
+				return
+			end
+			ChallengeService.startFor(player, portal.challengeId)
+		end
+	)
+end
+
+local function buildChallengePad(hub: Folder, pad: any, slot: number, slots: number)
+	-- Пады расставлены по кругу с равным шагом: магазин занимает свой слот,
+	-- иначе два пада встают в одну точку и подсказки накладываются друг на друга.
+	--[[
+		Занятия стоят полукругом ПЕРЕД порталами, а не вокруг них: порталы должны
+		быть видны от точки появления, и загораживать их падами нельзя.
+	]]
+	local angle = math.pi * (0.15 + 0.7 * (slot - 1) / math.max(1, slots - 1))
+	local position = Vector3.new(math.cos(angle) * PAD_DISTANCE, 1.5, math.sin(angle) * PAD_DISTANCE)
+
+	local meta = Challenges.expect(pad.challengeId)
+
+	local platform =
+		part(`Pad_{pad.challengeId}`, Vector3.new(14, 1, 14), CFrame.new(position), pad.color, hub)
+	caption(platform, pad.caption, 5)
+
+	-- Арка над падом, чтобы портал читался как вход, а не как плитка на полу
+	local frameColor = Color3.fromRGB(90, 140, 210)
+	part(
+		`PadArch_{pad.challengeId}`,
+		Vector3.new(14, 1.2, 1.2),
+		CFrame.new(position + Vector3.new(0, 9, 0)),
+		frameColor,
+		hub
+	)
+	part(
+		`PadLeft_{pad.challengeId}`,
+		Vector3.new(1.2, 9, 1.2),
+		CFrame.new(position + Vector3.new(-6.4, 4.5, 0)),
+		frameColor,
+		hub
+	)
+	part(
+		`PadRight_{pad.challengeId}`,
+		Vector3.new(1.2, 9, 1.2),
+		CFrame.new(position + Vector3.new(6.4, 4.5, 0)),
+		frameColor,
+		hub
+	)
+
+	makeActivator(platform, pad.action, meta.title, function(player: Player)
+		if not ProfileService.get(player) then
+			return
+		end
+		ChallengeService.startFor(player, pad.challengeId)
+	end)
+end
+
+--[[
+	Декор: деревья, клумбы и парящие буквы. Мир должен выглядеть местом, а не полигоном.
+
+	Предметы на земле расставляет DecorService по каталогу Config/Decor: там же лежит
+	и запрет ставить что-либо перед порталами и падами. Пока моделей нет, он ставит
+	заглушки того же размера — расстановка проверяется до прихода арта, а не после.
+]]
+local function buildDecor(hub: Folder)
+	DecorService.build(hub)
 
 	-- Парящие буквы вокруг Башни: тема мира читается с первого взгляда
 	local ordered = Letters.ordered()
@@ -237,23 +346,95 @@ local function buildDecor(hub: Folder)
 	end
 end
 
+--[[
+	Свет, воздух и облака. Погоды как механики в игре нет и не будет: смена погоды
+	или времени суток означала бы, что ребёнок пришёл — а мир другой, темнее
+	и хуже видно. Здесь всегда светлый день, и это решение, а не заглушка.
+
+	Ни один эффект не добавлен «для красоты вообще» — каждый отвечает за то,
+	чтобы объект в мире было ВИДНО:
+	  · день в два часа пополудни: тени короткие и ничего не прячут;
+	  · воздух чуть плотнее обычного — дальние дома видно, но они не спорят
+	    по контрасту с буквами на воротах;
+	  · облака над головой: небо перестаёт быть плоской заливкой, и мир
+	    читается как место, куда пришли, а не как полигон.
+
+	Дешёвые эффекты выбраны намеренно: цель — 30 FPS на дешёвом планшете
+	(CHECKLIST, «перед публикацией»). Поэтому мягкое солнце и лёгкое свечение,
+	а не глубина резкости и объёмный туман.
+]]
+local function effect(className: string, apply: (Instance) -> ())
+	local existing = Lighting:FindFirstChildOfClass(className)
+	if existing then
+		return
+	end
+	local instance = Instance.new(className)
+	apply(instance)
+	instance.Parent = Lighting
+end
+
 local function styleLighting()
-	Lighting.Brightness = 2.4
+	Lighting.Brightness = 2.6
 	Lighting.Ambient = Color3.fromRGB(120, 120, 140)
 	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 170)
 	Lighting.ClockTime = 14
+	Lighting.GeographicLatitude = 12 -- солнце повыше: длинные тени поперёк площади не нужны
+	Lighting.ExposureCompensation = 0.15
+	-- Мягкий край тени: жёсткая ступенька от дерева на плитке выглядит грязью.
+	Lighting.ShadowSoftness = 0.35
 
-	if not Lighting:FindFirstChildOfClass("Sky") then
-		local sky = Instance.new("Sky")
-		sky.Parent = Lighting
-	end
+	effect("Sky", function() end)
 
-	if not Lighting:FindFirstChildOfClass("Atmosphere") then
-		local atmosphere = Instance.new("Atmosphere")
-		atmosphere.Density = 0.28
-		atmosphere.Haze = 1.2
-		atmosphere.Color = Color3.fromRGB(210, 225, 245)
-		atmosphere.Parent = Lighting
+	effect("Atmosphere", function(instance)
+		local atmosphere = instance :: Atmosphere
+		atmosphere.Density = 0.32
+		atmosphere.Offset = 0.1
+		atmosphere.Haze = 1.4
+		atmosphere.Glare = 0.2
+		atmosphere.Color = Color3.fromRGB(215, 228, 245)
+		atmosphere.Decay = Color3.fromRGB(150, 175, 210)
+	end)
+
+	-- Свечение только на самом ярком: неоновые буквы, вода фонтана, плафоны.
+	effect("BloomEffect", function(instance)
+		local bloom = instance :: BloomEffect
+		bloom.Intensity = 0.5
+		bloom.Size = 20
+		bloom.Threshold = 1.6
+	end)
+
+	-- Тёплые лучи в кроны деревьев: одна из немногих вещей, которые дёшево
+	-- превращают «расставленные объекты» в место.
+	effect("SunRaysEffect", function(instance)
+		local rays = instance :: SunRaysEffect
+		rays.Intensity = 0.08
+		rays.Spread = 0.6
+	end)
+
+	--[[
+		Цвет: чуть теплее и сочнее. Насыщенность поднята слабо — на дешёвых
+		экранах сильный перекос по цвету бьёт как раз по различению букв,
+		а они у нас разноцветные не для красоты (docs/08-UX-UI.md).
+	]]
+	effect("ColorCorrectionEffect", function(instance)
+		local color = instance :: ColorCorrectionEffect
+		color.Brightness = 0.02
+		color.Contrast = 0.06
+		color.Saturation = 0.08
+		color.TintColor = Color3.fromRGB(255, 251, 245)
+	end)
+
+	--[[
+		Облака. Живут в Terrain, а не в Lighting, и террейна для них не нужно —
+		достаточно самого объекта.
+	]]
+	local terrain = workspace:FindFirstChildOfClass("Terrain")
+	if terrain and not terrain:FindFirstChildOfClass("Clouds") then
+		local clouds = Instance.new("Clouds")
+		clouds.Cover = 0.55 -- половина неба: не пасмурно и не голо
+		clouds.Density = 0.55
+		clouds.Color = Color3.fromRGB(255, 255, 255)
+		clouds.Parent = terrain
 	end
 end
 
@@ -269,36 +450,62 @@ function WorldService.build()
 	hub.Name = "Hub"
 	hub.Parent = workspace
 
+	--[[
+		Земля накрывает всю площадку с участками: край мира должен быть далеко
+		за домами, а не сразу за спиной у крайнего дома.
+	]]
 	part(
 		"Ground",
-		Vector3.new(HUB_RADIUS * 2, 2, HUB_RADIUS * 2),
+		Vector3.new(Base.GROUND_SIZE, 2, Base.GROUND_SIZE),
 		CFrame.new(0, 0, 0),
 		Color3.fromRGB(150, 205, 140),
 		hub
 	)
-	part("Plaza", Vector3.new(46, 2, 46), CFrame.new(0, 0.6, 0), Color3.fromRGB(235, 225, 200), hub)
-	part("TowerBase", Vector3.new(16, 2, 16), CFrame.new(0, 2, 0), Color3.fromRGB(250, 240, 215), hub)
+	part(
+		"Plaza",
+		Vector3.new(PLAZA_RADIUS * 2, 2, PLAZA_RADIUS * 2),
+		CFrame.new(0, 0.6, 0),
+		Color3.fromRGB(235, 225, 200),
+		hub
+	)
+
+	-- Дорожки от площади к кольцу участков: ребёнок видит, куда идти к домам.
+	for i = 1, 4 do
+		local angle = (i - 1) / 4 * math.pi * 2
+		local length = Base.RING_RADIUS - PLAZA_RADIUS
+		local at = (PLAZA_RADIUS + length / 2)
+		part(
+			`Path_{i}`,
+			Vector3.new(10, 0.4, length),
+			CFrame.new(math.cos(angle) * at, 1.1, math.sin(angle) * at) * CFrame.Angles(0, -angle, 0),
+			Color3.fromRGB(230, 215, 185),
+			hub
+		)
+	end
+
+	for _, portal in PORTALS do
+		buildPortal(hub, portal)
+	end
 
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "HubSpawn"
-	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.CFrame = CFrame.new(0, 2.2, 22)
+	spawn.Size = Vector3.new(12, 1, 12)
+	-- Появляемся лицом к порталам: первое, что видит ребёнок, — два входа в миры.
+	spawn.CFrame = CFrame.new(0, 2.2, 26)
 	spawn.Anchored = true
 	spawn.Color = Color3.fromRGB(255, 214, 102)
 	spawn.Material = Enum.Material.SmoothPlastic
 	spawn.Duration = 0
 	spawn.Parent = hub
 
-	local slots = Islands.count() + 2 -- острова + магазин + мост
-	local slotIndex = 0
+	local slots = #PADS + 1 -- занятия + магазин
 
-	for _, island in Islands.all do
-		slotIndex += 1
-		buildIslandPad(hub, island, slotIndex, slots)
+	for slot, pad in PADS do
+		buildChallengePad(hub, pad, slot, slots)
 	end
 
-	slotIndex += 1
-	local shopAngle = (slotIndex - 1) / slots * math.pi * 2
+	-- Магазин занимает последний слот полукруга: потратить перед выходом в мир.
+	local shopAngle = math.pi * (0.15 + 0.7 * (slots - 1) / math.max(1, slots - 1))
 	local shopPad = part(
 		"ShopPad",
 		Vector3.new(12, 1, 12),
@@ -309,34 +516,6 @@ function WorldService.build()
 	caption(shopPad, "🛍 Магазин", 5)
 	makeActivator(shopPad, "Открыть", "Магазин", function(player: Player)
 		RemoteDefs.event("OpenUI"):FireClient(player, "shop")
-	end)
-
-	slotIndex += 1
-	local bridgeAngle = (slotIndex - 1) / slots * math.pi * 2
-	local bridgePad = part(
-		"BridgePad",
-		Vector3.new(12, 1, 12),
-		CFrame.new(math.cos(bridgeAngle) * PAD_DISTANCE, 1.5, math.sin(bridgeAngle) * PAD_DISTANCE),
-		Color3.fromRGB(190, 150, 230),
-		hub
-	)
-	caption(bridgePad, "🌉 Мост слогов", 5)
-	makeActivator(bridgePad, "Строить", "Мост слогов", function(player: Player)
-		ChallengeService.startFor(player, "syllable_bridge")
-	end)
-
-	-- Вход в туннель. Временно стоит здесь: настоящий вход — два портала миров
-	-- на новом спавне (docs/14-TUNNEL-MODE.md § 3.1), они ещё не построены.
-	local tunnelPad = part(
-		"TunnelPad",
-		Vector3.new(12, 1, 12),
-		CFrame.new(0, 1.5, -PAD_DISTANCE),
-		Color3.fromRGB(140, 220, 200),
-		hub
-	)
-	caption(tunnelPad, "🌀 Азбучный туннель", 5)
-	makeActivator(tunnelPad, "Бежать", "Азбучный туннель", function(player: Player)
-		ChallengeService.startFor(player, "tunnel_run")
 	end)
 
 	buildDecor(hub)
@@ -351,7 +530,9 @@ function WorldService.build()
 		end
 	end
 
-	print(`[World] хаб построен: островов {Islands.count()}, падов {slots}`)
+	print(
+		`[World] площадь построена: порталов {#PORTALS}, падов {slots}, букв {Letters.count()}`
+	)
 end
 
 function WorldService.start()
@@ -361,13 +542,13 @@ function WorldService.start()
 		lastTouch[player] = nil
 	end)
 
-	-- Пересчитываем открытые острова при входе: буквы могли быть освоены в прошлой сессии.
+	-- Пересчитываем открытые ступени при входе: буквы могли быть освоены в прошлой сессии.
 	Players.PlayerAdded:Connect(function(player: Player)
 		task.spawn(function()
 			local profile = ProfileService.waitFor(player, 20)
 			if profile then
 				ProfileService.update(player, function(p)
-					ProgressService.refreshIslands(p)
+					ProgressService.refreshStages(p)
 				end)
 			end
 		end)

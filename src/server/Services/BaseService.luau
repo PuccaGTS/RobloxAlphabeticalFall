@@ -1,0 +1,642 @@
+--!nonstrict
+--[[
+	Участки игроков вокруг площади: у каждого ребёнка свой дом, который он строит
+	за Звёздочки и который видят все на сервере. См. docs/15-HOME-BASE.md.
+
+	Почему дом вообще: косметика отвечает на «что я получил», дом — на «что я построил».
+	Шапку надел и забыл, а дом ребёнок видит каждый вход, помнит, что там было вчера,
+	и хочет достроить. Это самый спокойный повод вернуться завтра: без реклам,
+	ежедневных наград и давления.
+
+	Три правила, которые сервис соблюдает:
+	  · участок гарантирован каждому — двадцать площадок на двадцать мест сервера;
+	  · менять можно только СВОЙ участок, соседний — только смотреть;
+	  · улучшение заменяет предыдущее, а не ставится рядом.
+
+	Строится кодом, а не руками в Studio: пока нет арта, геометрию проще держать
+	в репозитории, чем в .rbxl, который не читается в диффе.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Base = require(Shared.Config.Base)
+local RemoteDefs = require(Shared.Net.RemoteDefs)
+
+local ProfileService = require(script.Parent.ProfileService)
+local EconomyService = require(script.Parent.EconomyService)
+local RateLimiter = require(script.Parent.RateLimiter)
+
+local BaseService = {}
+
+local FOLDER_NAME = "Plots"
+
+type Plot = {
+	index: number,
+	model: Model,
+	cframe: CFrame,
+	owner: Player?,
+}
+
+local plots: { [number]: Plot } = {}
+local byPlayer: { [Player]: number } = {}
+local container: Folder? = nil
+
+local GRASS = Color3.fromRGB(150, 205, 140)
+local SOIL = Color3.fromRGB(178, 160, 130)
+
+-- Верх земли участка: всё, что на нём стоит, отсчитывается отсюда, иначе постройки
+-- уходят на студ под газон и дом выглядит просевшим.
+local FLOOR = 1
+
+-- Где на участке стоит Азбучная Башня: за домом, у дальнего угла двора.
+local TOWER_SPOT = CFrame.new(-13, 4, 13)
+
+local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): BasePart
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Size = size
+	p.CFrame = cframe
+	p.Color = color
+	p.Anchored = true
+	p.Material = Enum.Material.SmoothPlastic
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
+local function caption(parent: BasePart, text: string, height: number, size: number?)
+	local existing = parent:FindFirstChild("Caption")
+	if existing then
+		existing:Destroy()
+	end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "Caption"
+	billboard.Size = UDim2.fromOffset(size or 260, 80)
+	billboard.StudsOffset = Vector3.new(0, height, 0)
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = 70
+	billboard.Parent = parent
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextStrokeColor3 = Color3.fromRGB(35, 30, 50)
+	label.TextStrokeTransparency = 0
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.Parent = billboard
+end
+
+--[[
+	Где стоит участок с номером index.
+
+	Участки идут по кругу с равным шагом и повёрнуты лицом к площади: ребёнок
+	выходит из портала и видит фасады домов, а не их задние стены.
+]]
+function BaseService.plotCFrame(index: number): CFrame
+	return CFrame.lookAt(Base.plotPosition(index), Vector3.zero)
+end
+
+-- ===== Постройки =================================================================
+
+--[[
+	Дом: четыре уровня, каждый ЗАМЕНЯЕТ предыдущий.
+
+	Уровень 0 — пустая площадка с колышками: ребёнок видит место под дом,
+	а не пустоту, и понимает, что здесь что-то будет.
+]]
+local function buildHouse(plot: Model, at: CFrame, level: number)
+	if level <= 0 then
+		for corner = 1, 4 do
+			local angle = (corner - 1) / 4 * math.pi * 2
+			local peg = part(
+				`Peg_{corner}`,
+				Vector3.new(0.8, 2, 0.8),
+				at * CFrame.new(math.cos(angle) * 6, FLOOR + 1, math.sin(angle) * 6),
+				SOIL,
+				plot
+			)
+			peg.Material = Enum.Material.Wood
+		end
+		return
+	end
+
+	local sizes = {
+		Vector3.new(10, 6, 10), -- шалаш
+		Vector3.new(14, 8, 14), -- домик
+		Vector3.new(16, 14, 16), -- двухэтажный
+		Vector3.new(14, 20, 14), -- башенка
+	}
+	local colors = {
+		Color3.fromRGB(205, 175, 140),
+		Color3.fromRGB(235, 205, 165),
+		Color3.fromRGB(240, 225, 200),
+		Color3.fromRGB(225, 215, 240),
+	}
+
+	local size = sizes[level]
+	local walls = part("House", size, at * CFrame.new(0, FLOOR + size.Y / 2, 0), colors[level], plot)
+	walls.Material = Enum.Material.WoodPlanks
+
+	-- Дверь и окно: дом обязан читаться домом, а не ящиком.
+	local door = part(
+		"Door",
+		Vector3.new(3, 5, 0.4),
+		at * CFrame.new(0, FLOOR + 2.5, -size.Z / 2 - 0.2),
+		Color3.fromRGB(150, 110, 80),
+		plot
+	)
+	door.Material = Enum.Material.Wood
+
+	local window = part(
+		"Window",
+		Vector3.new(3, 3, 0.4),
+		at * CFrame.new(-size.X / 3, FLOOR + size.Y * 0.6, -size.Z / 2 - 0.2),
+		Color3.fromRGB(170, 220, 245),
+		plot
+	)
+	window.Material = Enum.Material.Glass
+
+	if level >= 3 then
+		part(
+			"SecondFloorBand",
+			Vector3.new(size.X + 1, 0.8, size.Z + 1),
+			at * CFrame.new(0, FLOOR + size.Y * 0.55, 0),
+			Color3.fromRGB(190, 150, 120),
+			plot
+		)
+	end
+end
+
+--[[
+	Крыша живёт только над домом: без дома её ставить некуда.
+
+	Это единственная зависимость между категориями, и она односторонняя —
+	купленный уровень крыши не пропадает, он просто ждёт дом.
+]]
+local function buildRoof(plot: Model, at: CFrame, level: number, houseLevel: number)
+	if level <= 0 or houseLevel <= 0 then
+		return
+	end
+
+	local heights = { 6, 8, 14, 20 }
+	local widths = { 11, 15, 17, 15 }
+	local colors = {
+		Color3.fromRGB(215, 185, 110), -- солома
+		Color3.fromRGB(190, 105, 90), -- черепица
+		Color3.fromRGB(150, 190, 230), -- цветная
+		Color3.fromRGB(255, 235, 160), -- светящаяся
+	}
+
+	local top = heights[houseLevel]
+	local width = widths[houseLevel]
+
+	local roof = part(
+		"Roof",
+		Vector3.new(width + 2, 3, width + 2),
+		at * CFrame.new(0, FLOOR + top + 1.5, 0),
+		colors[level],
+		plot
+	)
+	if level >= 4 then
+		roof.Material = Enum.Material.Neon
+	end
+
+	local cap = part(
+		"RoofCap",
+		Vector3.new(width * 0.6, 2.5, width * 0.6),
+		at * CFrame.new(0, FLOOR + top + 4, 0),
+		colors[level],
+		plot
+	)
+	if level >= 4 then
+		cap.Material = Enum.Material.Neon
+	end
+end
+
+-- Двор: от голой земли до фонтана. Растёт вокруг дома, а не вместо него.
+local function buildYard(plot: Model, at: CFrame, level: number)
+	local ground = part(
+		"Ground",
+		Vector3.new(Base.PLOT_SIZE, 1, Base.PLOT_SIZE),
+		at * CFrame.new(0, 0.5, 0),
+		if level >= 1 then GRASS else SOIL,
+		plot
+	)
+	ground.Material = if level >= 1 then Enum.Material.Grass else Enum.Material.Ground
+
+	if level >= 2 then
+		part(
+			"Path",
+			Vector3.new(4, 0.2, Base.PLOT_SIZE / 2),
+			at * CFrame.new(0, 1.05, -Base.PLOT_SIZE / 4),
+			Color3.fromRGB(230, 215, 185),
+			plot
+		)
+	end
+
+	if level >= 3 then
+		for i = 1, 6 do
+			local angle = (i - 1) / 6 * math.pi * 2
+			local bush = part(
+				`Bush_{i}`,
+				Vector3.new(3, 2.4, 3),
+				at * CFrame.new(math.cos(angle) * 14, FLOOR + 1.2, math.sin(angle) * 14),
+				Color3.fromRGB(120, 185, 130),
+				plot
+			)
+			bush.Material = Enum.Material.Grass
+		end
+	end
+
+	if level >= 4 then
+		part(
+			"FountainBowl",
+			Vector3.new(8, 1.6, 8),
+			at * CFrame.new(0, 1.8, 13),
+			Color3.fromRGB(215, 220, 230),
+			plot
+		)
+		local water = part(
+			"FountainWater",
+			Vector3.new(6, 2.6, 6),
+			at * CFrame.new(0, 3, 13),
+			Color3.fromRGB(140, 200, 240),
+			plot
+		)
+		water.Transparency = 0.35
+		water.Material = Enum.Material.Neon
+	end
+end
+
+--[[
+	Забор по краю участка. На верхнем уровне столбики — буквы: это витрина
+	обучения, вынесенная на границу двора, и её видно соседям.
+]]
+local function buildFence(plot: Model, at: CFrame, level: number)
+	if level <= 0 then
+		return
+	end
+
+	local heights = { 1.6, 3, 4, 4 }
+	local colors = {
+		Color3.fromRGB(180, 150, 110),
+		Color3.fromRGB(225, 215, 195),
+		Color3.fromRGB(170, 170, 175),
+		Color3.fromRGB(255, 214, 102),
+	}
+
+	local half = Base.PLOT_SIZE / 2 - 1
+	local step = 4
+	local height = heights[level]
+
+	for offset = -half, half, step do
+		for _, side in { -1, 1 } do
+			-- Проём в переднем заборе: калитка ровно там, где дорожка.
+			local isFrontGate = side == -1 and math.abs(offset) <= 3
+			if not isFrontGate then
+				local post = part(
+					`Post_{side}_{math.floor(offset)}`,
+					Vector3.new(0.8, height, 0.8),
+					at * CFrame.new(offset, FLOOR + height / 2, side * half),
+					colors[level],
+					plot
+				)
+				if level >= 4 then
+					post.Material = Enum.Material.Neon
+				end
+			end
+
+			local post = part(
+				`PostSide_{side}_{math.floor(offset)}`,
+				Vector3.new(0.8, height, 0.8),
+				at * CFrame.new(side * half, FLOOR + height / 2, offset),
+				colors[level],
+				plot
+			)
+			if level >= 4 then
+				post.Material = Enum.Material.Neon
+			end
+		end
+	end
+end
+
+-- ===== Пады улучшений ============================================================
+
+--[[
+	Пад улучшения — по одному на категорию, вдоль фасада участка.
+
+	Здесь, в отличие от падов занятий, срабатывает НЕ касание, а подсказка с
+	удержанием: занятие бесплатно и обратимо, а трата звёздочек — нет.
+	Ребёнок не должен потратить накопленное, просто пробежав мимо.
+]]
+local function buildUpgradePad(
+	plot: Model,
+	at: CFrame,
+	index: number,
+	categoryId: string,
+	player: Player,
+	level: number
+)
+	local category = Base.expect(categoryId)
+	local offset = (index - (#Base.CATEGORIES + 1) / 2) * 7
+
+	local pad = part(
+		`Upgrade_{categoryId}`,
+		Vector3.new(6, 1, 6),
+		at * CFrame.new(offset, 1.2, -Base.PLOT_SIZE / 2 + 5),
+		Color3.fromRGB(255, 235, 190),
+		plot
+	)
+
+	local price = Base.priceFor(categoryId, level)
+	local nextTitle = Base.nextTitle(categoryId, level)
+
+	if not price or not nextTitle then
+		caption(pad, `{category.emoji} {category.title}\nготово`, 4)
+		pad.Color = Color3.fromRGB(200, 230, 200)
+		return
+	end
+
+	caption(pad, `{category.emoji} {nextTitle}\n{price} ⭐`, 4)
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Построить"
+	prompt.ObjectText = `{category.title}: {nextTitle} — {price} ⭐`
+	prompt.HoldDuration = 0.8
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = pad
+
+	prompt.Triggered:Connect(function(who: Player)
+		if who == player then
+			BaseService.upgrade(who, categoryId)
+		end
+	end)
+end
+
+-- ===== Сборка участка ============================================================
+
+local function clearPlot(plot: Plot)
+	plot.model:ClearAllChildren()
+end
+
+--[[
+	Собирает участок целиком по уровням из профиля.
+
+	Перестраиваем участок ЦЕЛИКОМ на каждое улучшение, а не правим один слот:
+	двадцать деталей строятся мгновенно, а «улучшили крышу, а дом остался старый»
+	— это класс ошибок, которого при полной пересборке не существует.
+]]
+local function renderBuildings(plot: Plot, base: { [string]: number })
+	local at = plot.cframe
+	buildYard(plot.model, at, base.yard)
+	buildHouse(plot.model, at, base.house)
+	buildRoof(plot.model, at, base.roof, base.house)
+	buildFence(plot.model, at, base.fence)
+end
+
+local function renderSign(plot: Plot, text: string)
+	local sign = part(
+		"Sign",
+		Vector3.new(8, 0.6, 0.6),
+		plot.cframe * CFrame.new(0, 4, -Base.PLOT_SIZE / 2 + 1),
+		Color3.fromRGB(255, 240, 200),
+		plot.model
+	)
+	caption(sign, text, 2)
+end
+
+local function renderPlot(plot: Plot, player: Player?, levels: { [string]: number }?)
+	clearPlot(plot)
+
+	if not player then
+		-- Свободный участок: голая земля и табличка. Пустое место должно читаться
+		-- как «сюда кто-то въедет», а не как дырка в мире.
+		renderBuildings(plot, Base.newProgress())
+		renderSign(plot, "Свободный участок")
+		return
+	end
+
+	local base = Base.sanitize(levels)
+	renderBuildings(plot, base)
+	renderSign(plot, `Дом: {player.DisplayName}`)
+
+	for index, categoryId in Base.ids() do
+		buildUpgradePad(plot.model, plot.cframe, index, categoryId, player, base[categoryId])
+	end
+end
+
+--[[
+	Показать участок с заданными уровнями, ничего не покупая.
+
+	Нужно на проверке руками: накопить шесть тысяч звёздочек, чтобы посмотреть
+	на башенку с фонтаном, — не проверка, а рабочий день. Из игры не вызывается:
+	это команда для консоли Studio, см. docs/HOW-TO-CHECK.md.
+]]
+function BaseService.preview(index: number, levels: { [string]: number })
+	local plot = plots[index]
+	if not plot then
+		warn(`[Base] участка {index} нет`)
+		return
+	end
+
+	clearPlot(plot)
+	renderBuildings(plot, Base.sanitize(levels))
+	renderSign(plot, "Показ")
+end
+
+local function ensureContainer(): Folder
+	if container and container.Parent then
+		return container
+	end
+
+	local existing = workspace:FindFirstChild(FOLDER_NAME)
+	if existing then
+		existing:Destroy()
+	end
+
+	local folder = Instance.new("Folder")
+	folder.Name = FOLDER_NAME
+	folder.Parent = workspace
+	container = folder
+	return folder
+end
+
+function BaseService.build()
+	local folder = ensureContainer()
+	table.clear(plots)
+
+	for index = 1, Base.PLOT_COUNT do
+		local model = Instance.new("Model")
+		model.Name = `Plot_{index}`
+		model.Parent = folder
+
+		local plot: Plot = {
+			index = index,
+			model = model,
+			cframe = BaseService.plotCFrame(index),
+			owner = nil,
+		}
+		plots[index] = plot
+		renderPlot(plot, nil, nil)
+	end
+
+	print(
+		`[Base] участков построено: {Base.PLOT_COUNT}, радиус кольца {Base.RING_RADIUS}`
+	)
+end
+
+-- ===== Игроки ====================================================================
+
+local function freePlotIndex(): number?
+	for index = 1, Base.PLOT_COUNT do
+		local plot = plots[index]
+		if plot and not plot.owner then
+			return index
+		end
+	end
+	return nil
+end
+
+function BaseService.plotOf(player: Player): Plot?
+	local index = byPlayer[player]
+	return if index then plots[index] else nil
+end
+
+--[[
+	Перерисовывает участок игрока по текущему профилю.
+	Единственный путь, которым дом меняется на глазах у ребёнка.
+]]
+function BaseService.refresh(player: Player)
+	local plot = BaseService.plotOf(player)
+	local profile = ProfileService.get(player)
+	if not plot or not profile then
+		return
+	end
+	renderPlot(plot, player, profile.base)
+end
+
+function BaseService.assign(player: Player)
+	if byPlayer[player] then
+		return
+	end
+
+	local index = freePlotIndex()
+	if not index then
+		-- Участков ровно столько, сколько мест на сервере: сюда мы попасть не должны.
+		warn(`[Base] свободных участков нет для {player.Name}`)
+		return
+	end
+
+	local plot = plots[index]
+	plot.owner = player
+	byPlayer[player] = index
+
+	BaseService.refresh(player)
+
+	--[[
+		Клиенту сообщаем, где на его участке стоит Азбучная Башня.
+
+		Витрина обучения переезжает из центра карты во двор ребёнка
+		(docs/15-HOME-BASE.md § 4): в центре теперь порталы, а Башня — «моя»,
+		и стоит она у меня за домом, где её видно и мне, и соседям.
+	]]
+	RemoteDefs.event("BaseAssigned"):FireClient(player, (plot.cframe * TOWER_SPOT).Position)
+end
+
+function BaseService.release(player: Player)
+	local index = byPlayer[player]
+	byPlayer[player] = nil
+	if not index then
+		return
+	end
+
+	local plot = plots[index]
+	if plot then
+		plot.owner = nil
+		renderPlot(plot, nil, nil)
+	end
+end
+
+--[[
+	Улучшение постройки. Цена берётся ИЗ КОНФИГА, из запроса — только название
+	категории. Проверки те же, что в магазине: свой участок, есть следующий
+	уровень, хватает звёздочек.
+]]
+function BaseService.upgrade(player: Player, categoryId: any): boolean
+	if typeof(categoryId) ~= "string" then
+		return false
+	end
+
+	if not RateLimiter.allow(player, "BuildUpgrade", RemoteDefs.RATE_LIMITS.BuildUpgrade) then
+		return false
+	end
+
+	local category = Base.get(categoryId)
+	if not category then
+		warn(`[Base] неизвестная категория построек: {categoryId}`)
+		return false
+	end
+
+	local plot = BaseService.plotOf(player)
+	local profile = ProfileService.get(player)
+	if not plot or not profile then
+		return false
+	end
+
+	local level = Base.sanitize(profile.base)[categoryId]
+	local price = Base.priceFor(categoryId, level)
+	if not price then
+		return false -- достроено до конца
+	end
+
+	if not EconomyService.spend(player, price, `base:{categoryId}`) then
+		-- Не хватает звёздочек — это не ошибка, а «ещё не накопил».
+		RemoteDefs.event("OpenUI"):FireClient(player, "need_stars")
+		return false
+	end
+
+	ProfileService.update(player, function(p)
+		p.base = Base.sanitize(p.base)
+		p.base[categoryId] = level + 1
+	end)
+
+	BaseService.refresh(player)
+	print(`[Base] {player.Name}: {categoryId} → уровень {level + 1}`)
+	return true
+end
+
+function BaseService.start()
+	BaseService.build()
+
+	RemoteDefs.event("BuildUpgrade").OnServerEvent:Connect(function(player: Player, categoryId: any)
+		BaseService.upgrade(player, categoryId)
+	end)
+
+	Players.PlayerAdded:Connect(function(player: Player)
+		task.spawn(function()
+			if ProfileService.waitFor(player, 20) then
+				BaseService.assign(player)
+			end
+		end)
+	end)
+
+	for _, player in Players:GetPlayers() do
+		task.spawn(function()
+			if ProfileService.waitFor(player, 20) then
+				BaseService.assign(player)
+			end
+		end)
+	end
+
+	Players.PlayerRemoving:Connect(BaseService.release)
+end
+
+return BaseService
