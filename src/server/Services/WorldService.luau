@@ -113,6 +113,16 @@ local PADS = {
 
 local lastTouch: { [Player]: number } = {}
 
+--[[
+	Откуда ребёнок ушёл в испытание: точка рядом с падом или порталом, куда его
+	поставить, когда испытание кончится. Не на сам пад — иначе касание срабатывало
+	снова, и испытание начиналось по кругу: «постоянно куда-то телепортирует».
+]]
+local exitOf: { [Player]: CFrame } = {}
+
+-- Пауза после конца испытания, прежде чем пад или портал снова сработает на касание.
+local AFTER_FINISH_COOLDOWN = 3
+
 local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): BasePart
 	local p = Instance.new("Part")
 	p.Name = name
@@ -160,7 +170,13 @@ end
 	Дошкольник не будет искать клавишу E и не всегда попадёт по кнопке подсказки —
 	он просто придёт и встанет на пад. Касание обязано работать как основной способ.
 ]]
-local function makeActivator(pad: BasePart, actionText: string, objectText: string, action: (Player) -> ())
+local function makeActivator(
+	pad: BasePart,
+	actionText: string,
+	objectText: string,
+	action: (Player) -> (),
+	exit: CFrame?
+)
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = actionText
 	prompt.ObjectText = objectText
@@ -168,7 +184,14 @@ local function makeActivator(pad: BasePart, actionText: string, objectText: stri
 	prompt.MaxActivationDistance = 14
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = pad
-	prompt.Triggered:Connect(action)
+
+	local function activate(player: Player)
+		if exit then
+			exitOf[player] = exit
+		end
+		action(player)
+	end
+	prompt.Triggered:Connect(activate)
 
 	--[[
 		Касание срабатывает много раз в секунду, пока ребёнок стоит на паде.
@@ -191,7 +214,7 @@ local function makeActivator(pad: BasePart, actionText: string, objectText: stri
 
 		standing[player] = true
 		lastTouch[player] = now
-		action(player)
+		activate(player)
 	end)
 
 	pad.TouchEnded:Connect(function(hit: BasePart)
@@ -253,18 +276,18 @@ local function buildPortal(hub: Folder, portal: any)
 		Вход в мир. Испытание само решит, начать забег заново или продолжить
 		с последней арки: незаконченный забег лежит в профиле (Types.SavedRun).
 		Сохранки у миров свои — ключ забега это его испытание.
+
+		Срабатывает светящееся полотно арки, а не платформа под ней: в портал
+		входят, пройдя сквозь арку. Платформа 18 на 18 лежала посреди площади,
+		на неё наступали по пути куда угодно — и улетали в туннель, не собираясь.
 	]]
-	makeActivator(
-		platform,
-		portal.action,
-		Challenges.expect(portal.challengeId).title,
-		function(player: Player)
-			if not ProfileService.get(player) then
-				return
-			end
-			ChallengeService.startFor(player, portal.challengeId)
+	local front = position + Vector3.new(0, 3, 13)
+	makeActivator(veil, portal.action, Challenges.expect(portal.challengeId).title, function(player: Player)
+		if not ProfileService.get(player) then
+			return
 		end
-	)
+		ChallengeService.startFor(player, portal.challengeId)
+	end, CFrame.lookAt(front, Vector3.new(position.X, front.Y, position.Z)))
 end
 
 local function buildChallengePad(hub: Folder, pad: any, slot: number, slots: number)
@@ -307,43 +330,32 @@ local function buildChallengePad(hub: Folder, pad: any, slot: number, slots: num
 		hub
 	)
 
+	-- Выход — на шаг ближе к центру площади, лицом к паду: рядом, но не на нём.
+	local flat = Vector3.new(position.X, 0, position.Z)
+	local exitAt = position + Vector3.new(0, 3, 0) - flat.Unit * 12
 	makeActivator(platform, pad.action, meta.title, function(player: Player)
 		if not ProfileService.get(player) then
 			return
 		end
 		ChallengeService.startFor(player, pad.challengeId)
-	end)
+	end, CFrame.lookAt(exitAt, Vector3.new(position.X, exitAt.Y, position.Z)))
 end
 
 --[[
-	Декор: деревья, клумбы и парящие буквы. Мир должен выглядеть местом, а не полигоном.
+	Декор: деревья, фонари, клумбы. Мир должен выглядеть местом, а не полигоном.
 
 	Предметы на земле расставляет DecorService по каталогу Config/Decor: там же лежит
 	и запрет ставить что-либо перед порталами и падами. Пока моделей нет, он ставит
 	заглушки того же размера — расстановка проверяется до прихода арта, а не после.
 ]]
 local function buildDecor(hub: Folder)
+	--[[
+		Парящих букв над площадью больше нет. Они висели вокруг Башни, когда та
+		стояла в центре; Башня переехала во двор, а над порталами остались
+		33 неоновых куба без букв — цветной мусор в небе, по которому ничего
+		не понять. Буквы в мире теперь там, где с ними что-то делают.
+	]]
 	DecorService.build(hub)
-
-	-- Парящие буквы вокруг Башни: тема мира читается с первого взгляда
-	local ordered = Letters.ordered()
-	for i, letterId in ordered do
-		local letter = Letters.expect(letterId)
-		local angle = (i - 1) / #ordered * math.pi * 2
-		local radius = 20
-		local position = Vector3.new(math.cos(angle) * radius, 14 + (i % 3) * 3, math.sin(angle) * radius)
-
-		local floater = part(
-			`Floater_{letterId}`,
-			Vector3.new(2.6, 2.6, 2.6),
-			CFrame.new(position) * CFrame.Angles(0, -angle, 0),
-			letter.color,
-			hub
-		)
-		floater.CanCollide = false
-		floater.Material = Enum.Material.Neon
-		floater.Transparency = 0.25
-	end
 end
 
 --[[
@@ -438,11 +450,41 @@ local function styleLighting()
 	end
 end
 
-function WorldService.build()
-	local existing = workspace:FindFirstChild("Hub")
-	if existing then
-		existing:Destroy()
+--[[
+	Мир целиком строится кодом, и ничего чужого в нём быть не должно.
+
+	Если место открыто из шаблона Studio (с рельефом, горами и витриной
+	материалов), шаблон остаётся лежать поверх площади: рельеф с травой
+	оказывается над головой, ребёнок проваливается под него, выпрыгивает
+	наверх и уже не может дойти ни до портала, ни до дома. Поэтому перед
+	постройкой всё, что не наше, убирается: рельеф стирается, чужие объекты
+	удаляются. Это делается во время игры и файл места не меняет.
+
+	Не трогаем только камеру, сам объект Terrain (в нём живут облака)
+	и персонажей игроков, если они уже появились.
+]]
+local function clearForeignWorld()
+	workspace.Terrain:Clear()
+
+	local removed = 0
+	for _, child in workspace:GetChildren() do
+		local keep = child:IsA("Terrain")
+			or child:IsA("Camera")
+			or (child:IsA("Model") and Players:GetPlayerFromCharacter(child) ~= nil)
+		if not keep then
+			child:Destroy()
+			removed += 1
+		end
 	end
+	if removed > 0 then
+		print(
+			`[World] убрано чужое из Workspace: {removed} объектов и рельеф шаблона`
+		)
+	end
+end
+
+function WorldService.build()
+	clearForeignWorld()
 
 	styleLighting()
 
@@ -540,6 +582,30 @@ function WorldService.start()
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		lastTouch[player] = nil
+		exitOf[player] = nil
+	end)
+
+	--[[
+		Испытание кончилось — ребёнок встаёт рядом с тем падом или порталом,
+		откуда ушёл, лицом к нему. Не на него: иначе касание запускало испытание
+		снова. И пару секунд пад на него не реагирует вовсе.
+
+		Нажал 🏠 — его уже увели домой, и сюда возвращать не нужно.
+	]]
+	ChallengeService.onFinished(function(player: Player, _spec: any, reason: string)
+		local exit = exitOf[player]
+		exitOf[player] = nil
+		lastTouch[player] = os.clock() + AFTER_FINISH_COOLDOWN - TOUCH_DEBOUNCE
+		if not exit or reason == "aborted" then
+			return
+		end
+		-- После хука туннеля: он сначала возвращает ребёнка туда, откуда тот стартовал.
+		task.defer(function()
+			local character = player.Character
+			if character then
+				character:PivotTo(exit)
+			end
+		end)
 	end)
 
 	-- Пересчитываем открытые ступени при входе: буквы могли быть освоены в прошлой сессии.

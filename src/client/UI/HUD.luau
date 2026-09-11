@@ -6,7 +6,6 @@
 	кнопка «динамик» всегда на месте, текста ребёнку читать не нужно.
 
 	Это серый ящик: пропорции и логика верные, арта нет.
-	Кнопка «Играть» — временная, до появления хаба с порталами миров.
 ]]
 
 local Players = game:GetService("Players")
@@ -21,6 +20,7 @@ local starsLabel: TextLabel? = nil
 local targetLabel: TextLabel? = nil
 local progressLabel: TextLabel? = nil
 local toastLabel: TextLabel? = nil
+local subtitleLabel: TextLabel? = nil
 
 local function makeButton(name: string, text: string, size: UDim2, position: UDim2): TextButton
 	local button = Instance.new("TextButton")
@@ -111,22 +111,42 @@ function HUD.build(callbacks: { [string]: () -> () })
 	shopButton.Parent = screen
 	shopButton.Activated:Connect(callbacks.onShop)
 
-	-- Дубли падов из хаба: ребёнок может не дойти до пада, а взрослому нужен быстрый
-	-- способ проверить механики. Уберём, когда хаб обрастёт навигацией.
-	local startButton =
-		makeButton("Start", "Буквы", UDim2.fromScale(0.18, 0.1), UDim2.fromScale(0.21, 0.85))
-	startButton.Parent = screen
-	startButton.Activated:Connect(callbacks.onStart)
+	--[[
+		Кнопок «Буквы», «Лестница», «Числа» здесь больше нет. Это были отладочные
+		дубли падов, и они путали: «Буквы» запускала Буквопад, а не мир букв.
+		Дорогу к занятиям теперь показывают пады, порталы и стрелка обучения.
+	]]
 
-	local ladderButton =
-		makeButton("Ladder", "Лестница", UDim2.fromScale(0.18, 0.1), UDim2.fromScale(0.41, 0.85))
-	ladderButton.Parent = screen
-	ladderButton.Activated:Connect(callbacks.onLadder)
+	--[[
+		Субтитры: текст того, что говорит голос. Пока озвучка не записана, это
+		единственный способ узнать задание; потом — для тех, кто их включит.
+		Внизу по центру, где их ищут по привычке, над кнопками 🔊 и 🛍.
+	]]
+	local sub = Instance.new("TextLabel")
+	sub.Name = "Subtitle"
+	sub.AnchorPoint = Vector2.new(0.5, 1)
+	sub.Size = UDim2.fromScale(0.6, 0.08)
+	sub.Position = UDim2.fromScale(0.5, 0.95)
+	sub.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+	sub.BackgroundTransparency = 0.35
+	sub.TextColor3 = Color3.fromRGB(255, 255, 255)
+	sub.TextScaled = true
+	sub.Font = Enum.Font.GothamBold
+	sub.Text = ""
+	sub.Visible = false
+	sub.Parent = screen
+	subtitleLabel = sub
 
-	local mathButton =
-		makeButton("Math", "Числа", UDim2.fromScale(0.18, 0.1), UDim2.fromScale(0.61, 0.85))
-	mathButton.Parent = screen
-	mathButton.Activated:Connect(callbacks.onMath)
+	local subPadding = Instance.new("UIPadding")
+	subPadding.PaddingLeft = UDim.new(0, 12)
+	subPadding.PaddingRight = UDim.new(0, 12)
+	subPadding.PaddingTop = UDim.new(0, 4)
+	subPadding.PaddingBottom = UDim.new(0, 4)
+	subPadding.Parent = sub
+
+	local subCorner = Instance.new("UICorner")
+	subCorner.CornerRadius = UDim.new(0, 12)
+	subCorner.Parent = sub
 
 	--[[
 		«Домик»: одинаковый на всех экранах и всегда на месте (docs/08-UX-UI.md § 2).
@@ -227,6 +247,53 @@ function HUD.showIntro(glyph: string)
 end
 
 local toastToken = 0
+
+--[[
+	Очередь субтитров: строки идут одна за другой, как голос, а не затирают
+	друг друга. «Познакомься! Это…», «Буква А», «Беги в ворота…» приходят разом,
+	и покажи мы только последнюю, первые две пропали бы.
+]]
+local subtitleQueue: { string } = {}
+local subtitleRunning = false
+local SUBTITLE_MAX_PENDING = 3
+
+local function subtitleSeconds(text: string): number
+	-- Столько, сколько взрослый читает вслух: около 15 символов в секунду, не меньше полутора секунд.
+	return math.clamp(0.8 + utf8.len(text) / 15, 1.5, 6)
+end
+
+function HUD.subtitle(text: string)
+	if not subtitleLabel or text == "" then
+		return
+	end
+	-- Одна и та же строка подряд (тап по той же букве) — не копим повторы.
+	if subtitleQueue[#subtitleQueue] == text then
+		return
+	end
+	table.insert(subtitleQueue, text)
+	while #subtitleQueue > SUBTITLE_MAX_PENDING do
+		table.remove(subtitleQueue, 1)
+	end
+
+	if subtitleRunning then
+		return
+	end
+	subtitleRunning = true
+	task.spawn(function()
+		while #subtitleQueue > 0 do
+			local line = table.remove(subtitleQueue, 1) :: string
+			if subtitleLabel then
+				subtitleLabel.Text = line
+				subtitleLabel.Visible = true
+			end
+			task.wait(subtitleSeconds(line))
+		end
+		if subtitleLabel then
+			subtitleLabel.Visible = false
+		end
+		subtitleRunning = false
+	end)
+end
 
 function HUD.toast(text: string, seconds: number?)
 	if not toastLabel then

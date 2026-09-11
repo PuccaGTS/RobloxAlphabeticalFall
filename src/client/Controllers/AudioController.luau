@@ -7,7 +7,9 @@
 	  · реплики НЕ накладываются — только очередь;
 	  · название буквы (letter_) нельзя прервать ничем — это эталон;
 	  · на время любой реплики музыка и эмбиент опускаются до 30%;
-	  · кнопка «динамик» повторяет последнюю значимую реплику.
+	  · кнопка «динамик» повторяет последнюю значимую реплику;
+	  · реплика без загруженного аудио показывается текстом (Config/VOText):
+	    пока озвучка не записана, иначе игра молчит и задание не понять.
 ]]
 
 local SoundService = game:GetService("SoundService")
@@ -16,6 +18,7 @@ local ContentProvider = game:GetService("ContentProvider")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local AudioRegistry = require(Shared.Config.AudioRegistry)
+local VOText = require(Shared.Config.VOText)
 
 local AudioController = {}
 
@@ -70,6 +73,16 @@ local lastPhrase: { string }? = nil
 local lastRepeatAt = 0
 local ducked = false
 local pumping = false
+
+-- Куда отдавать субтитры (HUD) и показывать ли их даже при записанной озвучке.
+local subtitleSink: ((text: string) -> ())? = nil
+local subtitlesAlways = false
+
+local function subtitle(text: string?, hasAudio: boolean)
+	if subtitleSink and text and text ~= "" and (subtitlesAlways or not hasAudio) then
+		subtitleSink(text)
+	end
+end
 
 local function priorityOf(key: string): number
 	for _, entry in PRIORITY_BY_PREFIX do
@@ -192,7 +205,7 @@ end
 	Ставит реплику в очередь. Возвращает false, если озвучки ещё нет —
 	вызывающий код обязан это пережить (показать анимацию и идти дальше).
 ]]
-function AudioController.speak(key: string): boolean
+local function enqueue(key: string): boolean
 	ensureGroups()
 
 	local assetId = AudioRegistry.resolve(key)
@@ -215,6 +228,12 @@ function AudioController.speak(key: string): boolean
 	return true
 end
 
+function AudioController.speak(key: string): boolean
+	local spoken = enqueue(key)
+	subtitle(VOText.get(key), spoken)
+	return spoken
+end
+
 --[[
 	Фраза: несколько реплик подряд как одно задание. Так говорит математика —
 	«Сколько будет» + «два» + «плюс» + «два» (docs/16-MATH.md § 5).
@@ -227,11 +246,18 @@ function AudioController.speakPhrase(keys: { string }): boolean
 	ensureGroups()
 
 	local spoken = false
+	local complete = true
 	for _, key in keys do
-		if AudioController.speak(key) then
+		if enqueue(key) then
 			spoken = true
+		else
+			complete = false
 		end
 	end
+
+	-- Субтитр — фразой целиком, а не по кускам: «Сколько будет два плюс два».
+	-- Недостаёт хоть одного куска — показываем текст, иначе задание не понять.
+	subtitle(VOText.phrase(keys), complete)
 
 	-- Фразу запоминаем целиком и всегда, даже если озвучки ещё нет: кнопка
 	-- «повторить» должна вести себя одинаково до и после записи реплик.
@@ -279,16 +305,7 @@ function AudioController.repeatLast(): boolean
 	lastRepeatAt = now
 
 	if phrase then
-		local spoken = false
-		for _, item in phrase do
-			if AudioController.speak(item) then
-				spoken = true
-			end
-		end
-		-- speak() сбросил бы запомненную фразу, повторяя её же: возвращаем на место.
-		lastPhrase = phrase
-		lastRepeatable = nil
-		return spoken
+		return AudioController.speakPhrase(phrase)
 	end
 
 	return AudioController.speak(key :: string)
@@ -347,6 +364,18 @@ end
 function AudioController.group(name: string): SoundGroup?
 	ensureGroups()
 	return groups[name]
+end
+
+--[[
+	Субтитры. sink показывает текст на экране; always — показывать и при записанной
+	озвучке (настройка «Субтитры» в профиле). Без записи они показываются всегда.
+]]
+function AudioController.onSubtitle(sink: (text: string) -> ())
+	subtitleSink = sink
+end
+
+function AudioController.setSubtitles(always: boolean)
+	subtitlesAlways = always
 end
 
 function AudioController.init()

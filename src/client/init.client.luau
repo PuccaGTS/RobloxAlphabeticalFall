@@ -49,15 +49,6 @@ HUD.build({
 		SfxController.play("tap")
 		ShopUI.setOpen(not ShopUI.isOpen())
 	end,
-	onStart = function()
-		ChallengeController.start("letter_rain")
-	end,
-	onLadder = function()
-		ChallengeController.start("alphabet_ladder")
-	end,
-	onMath = function()
-		ChallengeController.start("math_gates")
-	end,
 	onHome = function()
 		SfxController.play("tap")
 		RemoteDefs.event("GoHome"):FireServer()
@@ -67,6 +58,8 @@ HUD.build({
 		ParentUI.open()
 	end,
 })
+
+AudioController.onSubtitle(HUD.subtitle)
 
 ParentUI.build()
 DayOverScreen.init(ParentUI.open)
@@ -114,6 +107,7 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 		AudioController.setVolume("Music", settings.music or 0.6)
 		AudioController.setVolume("SFX", settings.sfx or 0.7)
 		AudioController.setVolume("VO", settings.voice or 1)
+		AudioController.setSubtitles(settings.subtitles == true)
 	end
 
 	HUD.setStars(snapshot.stars or 0)
