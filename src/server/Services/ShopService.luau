@@ -21,6 +21,16 @@ local RateLimiter = require(script.Parent.RateLimiter)
 
 local ShopService = {}
 
+--[[
+	Хуки на удачную покупку. Нужны обучению: первая шапка закрывает его шаг
+	«магазин». Сервис при этом не знает про обучение — обучение знает про сервис.
+]]
+local purchaseHooks: { (player: Player, itemId: string) -> () } = {}
+
+function ShopService.onPurchase(hook: (player: Player, itemId: string) -> ())
+	table.insert(purchaseHooks, hook)
+end
+
 local function owns(profile, itemId: string): boolean
 	return table.find(profile.inventory, itemId) ~= nil
 end
@@ -70,6 +80,10 @@ local function onBuy(player: Player, itemId: any)
 
 	CosmeticsService.apply(player)
 	print(`[Shop] {player.Name} купил {itemId} за {item.price} ⭐`)
+
+	for _, hook in purchaseHooks do
+		task.spawn(hook, player, itemId)
+	end
 end
 
 local function onEquip(player: Player, itemId: any)

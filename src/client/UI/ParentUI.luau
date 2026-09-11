@@ -239,6 +239,22 @@ function showReport(tab: string?, cached: any?)
 			l.Font = FONT_BOLD
 		end
 	end
+
+	--[[
+		Обучение первых минут можно пропустить — для второго ребёнка в семье,
+		который уже видел, как играет первый (docs/13-PARENT-MODE.md § 3).
+		Кнопка есть, только пока обучение не пройдено.
+	]]
+	if current == "Главное" and data.tutorialDone == false then
+		local skip = button(root, "Пропустить обучение", KEY, 260)
+		skip.TextColor3 = TEXT
+		skip.Activated:Connect(function()
+			if auth({ action = "skip_tutorial" }).ok then
+				data.tutorialDone = true
+				showReport(current, data)
+			end
+		end)
+	end
 end
 
 -- ===== PIN =======================================================================

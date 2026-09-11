@@ -18,6 +18,7 @@ local Letters = require(script.Parent.Letters)
 local Challenges = require(script.Parent.Challenges)
 local Stages = require(script.Parent.Stages)
 local MathConfig = require(script.Parent.Math)
+local Tutorial = require(script.Parent.Parent.Logic.Tutorial)
 
 local AudioRegistry = {}
 
@@ -125,6 +126,13 @@ function AudioRegistry.requiredKeys(): { string }
 
 	for _, key in { "story_intro", "story_meet_letter", "story_stage_open", "story_stage_done" } do
 		set[key] = true
+	end
+
+	-- Голос обучения первых минут: без него стрелка есть, а что делать — непонятно.
+	for _, step in Tutorial.STEPS do
+		if step.vo then
+			set[step.vo] = true
+		end
 	end
 
 	for i = 1, AudioRegistry.PRAISE_COUNT do

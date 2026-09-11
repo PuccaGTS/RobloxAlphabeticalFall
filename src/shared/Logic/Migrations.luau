@@ -17,6 +17,7 @@ local Base = require(script.Parent.Parent.Config.Base)
 local Levels = require(script.Parent.Parent.Config.Levels)
 local ProfileTemplate = require(script.Parent.Parent.Config.ProfileTemplate)
 local PlayLog = require(script.Parent.PlayLog)
+local Tutorial = require(script.Parent.Tutorial)
 
 export type Step = (profile: any) -> ()
 
@@ -59,6 +60,10 @@ local Migrations = {}
 	    Незаконченный туннель без уровня выбрасывается. Его рецепт старого вида:
 	    по нему собрался бы уже другой туннель, и ребёнок оказался бы посреди
 	    чужого пути. Потеряна в худшем случае одна сохранка.
+
+	[7] Появилось обучение первых минут: поле `tutorial`. Кто уже играл —
+	    есть звёздочки, буквы или вещи, — получает его пройденным: вести
+	    за руку к паду, на котором ребёнок был сто раз, значит мешать.
 ]]
 local STEPS: { [number]: Step } = {
 	[1] = function(profile)
@@ -132,6 +137,12 @@ local STEPS: { [number]: Step } = {
 				profile.runs.tunnel_run = nil
 			end
 		end
+	end,
+
+	[7] = function(profile)
+		profile.tutorial = if Tutorial.hasPlayed(profile)
+			then Tutorial.finished()
+			else Tutorial.sanitize(profile.tutorial)
 	end,
 }
 

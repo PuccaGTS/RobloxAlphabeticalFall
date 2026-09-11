@@ -564,6 +564,24 @@ return function()
 			end
 		)
 
+		it("кто уже играл, обучение получает пройденным", function()
+			local profile = Migrations.normalize(version6Profile(), NOW)
+			expect(ProfileTemplate.toSnapshot(profile).tutorial).to.equal(nil)
+		end)
+
+		it(
+			"новичок старой версии проходит обучение с начала",
+			function()
+				local profile =
+					Migrations.normalize({ version = 6, stars = 0, letters = {}, inventory = {} }, NOW)
+				expect(ProfileTemplate.toSnapshot(profile).tutorial).to.equal("catch")
+			end
+		)
+
+		it("новый профиль начинает с Буквопада", function()
+			expect(ProfileTemplate.toSnapshot(ProfileTemplate.new(NOW)).tutorial).to.equal("catch")
+		end)
+
 		it("испорченный счёт уровней не роняет вход в игру", function()
 			for _, broken in
 				{ "три", { letters = -4 }, { letters = 999 }, { letters = 2.7 }, { letters = 0 / 0 } }

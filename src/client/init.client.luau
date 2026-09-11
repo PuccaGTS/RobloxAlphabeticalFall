@@ -16,6 +16,7 @@ local SfxController = require(Controllers.SfxController)
 local ChallengeController = require(Controllers.ChallengeController)
 local TowerController = require(Controllers.TowerController)
 local PortalSignController = require(Controllers.PortalSignController)
+local TutorialController = require(Controllers.TutorialController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -25,6 +26,7 @@ AudioController.init()
 SfxController.init()
 ChallengeController.init()
 TowerController.init()
+TutorialController.init()
 
 ShopUI.build({
 	onBuy = function(itemId: string)
@@ -94,6 +96,7 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 	ShopUI.update(snapshot)
 	TowerController.update(snapshot)
 	PortalSignController.update(snapshot)
+	TutorialController.update(snapshot)
 end)
 
 --[[

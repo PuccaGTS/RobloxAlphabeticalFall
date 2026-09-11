@@ -17,11 +17,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ParentGate = require(Shared.Logic.ParentGate)
+local Tutorial = require(Shared.Logic.Tutorial)
 local ParentReport = require(Shared.Logic.ParentReport)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
 local RateLimiter = require(script.Parent.RateLimiter)
+local TutorialService = require(script.Parent.TutorialService)
 
 local ParentService = {}
 
@@ -85,7 +87,9 @@ end
 	  reset  — «забыл PIN»: сброс настроек родительского режима, прогресс ребёнка
 	           не трогается (docs/13 § 1). Перед ним клиент спрашивает взрослый
 	           вопрос — это барьер от ребёнка, а не от взломщика;
-	  leave  — закрыть родительский экран.
+	  leave  — закрыть родительский экран;
+	  skip_tutorial — пропустить обучение первых минут (docs/13 § 3: для второго
+	           ребёнка в семье). Только после входа по PIN.
 ]]
 local function onAuth(player: Player, request: any)
 	if not RateLimiter.allow(player, "ParentAuth", RemoteDefs.RATE_LIMITS.ParentAuth) then
@@ -149,6 +153,15 @@ local function onAuth(player: Player, request: any)
 		return refuse("wrong_pin", { attemptsLeft = left, lockedFor = ParentGate.lockedFor(guard, now) })
 	end
 
+	if action == "skip_tutorial" then
+		if not isSignedIn(player) then
+			return refuse("not_signed_in")
+		end
+		TutorialService.skip(player)
+		logChange(player, "tutorial_skipped")
+		return { ok = true }
+	end
+
 	if action == "reset" then
 		ProfileService.update(player, function(p)
 			p.parent = { pinHash = nil, dailyLimitMin = nil }
@@ -182,6 +195,7 @@ local function onReport(player: Player)
 	signIn(player)
 	return {
 		report = ParentReport.build(profile, os.time()),
+		tutorialDone = Tutorial.isDone(Tutorial.sanitize(profile.tutorial)),
 		-- Время сервера: по нему клиент считает «повтор через 3 дня»,
 		-- часы планшета могут врать на сутки.
 		now = os.time(),

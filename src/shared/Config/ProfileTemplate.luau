@@ -11,6 +11,7 @@
 local Types = require(script.Parent.Parent.Types)
 local Base = require(script.Parent.Base)
 local Levels = require(script.Parent.Levels)
+local Tutorial = require(script.Parent.Parent.Logic.Tutorial)
 
 local ProfileTemplate = {}
 
@@ -41,8 +42,11 @@ local ProfileTemplate = {}
 
 	Версия 7: мир букв стал путём из уровней — поле `levels` со счётом пройденных
 	уровней каждого мира (Config/Levels). Портал ведёт на следующий за пройденными.
+
+	Версия 8: обучение первых минут — поле `tutorial` со сделанными шагами
+	(Logic/Tutorial). Кто уже играл, получает его пройденным.
 ]]
-ProfileTemplate.VERSION = 7
+ProfileTemplate.VERSION = 8
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
@@ -68,6 +72,7 @@ function ProfileTemplate.new(now: number): Types.Profile
 		},
 		runs = {},
 		levels = Levels.sanitize(nil),
+		tutorial = {},
 		base = Base.newProgress(),
 		inventory = {},
 		equipped = { hat = nil, back = nil, face = nil, trail = nil, pets = {} },
@@ -97,12 +102,20 @@ export type Snapshot = {
 	stages: { [number]: boolean },
 	-- Пройденные уровни каждого мира: по ним клиент подписывает портал.
 	levels: { [string]: number },
+	-- Текущий шаг обучения ("catch", "shop", "run") или nil, если пройдено.
+	tutorial: string?,
 	base: { [string]: number },
 	inventory: { string },
 	equipped: Types.Equipped,
 	dailyStreak: number,
 	settings: Types.Settings,
 }
+
+-- Клиенту нужен только текущий шаг обучения — куда показывать стрелкой.
+local function tutorialStep(profile: Types.Profile): string?
+	local step = Tutorial.current(Tutorial.sanitize(profile.tutorial))
+	return if step then step.id else nil
+end
 
 function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 	local mastery: { [string]: number } = {}
@@ -131,6 +144,7 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 		math = math_,
 		stages = stages,
 		levels = Levels.sanitize(profile.levels),
+		tutorial = tutorialStep(profile),
 		base = table.clone(profile.base),
 		inventory = table.clone(profile.inventory),
 		equipped = {
