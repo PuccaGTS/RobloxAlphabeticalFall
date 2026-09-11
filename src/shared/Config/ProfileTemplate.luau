@@ -10,6 +10,7 @@
 
 local Types = require(script.Parent.Parent.Types)
 local Base = require(script.Parent.Base)
+local Levels = require(script.Parent.Levels)
 
 local ProfileTemplate = {}
 
@@ -37,8 +38,11 @@ local ProfileTemplate = {}
 
 	Версия 6: посуточная история занятий — поле `playLog`. Без неё отчёт родителя
 	не может сказать «занимался 6 дней из последних 7» (docs/13-PARENT-MODE.md § 2).
+
+	Версия 7: мир букв стал путём из уровней — поле `levels` со счётом пройденных
+	уровней каждого мира (Config/Levels). Портал ведёт на следующий за пройденными.
 ]]
-ProfileTemplate.VERSION = 6
+ProfileTemplate.VERSION = 7
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
@@ -63,6 +67,7 @@ function ProfileTemplate.new(now: number): Types.Profile
 			[1] = { unlocked = true, chests = {} },
 		},
 		runs = {},
+		levels = Levels.sanitize(nil),
 		base = Base.newProgress(),
 		inventory = {},
 		equipped = { hat = nil, back = nil, face = nil, trail = nil, pets = {} },

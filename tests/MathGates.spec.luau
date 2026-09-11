@@ -267,12 +267,12 @@ return function()
 		end)
 
 		--[[
-			Взял ворота — слышишь следующую задачу; ошибся — ту же самую ещё раз.
-			Без этого ребёнок бежит к следующим воротам, не зная, что от него хотят,
-			и выбирает проём наугад.
+			После любых ворот звучит задача следующих. Через неверный проём ребёнок
+			пробегает так же, как через верный, и повтори игра старую задачу, он
+			побежал бы к следующим воротам с чужим примером в голове.
 		]]
 		it(
-			"после ворот звучит следующая задача, после промаха — та же",
+			"после ворот звучит следующая задача — и после промаха тоже",
 			function()
 				local spec = build(7, 3)
 				local state = stateFor(spec)
@@ -289,7 +289,8 @@ return function()
 					gateIndex = 2,
 					lane = laneOf(spec.params.gates[2], false),
 				})
-				expect(table.concat(miss.voAfter, ",")).to.equal(table.concat(spec.params.gates[2].vo, ","))
+				expect(table.concat(miss.voAfter, ",")).to.equal(table.concat(spec.params.gates[3].vo, ","))
+				expect(miss.nextPrompt).to.equal(spec.params.gates[3].prompt)
 			end
 		)
 

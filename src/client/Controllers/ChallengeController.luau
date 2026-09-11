@@ -15,6 +15,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
+local Stages = require(Shared.Config.Stages)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local AudioController = require(script.Parent.AudioController)
@@ -325,13 +326,26 @@ local function onFeedback(feedback: any)
 	end
 
 	if activeChallengeId == "tunnel_run" or activeChallengeId == "obstacle_course" then
-		HUD.showTarget(activeTargetGlyph, feedback.caught, feedback.targetCount)
 		if not feedback.correct and feedback.tappedLetterId then
 			local tapped = Letters.get(feedback.tappedLetterId)
 			if tapped then
 				AudioController.speak(tapped.vo.name)
 			end
 		end
+
+		--[[
+			Уровень перешёл на новую букву: следующий отрезок ищет её. Название
+			произносит сервер сразу за похвалой, здесь только экран — и знакомство,
+			если с этой буквой ребёнок встречается впервые.
+		]]
+		if feedback.nextGlyph then
+			activeTargetGlyph = feedback.nextGlyph
+			if feedback.introGlyph then
+				HUD.showIntro(feedback.introGlyph)
+			end
+			HUD.toast(`Теперь беги в ворота с буквой {feedback.nextGlyph}`, 4)
+		end
+		HUD.showTarget(activeTargetGlyph, feedback.caught, feedback.targetCount)
 		return
 	end
 
@@ -382,10 +396,17 @@ local function onEnd(result: any)
 	end
 
 	local stars = string.rep("⭐", math.clamp(result.stars or 1, 1, 3))
+	--[[
+		Пройденный уровень называется по имени ступени: «Первые три пройдены».
+		Ребёнок прочитать это не сможет, а вот родитель рядом — сможет, и именно
+		ему важно видеть, что путь продвинулся.
+	]]
+	local stage = if result.levelCleared then Stages.get(result.levelCleared) else nil
+	local cleared = if stage then `Уровень «{stage.title}» пройден!   ` else ""
 	if (result.stars_awarded or 0) > 0 then
-		HUD.toast(`{stars}   +{result.stars_awarded}`, 4)
+		HUD.toast(`{cleared}{stars}   +{result.stars_awarded}`, 4)
 	else
-		HUD.toast(`{stars}   Попробуем ещё?`, 4)
+		HUD.toast(`{cleared}{stars}   Попробуем ещё?`, 4)
 	end
 	print(
 		string.format(

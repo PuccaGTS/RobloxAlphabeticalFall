@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage.Shared
 local Migrations = require(Shared.Logic.Migrations)
 local ProfileTemplate = require(Shared.Config.ProfileTemplate)
 local Base = require(Shared.Config.Base)
+local Levels = require(Shared.Config.Levels)
 
 local NOW = 1_700_000_000
 
@@ -281,13 +282,13 @@ return function()
 		it("уже записанный забег миграция не трогает", function()
 			local profile = version2Profile()
 			profile.runs = {
-				tunnel_run = { challengeId = "tunnel_run", seed = 7, checkpoint = 2 },
+				obstacle_course = { challengeId = "obstacle_course", seed = 7, checkpoint = 2 },
 			}
 
 			local migrated = Migrations.normalize(profile, NOW)
 
-			expect(migrated.runs.tunnel_run.seed).to.equal(7)
-			expect(migrated.runs.tunnel_run.checkpoint).to.equal(2)
+			expect(migrated.runs.obstacle_course.seed).to.equal(7)
+			expect(migrated.runs.obstacle_course.checkpoint).to.equal(2)
 		end)
 
 		it(
@@ -485,6 +486,83 @@ return function()
 			profile.playLog = { { day = 20000, sec = 600 } }
 
 			expect(ProfileTemplate.toSnapshot(profile).playLog).to.never.be.ok()
+		end)
+	end)
+
+	--[[
+		Шаг 6 — мир букв стал путём из уровней. Главное: старый туннель без уровня
+		выбрасывается (по его рецепту собрался бы другой туннель), а всё прочее,
+		что ребёнок заработал, остаётся на месте.
+	]]
+	describe("Миграция 6 → 7: уровни мира букв", function()
+		local function version6Profile()
+			return {
+				version = 6,
+				stars = 75,
+				letters = { a = { mastery = 2, correct = 4, wrong = 1, streak = 2, types = {} } },
+				runs = {
+					tunnel_run = {
+						challengeId = "tunnel_run",
+						seed = 11,
+						letters = { "a", "b" },
+						checkpoint = 2,
+					},
+					math_gates = {
+						challengeId = "math_gates",
+						seed = 5,
+						letters = {},
+						stage = 2,
+						checkpoint = 1,
+					},
+				},
+			}
+		end
+
+		it("путь начинается с первого уровня", function()
+			local profile = Migrations.normalize(version6Profile(), NOW)
+
+			expect(profile.version).to.equal(ProfileTemplate.VERSION)
+			expect(profile.levels.letters).to.equal(0)
+			expect(Levels.current(profile.levels.letters)).to.equal(1)
+		end)
+
+		it("туннель старого вида выбрасывается", function()
+			local profile = Migrations.normalize(version6Profile(), NOW)
+
+			expect(profile.runs.tunnel_run).to.equal(nil)
+		end)
+
+		it("математика, буквы и звёздочки остаются", function()
+			local profile = Migrations.normalize(version6Profile(), NOW)
+
+			expect(profile.runs.math_gates.checkpoint).to.equal(1)
+			expect(profile.letters.a.mastery).to.equal(2)
+			expect(profile.stars).to.equal(75)
+		end)
+
+		it("туннель уже с уровнем миграция не трогает", function()
+			local profile = version6Profile()
+			profile.runs.tunnel_run.level = 3
+
+			local migrated = Migrations.normalize(profile, NOW)
+
+			expect(migrated.runs.tunnel_run.level).to.equal(3)
+			expect(migrated.runs.tunnel_run.checkpoint).to.equal(2)
+		end)
+
+		it("испорченный счёт уровней не роняет вход в игру", function()
+			for _, broken in
+				{ "три", { letters = -4 }, { letters = 999 }, { letters = 2.7 }, { letters = 0 / 0 } }
+			do
+				local profile = version6Profile()
+				profile.levels = broken
+
+				local migrated = Migrations.normalize(profile, NOW)
+				local cleared = migrated.levels.letters
+
+				expect(cleared >= 0 and cleared <= Levels.count()).to.equal(true)
+				expect(cleared).to.equal(math.floor(cleared))
+			end
 		end)
 	end)
 end

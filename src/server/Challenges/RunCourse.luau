@@ -11,12 +11,21 @@
 	Модуль отвечает за буквы на воротах и за правила. Расстояния и препятствия
 	раскладывает CourseLayout — он же обслуживает ворота с числами. Геометрию
 	из плана строит TunnelService.
+
+	Забег бывает двух видов:
+	  · уровень мира букв (docs/14-TUNNEL-MODE.md § 3.3) — «Азбучный туннель»
+	    за порталом. Отрезков столько, сколько у уровня, и у каждого отрезка
+	    своя буква: новые буквы ступени, потом повторение (Config/Levels);
+	  · свободный забег — «Полоса препятствий» на паде. Буква одна на весь
+	    забег, первая из очереди повторений.
+	Правила ворот у них одни и те же; разница только в том, откуда берутся буквы.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
+local Levels = require(Shared.Config.Levels)
 local Tunnel = require(Shared.Config.Tunnel)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 
@@ -24,7 +33,30 @@ local CourseLayout = require(script.Parent.CourseLayout)
 
 local RunCourse = {}
 
-local function buildOpenings(random: Random, choiceCount: number, targetId: string, pool: { string })
+--[[
+	Отвлекающие буквы уровня: по группам из Config/Levels, каждая перемешана
+	сидом забега. Повторов в одних воротах нет — две одинаковые буквы в соседних
+	проёмах выглядят как ошибка игры, а не как выбор.
+]]
+local function levelDistractors(
+	levelIndex: number,
+	targetId: string,
+	random: Random,
+	count: number
+): { string }
+	local picked: { string } = {}
+	for _, group in Levels.distractorGroups(levelIndex, targetId) do
+		for _, id in CourseLayout.shuffled(group, random) do
+			if #picked >= count then
+				return picked
+			end
+			table.insert(picked, id)
+		end
+	end
+	return picked
+end
+
+local function buildOpenings(random: Random, choiceCount: number, targetId: string, distractors: () -> string)
 	-- Дорожки для проёмов выбираем случайно, но целевая буква обязана
 	-- оказаться на одной из них.
 	local lanes = CourseLayout.lanes(random)
@@ -33,7 +65,7 @@ local function buildOpenings(random: Random, choiceCount: number, targetId: stri
 	local targetSlot = random:NextInteger(1, choiceCount)
 
 	for slot = 1, choiceCount do
-		local letterId = if slot == targetSlot then targetId else pool[random:NextInteger(1, #pool)]
+		local letterId = if slot == targetSlot then targetId else distractors()
 		local letter = Letters.expect(letterId)
 
 		table.insert(openings, {
@@ -54,47 +86,77 @@ end
 	Создаёт модуль испытания-забега.
 
 	id — идентификатор испытания (он же ключ в Config/Challenges),
-	params — блок параметров из Config/Tunnel.
+	params — блок параметров из Config/Tunnel,
+	options.levels — забег идёт по уровням мира букв (Config/Levels).
 ]]
-function RunCourse.new(id: string, params)
+function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 	local Module = {}
+	local usesLevels = options ~= nil and options.levels == true
 
 	Module.id = id
 	Module.trains = { "recognize" }
 	Module.minLetters = 2
+	-- Просит у ChallengeService уровень мира букв: его выбирает не ребёнок, а пройденный путь.
+	Module.usesLevel = usesLevels
 
 	--[[
-		Собирает план забега по рецепту: буквы, сложность и сид.
+		Собирает план забега по рецепту: буквы, сложность, сид и — у уровня — его номер.
 
 		Функция обязана быть детерминированной. На этом держится сохранка:
 		вернувшийся назавтра ребёнок получает тот же самый туннель, потому что
-		в профиле лежит не геометрия, а эти три числа (см. Types.SavedRun).
+		в профиле лежит не геометрия, а эти несколько чисел (см. Types.SavedRun).
 		Ничего случайного, кроме Random.new(seed), здесь появляться не должно.
 
-		letters — очередь повторений. Первая буква становится главной целью забега:
-		один забег — одна буква, чтобы ребёнок успел с ней освоиться.
+		letters — очередь повторений. У свободного забега первая буква становится
+		целью на весь забег; у уровня из очереди берётся повторение для отрезков
+		после новых букв.
 
 		resumeFrom — с какой сохранки продолжаем. 0 — забег с начала.
 	]]
-	local function assemble(letters: { string }, difficulty: number, seed: number, resumeFrom: number)
+	local function assemble(
+		letters: { string },
+		difficulty: number,
+		seed: number,
+		resumeFrom: number,
+		levelIndex: number?
+	)
 		assert(#letters >= Module.minLetters, `{id}: нужно минимум две буквы`)
 
-		local gateCount = DifficultyCurve.pick(params.gates, difficulty)
+		local level = if usesLevels then Levels.get(levelIndex) else nil
+		assert(level or not usesLevels, `{id}: нет уровня {tostring(levelIndex)}`)
+
+		--[[
+			У уровня отрезков столько, сколько записано в нём самом: длина пути —
+			часть уровня, а не настроение адаптивной сложности. Проёмов же столько,
+			сколько разрешают сразу и сложность, и уровень, и дорожки.
+		]]
+		local gateCount = if level then level.segments else DifficultyCurve.pick(params.gates, difficulty)
 		local choiceCount = math.min(DifficultyCurve.pick(params.choices, difficulty), Tunnel.LANE_COUNT)
+		if level then
+			choiceCount = math.min(choiceCount, level.maxChoices)
+		end
 		local obstacleCount = DifficultyCurve.pick(params.obstacles, difficulty)
 		local obstacleTier = DifficultyCurve.pick(params.obstacleTier, difficulty)
 		local slowSeconds = DifficultyCurve.pick(params.missSlowSeconds, difficulty)
 		local slowFactor = DifficultyCurve.pick(params.missSlowFactor, difficulty)
 
-		local targetId = letters[1]
+		local targets: { string }
+		if level then
+			targets = Levels.targets(level.index, letters)
+		else
+			targets = table.create(gateCount, letters[1])
+		end
 
+		-- Отвлекающие буквы свободного забега: остаток очереди, а если его нет — весь алфавит.
 		local distractorPool: { string } = {}
 		for index = 2, #letters do
-			table.insert(distractorPool, letters[index])
+			if letters[index] ~= letters[1] then
+				table.insert(distractorPool, letters[index])
+			end
 		end
 		if #distractorPool == 0 then
 			for _, other in Letters.ordered() do
-				if other ~= targetId then
+				if other ~= letters[1] then
 					table.insert(distractorPool, other)
 				end
 			end
@@ -106,24 +168,54 @@ function RunCourse.new(id: string, params)
 			gateCount = gateCount,
 			obstacleCount = obstacleCount,
 			obstacleTier = obstacleTier,
-			makeGate = function(_index: number, gateRandom: Random)
-				return { openings = buildOpenings(gateRandom, choiceCount, targetId, distractorPool) }
+			makeGate = function(index: number, gateRandom: Random)
+				local targetId = targets[index]
+				local target = Letters.expect(targetId)
+
+				local openings
+				if level then
+					local picked = levelDistractors(level.index, targetId, gateRandom, choiceCount - 1)
+					local taken = 0
+					openings = buildOpenings(gateRandom, #picked + 1, targetId, function()
+						taken += 1
+						return picked[taken]
+					end)
+				else
+					openings = buildOpenings(gateRandom, choiceCount, targetId, function()
+						return distractorPool[gateRandom:NextInteger(1, #distractorPool)]
+					end)
+				end
+
+				return {
+					-- Буква отрезка живёт в самих воротах: у уровня она своя на каждом отрезке.
+					targetLetter = targetId,
+					targetGlyph = target.glyph,
+					targetVO = target.vo.name,
+					openings = openings,
+				}
 			end,
 		})
+
+		--[[
+			Сколько сохранок уже пройдено: столько же ворот считаются взятыми,
+			и с этой точки TunnelService поставит ребёнка в туннель. Буква-цель
+			на старте — буква первых невзятых ворот, а не первых вообще.
+		]]
+		local from = math.clamp(resumeFrom, 0, gateCount)
+		local current = gates[from + 1] or gates[#gates]
 
 		return {
 			challengeId = id,
 			seed = seed,
 			letters = table.clone(letters),
 			difficulty = difficulty,
+			level = if level then level.index else nil,
 			targetCount = gateCount,
 			params = {
-				-- Сколько сохранок уже пройдено: столько же ворот считаются взятыми,
-				-- и с этой точки TunnelService поставит ребёнка в туннель.
-				resumeFrom = math.clamp(resumeFrom, 0, gateCount),
-				targetLetter = targetId,
-				targetGlyph = Letters.expect(targetId).glyph,
-				targetVO = Letters.expect(targetId).vo.name,
+				resumeFrom = from,
+				targetLetter = current.targetLetter,
+				targetGlyph = current.targetGlyph,
+				targetVO = current.targetVO,
 				gates = gates,
 				obstacles = obstacles,
 				checkpoints = checkpoints,
@@ -134,21 +226,27 @@ function RunCourse.new(id: string, params)
 		}
 	end
 
-	-- Новый забег: сид берётся из часов, дальше он живёт в профиле вместе с сохранкой.
-	function Module.Build(_player: Player?, letters: { string }, difficulty: number)
+	--[[
+		Новый забег: сид берётся из часов, дальше он живёт в профиле вместе с сохранкой.
+		level — уровень мира букв; свободному забегу он не нужен, и тот его не читает.
+	]]
+	function Module.Build(_player: Player?, letters: { string }, difficulty: number, level: number?)
 		local seed = math.floor(os.clock() * 1000) % 2 ^ 31
-		return assemble(letters, difficulty, seed, 0)
+		return assemble(letters, difficulty, seed, 0, level)
 	end
 
 	--[[
 		Восстанавливает незаконченный забег из профиля: тот же сид, те же буквы,
-		та же сложность — значит, тот же туннель, только начатый с сохранки.
+		та же сложность, тот же уровень — значит, тот же туннель, только начатый
+		с сохранки.
 
 		Сложность берём сохранённую, а не сегодняшнюю: иначе за ночь мог смениться
 		размер плана, и ребёнок вернулся бы в туннель, похожий на свой, но другой.
+		Уровень — по той же причине: пройди ребёнок следующий уровень на другом
+		устройстве, эта сохранка всё равно ведёт в свой.
 	]]
 	function Module.Rebuild(saved)
-		return assemble(saved.letters, saved.difficulty, saved.seed, saved.checkpoint)
+		return assemble(saved.letters, saved.difficulty, saved.seed, saved.checkpoint, saved.level)
 	end
 
 	--[[
@@ -174,6 +272,12 @@ function RunCourse.new(id: string, params)
 
 		Падения и сохранки сюда не попадают: они про геометрию, а не про буквы,
 		и живут целиком в TunnelService. Обучающий прогресс от них не зависит.
+
+		Ворота пройдены в любом случае — и через верный проём, и через неверный:
+		стена не держит, ошибка стоит только замедления. Поэтому следующая буква
+		объявляется после любого ответа, если она сменилась. Иначе ребёнок,
+		ошибившийся на последних воротах отрезка, бежал бы к новым воротам
+		со старой буквой в голове.
 	]]
 	function Module.Validate(state, action)
 		if typeof(action) ~= "table" then
@@ -199,7 +303,6 @@ function RunCourse.new(id: string, params)
 		if state.answered[action.gateIndex] then
 			return { handled = false }
 		end
-		state.answered[action.gateIndex] = true
 
 		local opening
 		for _, candidate in gate.openings do
@@ -211,6 +314,7 @@ function RunCourse.new(id: string, params)
 		if not opening then
 			return { handled = false }
 		end
+		state.answered[action.gateIndex] = true
 
 		local correct = opening.isTarget
 		if correct then
@@ -219,12 +323,19 @@ function RunCourse.new(id: string, params)
 			state.missed += 1
 		end
 
+		local nextGate = gates[action.gateIndex + 1]
+		local changes = nextGate ~= nil and nextGate.targetLetter ~= gate.targetLetter
+
 		return {
 			handled = true,
 			correct = correct,
 			gateIndex = action.gateIndex,
-			letterId = state.spec.params.targetLetter,
+			letterId = gate.targetLetter,
 			tappedLetterId = if correct then nil else opening.letterId,
+			-- Новая буква следующего отрезка: её название звучит сразу после реакции.
+			nextLetter = if changes then nextGate.targetLetter else nil,
+			nextGlyph = if changes then nextGate.targetGlyph else nil,
+			voAfter = if changes then { nextGate.targetVO } else nil,
 			cooldown = if correct then 0 else state.spec.params.slowSeconds,
 			slowFactor = state.spec.params.slowFactor,
 			reactionMs = math.max(

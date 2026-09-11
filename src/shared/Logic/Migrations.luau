@@ -14,6 +14,7 @@
 
 local Types = require(script.Parent.Parent.Types)
 local Base = require(script.Parent.Parent.Config.Base)
+local Levels = require(script.Parent.Parent.Config.Levels)
 local ProfileTemplate = require(script.Parent.Parent.Config.ProfileTemplate)
 local PlayLog = require(script.Parent.PlayLog)
 
@@ -49,6 +50,15 @@ local Migrations = {}
 	    не из чего — время по дням раньше не писалось, — поэтому история
 	    начинается пустой. Серию dailyStreak шаг не трогает: её тоже никто
 	    не писал, и там ноль.
+
+	[6] Мир букв стал путём из уровней: поле `levels`, пройденных уровней ноль.
+	    Засчитать что-то задним числом не из чего — финиши раньше никуда
+	    не писались, — и ребёнок начинает путь с первого уровня. Буквы, которые
+	    он уже знает, при этом никуда не деваются: статусы живут отдельно.
+
+	    Незаконченный туннель без уровня выбрасывается. Его рецепт старого вида:
+	    по нему собрался бы уже другой туннель, и ребёнок оказался бы посреди
+	    чужого пути. Потеряна в худшем случае одна сохранка.
 ]]
 local STEPS: { [number]: Step } = {
 	[1] = function(profile)
@@ -111,6 +121,17 @@ local STEPS: { [number]: Step } = {
 
 	[5] = function(profile)
 		profile.playLog = PlayLog.sanitize(profile.playLog)
+	end,
+
+	[6] = function(profile)
+		profile.levels = Levels.sanitize(profile.levels)
+
+		if typeof(profile.runs) == "table" then
+			local tunnel = profile.runs.tunnel_run
+			if typeof(tunnel) == "table" and tunnel.level == nil then
+				profile.runs.tunnel_run = nil
+			end
+		end
 	end,
 }
 

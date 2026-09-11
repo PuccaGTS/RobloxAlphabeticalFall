@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 local Stages = require(Shared.Config.Stages)
+local Levels = require(Shared.Config.Levels)
 local MathConfig = require(Shared.Config.Math)
 local Economy = require(Shared.Config.Economy)
 local MasteryRules = require(Shared.Logic.MasteryRules)
@@ -387,6 +388,10 @@ local function isSavedRun(value: any, challengeId: string): boolean
 	if #value.letters < 2 then
 		return false
 	end
+	-- Уровня может не быть (свободный забег), но если он есть, он обязан существовать.
+	if value.level ~= nil and not Levels.get(value.level) then
+		return false
+	end
 	return true
 end
 
@@ -439,6 +444,8 @@ function ProgressService.saveRunCheckpoint(player: Player, spec, checkpointIndex
 			-- Ступень счёта — часть рецепта наравне с сидом: без неё вернувшийся
 			-- ребёнок получил бы тот же туннель с другими задачами.
 			stage = spec.stage,
+			-- Уровень мира букв — по той же причине: он решает, какие буквы на отрезках.
+			level = spec.level,
 			checkpoint = checkpointIndex,
 			savedAt = os.time(),
 		}
@@ -451,6 +458,33 @@ function ProgressService.clearRun(player: Player, challengeId: string)
 		if typeof(profile.runs) == "table" then
 			profile.runs[challengeId] = nil
 		end
+	end)
+end
+
+-- ===== Уровни мира букв ==========================================================
+
+--[[
+	Уровень, который играет портал мира букв: следующий за пройденными.
+	Ребёнок его не выбирает — портал просто продолжает путь (docs/14-TUNNEL-MODE.md § 3.2).
+]]
+function ProgressService.lettersLevel(player: Player): number
+	local profile = ProfileService.get(player)
+	local cleared = if profile then Levels.sanitize(profile.levels)[Levels.WORLD] else 0
+	return Levels.current(cleared)
+end
+
+--[[
+	Уровень пройден до финиша. Пройденный путь назад не двигается: повторное
+	прохождение раннего уровня не отнимает поздних.
+]]
+function ProgressService.clearLevel(player: Player, index: number)
+	if not Levels.get(index) then
+		return
+	end
+	ProfileService.update(player, function(profile)
+		local levels = Levels.sanitize(profile.levels)
+		levels[Levels.WORLD] = math.max(levels[Levels.WORLD], index)
+		profile.levels = levels
 	end)
 end
 

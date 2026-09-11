@@ -6,12 +6,24 @@ local ObstacleCourse = require(ReplicatedStorage.ServerChallenges.ObstacleCourse
 local Tunnel = require(ReplicatedStorage.Shared.Config.Tunnel)
 local Letters = require(ReplicatedStorage.Shared.Config.Letters)
 local Obstacles = require(ReplicatedStorage.Shared.Config.Obstacles)
+local Levels = require(ReplicatedStorage.Shared.Config.Levels)
 local DifficultyCurve = require(ReplicatedStorage.Shared.Logic.DifficultyCurve)
 
 local DIFFICULTY = 2
+local LEVEL = 5
 
-local function build(letters, difficulty)
-	return TunnelRun.Build(nil, letters or { "m", "a", "u" }, difficulty or DIFFICULTY)
+local function build(letters, difficulty, level)
+	return TunnelRun.Build(nil, letters or { "m", "a", "u" }, difficulty or DIFFICULTY, level or LEVEL)
+end
+
+local function countOf(list, value)
+	local count = 0
+	for _, item in list do
+		if item == value then
+			count += 1
+		end
+	end
+	return count
 end
 
 local function stateFor(spec)
@@ -52,12 +64,12 @@ return function()
 			end
 		end)
 
-		it("целевая буква одна на весь забег", function()
+		it("верный проём несёт букву своего отрезка", function()
 			local spec = build()
 			for _, gate in spec.params.gates do
 				for _, opening in gate.openings do
 					if opening.isTarget then
-						expect(opening.letterId).to.equal(spec.params.targetLetter)
+						expect(opening.letterId).to.equal(gate.targetLetter)
 					end
 				end
 			end
@@ -89,7 +101,7 @@ return function()
 			for _, gate in spec.params.gates do
 				for _, opening in gate.openings do
 					if not opening.isTarget then
-						expect(opening.letterId).never.to.equal(spec.params.targetLetter)
+						expect(opening.letterId).never.to.equal(gate.targetLetter)
 					end
 				end
 			end
@@ -201,19 +213,223 @@ return function()
 			end
 		)
 
-		it("строится на любой паре букв алфавита", function()
-			local ids = Letters.ordered()
-			for _, first in ids do
-				for _, second in ids do
-					if first ~= second then
+		it("строится на любом уровне с любой очередью", function()
+			for _, level in Levels.all do
+				for _, first in Letters.ordered() do
+					for difficulty = 1, 5, 4 do
 						local ok = pcall(function()
-							return TunnelRun.Build(nil, { first, second }, 3)
+							return TunnelRun.Build(nil, { first, "a" }, difficulty, level.index)
 						end)
 						expect(ok).to.equal(true)
 					end
 				end
 			end
 		end)
+
+		it("без уровня туннель не строится", function()
+			expect(pcall(TunnelRun.Build, nil, { "m", "a" }, 3, nil)).to.equal(false)
+			expect(pcall(TunnelRun.Build, nil, { "m", "a" }, 3, 99)).to.equal(false)
+		end)
+	end)
+
+	--[[
+		Уровень как цепочка отрезков (docs/14-TUNNEL-MODE.md § 3.3).
+
+		Проверяется то, что ребёнок почувствует сразу: отрезков столько, сколько
+		у уровня; буквы на отрезках — новые буквы ступени, потом повторение;
+		в воротах нет ни повторов, ни букв, которых он ещё не видел, ни —
+		на первых уровнях — похожих пар вроде Б и В.
+	]]
+	describe("TunnelRun — уровень мира букв", function()
+		it("ворот столько, сколько отрезков у уровня", function()
+			for _, level in Levels.all do
+				for difficulty = 1, 5 do
+					local spec = build(nil, difficulty, level.index)
+					expect(#spec.params.gates).to.equal(level.segments)
+					expect(#spec.params.checkpoints).to.equal(level.segments)
+					expect(spec.targetCount).to.equal(level.segments)
+					expect(spec.level).to.equal(level.index)
+				end
+			end
+		end)
+
+		it("буквы отрезков — по плану уровня", function()
+			local queue = { "m", "a", "u" }
+			for _, level in Levels.all do
+				local spec = build(queue, 3, level.index)
+				local planned = Levels.targets(level.index, queue)
+				for index, gate in spec.params.gates do
+					expect(gate.targetLetter).to.equal(planned[index])
+				end
+			end
+		end)
+
+		it("проёмов не больше, чем разрешает уровень", function()
+			for _, level in Levels.all do
+				local spec = build(nil, 5, level.index)
+				for _, gate in spec.params.gates do
+					expect(#gate.openings <= level.maxChoices).to.equal(true)
+					expect(#gate.openings >= 2).to.equal(true)
+				end
+			end
+		end)
+
+		it("в одних воротах буквы не повторяются", function()
+			for _, level in Levels.all do
+				for difficulty = 1, 5 do
+					local spec = build(nil, difficulty, level.index)
+					for _, gate in spec.params.gates do
+						local seen = {}
+						for _, opening in gate.openings do
+							expect(seen[opening.letterId]).to.equal(nil)
+							seen[opening.letterId] = true
+						end
+					end
+				end
+			end
+		end)
+
+		it(
+			"в воротах только буквы, открытые к этому уровню",
+			function()
+				for _, level in Levels.all do
+					local spec = build(Letters.ordered(), 5, level.index)
+					for _, gate in spec.params.gates do
+						for _, opening in gate.openings do
+							expect(Letters.expect(opening.letterId).stage <= level.index).to.equal(true)
+						end
+					end
+				end
+			end
+		)
+
+		-- docs/02-LEARNING.md § 6
+		it(
+			"на первых уровнях похожие буквы не встают в одни ворота",
+			function()
+				for index = 1, Levels.CONFUSABLES_APART_UNTIL do
+					for difficulty = 1, 5 do
+						local spec = build(Letters.ordered(), difficulty, index)
+						for _, gate in spec.params.gates do
+							local pair = Letters.expect(gate.targetLetter).confusableWith
+							for _, opening in gate.openings do
+								expect(table.find(pair, opening.letterId)).to.equal(nil)
+							end
+						end
+					end
+				end
+			end
+		)
+
+		it("первый уровень — выбор из двух между А, Б и В", function()
+			for difficulty = 1, 5 do
+				local spec = build({ "a", "b", "v" }, difficulty, 1)
+				for _, gate in spec.params.gates do
+					expect(#gate.openings).to.equal(2)
+					for _, opening in gate.openings do
+						expect(table.find({ "a", "b", "v" }, opening.letterId)).to.be.ok()
+					end
+				end
+			end
+		end)
+
+		it(
+			"каждая новая буква ступени получает свой отрезок",
+			function()
+				for _, level in Levels.all do
+					local spec = build(nil, 3, level.index)
+					local targets = {}
+					for _, gate in spec.params.gates do
+						table.insert(targets, gate.targetLetter)
+					end
+					for _, id in Levels.stage(level.index).letters do
+						expect(countOf(targets, id) >= 1).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it("ответ засчитывается букве своего отрезка", function()
+			local spec = build(nil, 3, 2)
+			local state = stateFor(spec)
+			local gate = spec.params.gates[2]
+
+			state.answered[1] = true
+			local result =
+				TunnelRun.Validate(state, { kind = "gate", gateIndex = 2, lane = targetLaneOf(gate) })
+
+			expect(result.letterId).to.equal(gate.targetLetter)
+		end)
+
+		--[[
+			Через неверный проём ребёнок пробегает так же, как через верный.
+			Поэтому новая буква объявляется после любого ответа — иначе после
+			ошибки он бежал бы к новым воротам со старой буквой в голове.
+		]]
+		it(
+			"после любых ворот звучит буква следующего отрезка",
+			function()
+				local spec = build(nil, 3, 1)
+				local gates = spec.params.gates
+				expect(gates[1].targetLetter).never.to.equal(gates[2].targetLetter)
+
+				local hitState = stateFor(spec)
+				local hit = TunnelRun.Validate(
+					hitState,
+					{ kind = "gate", gateIndex = 1, lane = targetLaneOf(gates[1]) }
+				)
+				expect(hit.nextLetter).to.equal(gates[2].targetLetter)
+				expect(hit.nextGlyph).to.equal(gates[2].targetGlyph)
+				expect(hit.voAfter[1]).to.equal(gates[2].targetVO)
+
+				local wrongLane
+				for _, opening in gates[1].openings do
+					if not opening.isTarget then
+						wrongLane = opening.lane
+					end
+				end
+				local missState = stateFor(spec)
+				local miss = TunnelRun.Validate(missState, { kind = "gate", gateIndex = 1, lane = wrongLane })
+				expect(miss.correct).to.equal(false)
+				expect(miss.nextLetter).to.equal(gates[2].targetLetter)
+			end
+		)
+
+		it("на последних воротах объявлять больше нечего", function()
+			local spec = build(nil, 3, 1)
+			local last = #spec.params.gates
+			local state = stateFor(spec)
+			for index = 1, last - 1 do
+				state.answered[index] = true
+			end
+
+			local result = TunnelRun.Validate(state, {
+				kind = "gate",
+				gateIndex = last,
+				lane = targetLaneOf(spec.params.gates[last]),
+			})
+			expect(result.nextLetter).to.equal(nil)
+			expect(result.voAfter).to.equal(nil)
+		end)
+
+		it(
+			"продолженный уровень начинается с буквы невзятого отрезка",
+			function()
+				local spec = build(nil, 3, 1)
+				local resumed = TunnelRun.Rebuild({
+					challengeId = spec.challengeId,
+					seed = spec.seed,
+					letters = spec.letters,
+					difficulty = spec.difficulty,
+					level = spec.level,
+					checkpoint = 2,
+					savedAt = 0,
+				})
+
+				expect(resumed.params.targetLetter).to.equal(spec.params.gates[3].targetLetter)
+				expect(resumed.params.targetGlyph).to.equal(spec.params.gates[3].targetGlyph)
+			end
+		)
 	end)
 
 	describe("TunnelRun.Validate", function()
@@ -335,6 +551,7 @@ return function()
 				seed = spec.seed,
 				letters = spec.letters,
 				difficulty = spec.difficulty,
+				level = spec.level,
 				checkpoint = checkpoint,
 				savedAt = 0,
 			}
@@ -349,13 +566,15 @@ return function()
 			local again = TunnelRun.Rebuild(savedFrom(spec, 1))
 
 			expect(again.params.length).to.equal(spec.params.length)
-			expect(again.params.targetLetter).to.equal(spec.params.targetLetter)
+			-- Продолжение с первой сохранки начинается с буквы вторых ворот, а не первых.
+			expect(again.params.targetLetter).to.equal(spec.params.gates[2].targetLetter)
 			expect(#again.params.gates).to.equal(#spec.params.gates)
 			expect(#again.params.obstacles).to.equal(#spec.params.obstacles)
 
 			for index, gate in spec.params.gates do
 				local twin = again.params.gates[index]
 				expect(twin.z).to.equal(gate.z)
+				expect(twin.targetLetter).to.equal(gate.targetLetter)
 				for slot, opening in gate.openings do
 					expect(twin.openings[slot].lane).to.equal(opening.lane)
 					expect(twin.openings[slot].letterId).to.equal(opening.letterId)
@@ -429,13 +648,17 @@ return function()
 	]]
 	describe("ObstacleCourse", function()
 		it(
-			"препятствий больше, а ворот меньше, чем в туннеле",
+			"на отрезок препятствий больше, а ворот меньше, чем в туннеле",
 			function()
-				local tunnel = TunnelRun.Build(nil, { "m", "a", "u" }, 3)
+				-- Сравниваем пропорции, а не итог: длина туннеля задана уровнем, полосы — нет.
 				local course = ObstacleCourse.Build(nil, { "m", "a", "u" }, 3)
+				local courseRatio = #course.params.obstacles / #course.params.gates
 
-				expect(#course.params.obstacles > #tunnel.params.obstacles).to.equal(true)
-				expect(#course.params.gates < #tunnel.params.gates).to.equal(true)
+				for _, level in Levels.all do
+					local tunnel = TunnelRun.Build(nil, { "m", "a", "u" }, 3, level.index)
+					expect(courseRatio > #tunnel.params.obstacles / #tunnel.params.gates).to.equal(true)
+					expect(#course.params.gates < #tunnel.params.gates).to.equal(true)
+				end
 			end
 		)
 
@@ -457,6 +680,29 @@ return function()
 				end
 			end
 		)
+
+		-- Полоса — не уровень: буква на ней одна, первая из очереди повторений.
+		it("целевая буква одна на весь забег", function()
+			local spec = ObstacleCourse.Build(nil, { "m", "a", "u" }, 3)
+			expect(spec.level).to.equal(nil)
+			for _, gate in spec.params.gates do
+				expect(gate.targetLetter).to.equal("m")
+			end
+		end)
+
+		it("строится на любой паре букв алфавита", function()
+			local ids = Letters.ordered()
+			for _, first in ids do
+				for _, second in ids do
+					if first ~= second then
+						local ok = pcall(function()
+							return ObstacleCourse.Build(nil, { first, second }, 3)
+						end)
+						expect(ok).to.equal(true)
+					end
+				end
+			end
+		end)
 
 		it("отрезок длиннее, когда препятствий больше", function()
 			local spec = ObstacleCourse.Build(nil, { "m", "a", "u" }, 5)

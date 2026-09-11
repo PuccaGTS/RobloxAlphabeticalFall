@@ -111,6 +111,16 @@ local function finish(player: Player, reason: string)
 		ProgressService.clearRun(player, state.module.id)
 	end
 
+	--[[
+		Финиш уровня открывает следующий — сколько бы ворот ни было взято.
+		Ошибка стоит времени, а не прогресса: буквы, на которых ребёнок ошибся,
+		вернутся к нему повторением на следующих уровнях.
+	]]
+	local levelCleared = if reason == "completed" then state.spec.level else nil
+	if levelCleared then
+		ProgressService.clearLevel(player, levelCleared)
+	end
+
 	local result = state.module.Finish(state)
 
 	--[[
@@ -130,6 +140,7 @@ local function finish(player: Player, reason: string)
 		targetCount = result.targetCount,
 		stars_awarded = awarded,
 		reason = reason,
+		levelCleared = levelCleared,
 	})
 
 	print(
@@ -216,11 +227,15 @@ local function onStart(player: Player, challengeId: any)
 	local difficulty = ProgressService.difficultyFor(player, challengeId)
 
 	--[[
-		Ступень счёта выбирает не ребёнок, а прогресс: читать он не умеет, а меню
-		ступеней ему и не нужно — играется самая высокая открытая. Испытаниям
-		по буквам этот аргумент не нужен, и они его не берут.
+		Место на пути своего мира: ступень счёта для математики, уровень для букв.
+		Выбирает его не ребёнок, а прогресс: читать он не умеет, а меню ступеней
+		и уровней ему не нужно. Испытаниям с площади этот аргумент не нужен,
+		и они его не берут.
 	]]
-	local mathStage = if module.usesMathStage then ProgressService.mathStage(player) else nil
+	local track = if module.usesMathStage
+		then ProgressService.mathStage(player)
+		elseif module.usesLevel then ProgressService.lettersLevel(player)
+		else nil
 
 	--[[
 		Незаконченный забег продолжается, а не начинается заново.
@@ -246,7 +261,7 @@ local function onStart(player: Player, challengeId: any)
 			saved = nil
 		end
 	end
-	spec = spec or module.Build(player, letters, difficulty, mathStage)
+	spec = spec or module.Build(player, letters, difficulty, track)
 
 	local state = {
 		module = module,
@@ -361,6 +376,21 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		then randomVO("praise", AudioRegistry.PRAISE_COUNT)
 		else randomVO("retry", AudioRegistry.RETRY_COUNT)
 
+	--[[
+		Уровень сменил букву посреди забега. Если с новой буквой ребёнок ещё
+		не встречался, сперва знакомство, потом название — тот же порядок,
+		что и на старте забега: сначала показываем, кто это, потом просим найти.
+	]]
+	local voAfter = result.voAfter
+	local introGlyph = nil
+	if result.nextLetter and ProgressService.isFirstMeeting(player, result.nextLetter) then
+		local letter = Letters.get(result.nextLetter)
+		if letter then
+			introGlyph = letter.glyph
+			voAfter = { "story_meet_letter", letter.vo.name }
+		end
+	end
+
 	RemoteDefs.event("ChallengeFeedback"):FireClient(player, {
 		itemIndex = result.itemIndex,
 		sectionIndex = result.sectionIndex,
@@ -378,6 +408,9 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		-- Ворота с числами: во что ребёнок вбежал и какой пример его ждёт дальше
 		tappedValue = result.tappedValue,
 		nextPrompt = result.nextPrompt,
+		-- Уровень мира букв: буква следующего отрезка и знакомство с ней, если оно первое
+		nextGlyph = result.nextGlyph,
+		introGlyph = introGlyph,
 		mastery = if outcome then outcome.mastery else nil,
 	})
 
@@ -392,7 +425,7 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		ошибся). Порядок именно такой: сперва короткое «молодец», потом новое
 		задание, иначе задание перебивается похвалой и его не слышно.
 	]]
-	playPhrase(player, result.voAfter)
+	playPhrase(player, voAfter)
 
 	if result.finished then
 		finish(player, "completed")
