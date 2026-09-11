@@ -14,6 +14,11 @@ local function contains(list, value)
 	return table.find(list, value) ~= nil
 end
 
+-- Озвучка задачи — цепочка ключей; для сравнения склеиваем её в строку.
+local function voOf(task)
+	return table.concat(task.vo, " ")
+end
+
 return function()
 	describe("Math.Ступени", function()
 		it(
@@ -84,7 +89,7 @@ return function()
 				local second = MathConfig.generate(stage, Random.new(42))
 				expect(first.answer).to.equal(second.answer)
 				expect(first.prompt).to.equal(second.prompt)
-				expect(first.vo).to.equal(second.vo)
+				expect(voOf(first)).to.equal(voOf(second))
 				expect(#first.answers).to.equal(#second.answers)
 			end
 		end)
@@ -245,16 +250,53 @@ return function()
 			"равные группы дают ровно произведение групп на содержимое",
 			function()
 				forEachTask(10, 80, function(task, seed)
-					local groups, each = string.match(task.vo, "^mex_group_(%d+)_(%d+)$")
-					if groups == nil then
-						error(`сид {seed}: непонятный ключ «{task.vo}»`)
+					if task.groups == nil or task.each == nil then
+						error(
+							`сид {seed}: у равных групп не сказано, сколько тарелок`
+						)
 					end
-					if tonumber(groups) * tonumber(each) ~= task.answer then
-						error(`сид {seed}: {groups} по {each} дало {task.answer}`)
+					if task.groups * task.each ~= task.answer then
+						error(`сид {seed}: {task.groups} по {task.each} дало {task.answer}`)
 					end
 				end)
 			end
 		)
+
+		--[[
+			Единственное место в игре, где ответ выходит за десяток. Правило,
+			которое это оправдывает: ребёнок СЧИТАЕТ группы, а не читает
+			двузначное число (docs/16-MATH.md § 1, правило 3).
+		]]
+		it("за десяток выходит только умножение", function()
+			for stage = 1, MathConfig.count() do
+				local spec = MathConfig.expect(stage)
+				local ceiling = if spec.kind == "mul" then MathConfig.MAX_ANSWER else MathConfig.MAX_NUMBER
+				forEachTask(stage, 40, function(task, seed)
+					if task.answer > ceiling then
+						error(
+							`ступень {stage}, сид {seed}: ответ {task.answer} выше потолка {ceiling}`
+						)
+					end
+					for _, answer in task.answers do
+						if answer > ceiling then
+							error(
+								`ступень {stage}, сид {seed}: вариант {answer} выше потолка {ceiling}`
+							)
+						end
+					end
+				end)
+			end
+		end)
+
+		it("умножение всегда показывает группы", function()
+			for stage = 1, MathConfig.count() do
+				local spec = MathConfig.expect(stage)
+				if spec.kind == "mul" then
+					expect(spec.showPips).to.equal(true)
+					expect(spec.objects).to.be.ok()
+				end
+			end
+		end)
 
 		it("умножение не выходит за пять на пять", function()
 			forEachTask(11, 100, function(task, seed)
@@ -278,11 +320,9 @@ return function()
 					if a == b then
 						error(`сид {seed}: обе чаши одинаковы`)
 					end
-					local expected = if task.vo == "mtask_compare_more"
-						then math.max(a, b)
-						else math.min(a, b)
+					local expected = if task.vo[1] == "mtask_more" then math.max(a, b) else math.min(a, b)
 					if task.answer ~= expected then
-						error(`сид {seed}: {task.vo} при {a} и {b} дало {task.answer}`)
+						error(`сид {seed}: {voOf(task)} при {a} и {b} дало {task.answer}`)
 					end
 				end)
 			end
@@ -291,7 +331,7 @@ return function()
 
 	describe("Math.Озвучка", function()
 		it(
-			"каждой сгенерированной задаче есть ключ в списке озвучки",
+			"каждый кусок сгенерированной фразы есть в списке озвучки",
 			function()
 				local keys = {}
 				for _, key in MathConfig.voKeys() do
@@ -299,15 +339,39 @@ return function()
 				end
 				for stage = 1, 11 do
 					forEachTask(stage, 60, function(task, seed)
-						if not keys[task.vo] then
-							error(
-								`ступень {stage}, сид {seed}: ключа «{task.vo}» нет в voKeys()`
-							)
+						if #task.vo == 0 then
+							error(`ступень {stage}, сид {seed}: задача молчит`)
+						end
+						for _, key in task.vo do
+							if not keys[key] then
+								error(
+									`ступень {stage}, сид {seed}: ключа «{key}» нет в voKeys()`
+								)
+							end
 						end
 					end)
 				end
 			end
 		)
+
+		--[[
+			Тот самый потолок, ради которого задача произносится по кускам.
+			Реплика на каждый пример — это под три сотни записей, и ровно такой объём
+			однажды уже сменил концепцию игры (docs/05-AUDIO-VO.md § 1).
+		]]
+		it(
+			"реплик математики — два десятка, а не три сотни",
+			function()
+				expect(#MathConfig.voKeys() <= 25).to.equal(true)
+			end
+		)
+
+		it("фраза читается словами: она же идёт в субтитры", function()
+			local task = MathConfig.generate(7, Random.new(11))
+			local spelled = MathConfig.spell(task)
+			expect(string.find(spelled, "Сколько будет")).to.be.ok()
+			expect(string.find(spelled, "плюс")).to.be.ok()
+		end)
 
 		it("числа озвучены с одного до десяти", function()
 			local keys = {}

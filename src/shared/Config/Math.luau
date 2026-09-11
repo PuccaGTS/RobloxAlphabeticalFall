@@ -10,10 +10,19 @@
 	Три правила доки, которые здесь зашиты в данные:
 	  · сначала количество, потом цифра — showPips на ранних ступенях;
 	  · считаем предметы, а не абстракции — у ступеней есть objects;
-	  · потолок игры 10 и он не сдвигается; умножение до 5x5.
+	  · читаемый потолок игры 10 и он не сдвигается; умножение — единственное
+	    исключение (до 5x5) и оно всегда показано группами предметов.
 
 	Генератор детерминирован: одному Random соответствует одна и та же задача.
 	Это нужно и серверу с клиентом, чтобы сойтись, и тестам.
+
+	ОЗВУЧКА СОБИРАЕТСЯ ИЗ КУСКОВ. Задача несёт не один ключ, а короткую цепочку:
+	«Сколько будет» + «два» + «плюс» + «два». Причина ровно та же, по которой
+	инструкция к испытанию заканчивается на «вот эту букву:» и продолжается
+	названием буквы (docs/05-AUDIO-VO.md § 2): отдельная запись на каждый пример
+	дала бы под три сотни реплик только по математике, а именно объём записи
+	однажды уже сменил концепцию игры. Кусков двадцать: десять чисел, семь
+	зачинов и три связки — и ими покрываются все одиннадцать ступеней.
 ]]
 
 local Types = require(script.Parent.Parent.Types)
@@ -22,6 +31,9 @@ local MathConfig = {}
 
 MathConfig.MAX_NUMBER = 10 -- верхняя граница игры, «для старших» не сдвигается
 MathConfig.MAX_FACTOR = 5 -- умножение только до 5x5
+-- Наибольший ответ во всей игре: он бывает только на ступени умножения,
+-- и там задача обязана показывать группы предметов, а не одно число.
+MathConfig.MAX_ANSWER = MathConfig.MAX_FACTOR * MathConfig.MAX_FACTOR
 
 -- Ступень открывается, когда предыдущая освоена. Доля из docs/16-MATH.md § 2
 -- относится к набору букв острова; у математики ступень — один объект прогресса,
@@ -146,7 +158,12 @@ local Stages: { Types.MathStage } = {
 		kind = "mul",
 		min = 1,
 		max = 5,
-		showPips = false,
+		--[[
+			Группы показываем обязательно. Это единственная ступень, где ответ
+			выходит за десяток (до 25), а двузначных чисел ребёнок ещё не читает:
+			он считает предметы на тарелках. См. docs/16-MATH.md § 1, правило 3.
+		]]
+		showPips = true,
 		objects = "apple",
 		choices = 3,
 	},
@@ -174,6 +191,16 @@ end
 
 function Module.count(): number
 	return #Stages
+end
+
+-- Ступень по её строковому id: под ним прогресс лежит в профиле («digit_small»).
+function Module.byId(id: string): Types.MathStage?
+	for _, stage in Stages do
+		if stage.id == id then
+			return stage
+		end
+	end
+	return nil
 end
 
 --[[
@@ -263,13 +290,20 @@ function Module.generate(stage: number, random: Random, choices: number?): Types
 	local kind = spec.kind
 	local answer: number
 	local prompt = ""
-	local vo: string
+	local vo: { string }
+	-- Равные группы: сколько тарелок и по сколько на каждой. Их рисуют над воротами,
+	-- и по ним же собирается фраза «два по три».
+	local groups: number? = nil
+	local each: number? = nil
 	local lo, hi = spec.min, spec.max
 
 	if kind == "count" or kind == "digit" then
 		answer = random:NextInteger(spec.min, spec.max)
-		-- Цифру называет голос, поэтому над воротами ничего не пишем.
-		vo = if kind == "digit" then `num_{answer}` else `mtask_{spec.id}`
+		--[[
+			Число называет голос, а над воротами не пишем ничего: увидев «3» на щите,
+			ребёнок нашёл бы такую же цифру в проёме, ничего не посчитав.
+		]]
+		vo = if kind == "digit" then { "mtask_digit", `num_{answer}` } else { "mtask_where", `num_{answer}` }
 	elseif kind == "compare" then
 		-- Две разные величины: спрашиваем большую или меньшую.
 		local first = random:NextInteger(spec.min, spec.max)
@@ -279,7 +313,7 @@ function Module.generate(stage: number, random: Random, choices: number?): Types
 		end
 		local wantMore = random:NextInteger(0, 1) == 1
 		answer = if wantMore then math.max(first, second) else math.min(first, second)
-		vo = if wantMore then "mtask_compare_more" else "mtask_compare_less"
+		vo = if wantMore then { "mtask_more" } else { "mtask_less" }
 		-- Варианты здесь не соседи, а ровно те две величины, что лежат на чашах.
 		local pair = shuffled({ first, second }, random)
 		return {
@@ -310,14 +344,14 @@ function Module.generate(stage: number, random: Random, choices: number?): Types
 		end
 		answer = a + b
 		prompt = `{a} + {b}`
-		vo = `mex_add_{a}_{b}`
+		vo = { "mtask_howmuch", `num_{a}`, "mop_plus", `num_{b}` }
 		lo = 1
 	elseif kind == "sub" then
 		local a = random:NextInteger(spec.min + 1, spec.max)
 		local b = random:NextInteger(1, a - 1)
 		answer = a - b
 		prompt = `{a} − {b}`
-		vo = `mex_sub_{a}_{b}`
+		vo = { "mtask_howmuch", `num_{a}`, "mop_minus", `num_{b}` }
 		lo, hi = 0, spec.max
 	elseif kind == "compose" then
 		-- «Сколько не хватает до пяти»: показываем часть и целое.
@@ -325,21 +359,29 @@ function Module.generate(stage: number, random: Random, choices: number?): Types
 		local part = random:NextInteger(1, total - 1)
 		answer = total - part
 		prompt = `{part} + ? = {total}`
-		vo = `mex_compose_{part}_{total}`
+		vo = { "mtask_missing", `num_{total}` }
 		lo, hi = 1, spec.max
 	elseif kind == "group" then
 		-- «Три тарелки, на каждой по два»: считаем предметы, а не заучиваем таблицу.
-		local groups = random:NextInteger(2, 5)
-		local each = random:NextInteger(2, math.max(2, math.floor(spec.max / groups)))
-		answer = groups * each
-		vo = `mex_group_{groups}_{each}`
+		groups = random:NextInteger(2, 5)
+		each = random:NextInteger(2, math.max(2, math.floor(spec.max / (groups :: number))))
+		answer = (groups :: number) * (each :: number)
+		-- Пример словами не пишем: тарелки с предметами и есть условие задачи.
+		-- Сначала условие, потом вопрос: «Три по два. Сколько всего?»
+		vo = { `num_{groups}`, "mop_by", `num_{each}`, "mtask_total" }
 		lo, hi = 2, MathConfig.MAX_NUMBER
 	elseif kind == "mul" then
 		local a = random:NextInteger(1, MathConfig.MAX_FACTOR)
 		local b = random:NextInteger(1, MathConfig.MAX_FACTOR)
 		answer = a * b
 		prompt = `{a} × {b}`
-		vo = `mex_mul_{a}_{b}`
+		--[[
+			Умножение звучит как равные группы, а не как таблица: «два по три».
+			Тарелки при этом рисуются те же самые — это то самое условие, ради
+			которого умножению вообще разрешили выйти за десяток.
+		]]
+		groups, each = a, b
+		vo = { `num_{a}`, "mop_by", `num_{b}`, "mtask_total" }
 		lo, hi = 1, MathConfig.MAX_FACTOR * MathConfig.MAX_FACTOR
 	else
 		error(`Math: неизвестный вид задачи "{kind}"`)
@@ -355,71 +397,72 @@ function Module.generate(stage: number, random: Random, choices: number?): Types
 		answers = buildAnswers(answer, lo, hi, count, random),
 		objects = spec.objects,
 		showPips = spec.showPips,
+		groups = groups,
+		each = each,
 	}
 end
 
 --[[
-	Все ключи озвучки, которые нужны математике. Отдельным списком, а не через
-	AudioRegistry: математический мир ещё не собран, и подмешивать сотню пустых
-	ключей в отчёт о недостающей озвучке по буквам сейчас только мешало бы.
-	Подключить сюда реестр — когда появятся математические уровни.
+	Куски, из которых собирается любая математическая фраза, и что они значат.
+	Здесь же и текст для субтитров: реплики короткие, и держать их рядом с ключом
+	дешевле, чем заводить отдельный словарь.
+]]
+local PHRASES: { [string]: string } = {
+	mtask_where = "Беги туда, где", -- + число
+	mtask_digit = "Беги на цифру", -- + число
+	mtask_more = "Беги туда, где больше",
+	mtask_less = "Беги туда, где меньше",
+	mtask_howmuch = "Сколько будет", -- + число + связка + число
+	--[[
+		Падежи — цена сборки фразы из кусков. «Сколько не хватает до пять» звучало бы
+		сломанно, а записывать десять чисел ещё и в родительном падеже — это лишний
+		десяток реплик ради одной ступени. Поэтому формулировка подобрана так,
+		чтобы число вставало в именительном: «...чтобы стало пять».
+	]]
+	mtask_missing = "Сколько не хватает, чтобы стало", -- + число
+	mtask_total = "Сколько всего", -- + число + «по» + число
+	mop_plus = "плюс",
+	mop_minus = "минус",
+	mop_by = "по", -- «два по три»: равные группы и умножение
+}
+
+Module.PHRASES = PHRASES
+
+--[[
+	Все ключи озвучки, которые нужны математике: десять чисел и десять кусков фраз.
+
+	Список короткий не случайно. Записать реплику на каждый пример — это под три
+	сотни файлов, и ровно такой объём однажды уже похоронил обучение звукам
+	(docs/05-AUDIO-VO.md § 1). Поэтому задача произносится по частям, а тест
+	на потолок в сотню реплик держит это правило вместо честного слова.
 ]]
 function Module.voKeys(): { string }
-	local set: { [string]: boolean } = {}
+	local keys: { string } = {}
 
 	for value = 1, MathConfig.MAX_NUMBER do
-		set[`num_{value}`] = true
+		table.insert(keys, `num_{value}`)
 	end
-	set["mtask_compare_more"] = true
-	set["mtask_compare_less"] = true
-
-	for _, spec in Stages do
-		if spec.kind == "count" then
-			set[`mtask_{spec.id}`] = true
-		elseif spec.kind == "add" then
-			for a = spec.min, spec.max do
-				local top = if spec.id == "plus_one" then 1 else math.max(1, spec.max - a)
-				for b = 1, top do
-					set[`mex_add_{a}_{b}`] = true
-				end
-			end
-		elseif spec.kind == "sub" then
-			for a = spec.min + 1, spec.max do
-				for b = 1, a - 1 do
-					set[`mex_sub_{a}_{b}`] = true
-				end
-			end
-		elseif spec.kind == "compose" then
-			for total = math.max(2, spec.min), spec.max do
-				for part = 1, total - 1 do
-					set[`mex_compose_{part}_{total}`] = true
-				end
-			end
-		elseif spec.kind == "group" then
-			for groups = 2, 5 do
-				for each = 2, math.max(2, math.floor(spec.max / groups)) do
-					set[`mex_group_{groups}_{each}`] = true
-				end
-			end
-		elseif spec.kind == "mul" then
-			for a = 1, MathConfig.MAX_FACTOR do
-				for b = 1, MathConfig.MAX_FACTOR do
-					set[`mex_mul_{a}_{b}`] = true
-				end
-			end
-		end
-	end
-
-	local keys: { string } = {}
-	for key in set do
+	for key in PHRASES do
 		table.insert(keys, key)
 	end
+
 	table.sort(keys)
 	return keys
 end
 
+-- Текст задачи словами: для субтитров и для родительского режима.
+function Module.spell(task: Types.MathTask): string
+	local words: { string } = {}
+	for _, key in task.vo do
+		local number = string.match(key, "^num_(%d+)$")
+		table.insert(words, if number then number else PHRASES[key] or key)
+	end
+	return table.concat(words, " ")
+end
+
 Module.MAX_NUMBER = MathConfig.MAX_NUMBER
 Module.MAX_FACTOR = MathConfig.MAX_FACTOR
+Module.MAX_ANSWER = MathConfig.MAX_ANSWER
 Module.UNLOCK_MIN_MASTERY = MathConfig.UNLOCK_MIN_MASTERY
 
 return Module
