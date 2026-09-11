@@ -8,13 +8,16 @@
 
 	Порядок работы: записали → загрузили на аккаунт ГРУППЫ → вписали id сюда → коммит.
 	См. docs/05-AUDIO-VO.md и docs/10-CONTENT-PIPELINE.md.
+
+	Реплик стало мало и они простые: 33 названия букв плюс общий набор инструкций,
+	похвал и подсказок. Никаких изолированных звуков и слитных слогов — почему,
+	написано в docs/05-AUDIO-VO.md § 1.
 ]]
 
 local Letters = require(script.Parent.Letters)
-local Syllables = require(script.Parent.Syllables)
-local Words = require(script.Parent.Words)
 local Challenges = require(script.Parent.Challenges)
-local Islands = require(script.Parent.Islands)
+local Stages = require(script.Parent.Stages)
+local MathConfig = require(script.Parent.Math)
 
 local AudioRegistry = {}
 
@@ -22,47 +25,31 @@ local AudioRegistry = {}
 -- Включить перед релизом, когда все реплики записаны.
 AudioRegistry.STRICT = false
 
-AudioRegistry.PRAISE_COUNT = 8 -- praise_01 .. praise_08 (MVP)
+AudioRegistry.PRAISE_COUNT = 8 -- praise_01 .. praise_08
 AudioRegistry.RETRY_COUNT = 5
 AudioRegistry.HINT_COUNT = 3
 
 --[[
-	Заполняется по мере загрузки аудио. Формат: ["snd_m"] = "rbxassetid://123456".
+	Заполняется по мере загрузки аудио. Формат: ["letter_m"] = "rbxassetid://123456".
 	Пустая строка = реплика ещё не записана.
 ]]
 local ids: { [string]: string } = {
-	-- === Звуки букв (записывать первыми) ===
-	snd_a = "",
-	snd_u = "",
-	snd_o = "",
-	snd_i = "",
-	snd_m = "",
-	snd_p = "",
-	snd_b = "",
-	snd_t = "",
-	snd_n = "",
-
-	-- === Растянутые звуки для «Эхо-буквы» ===
-	snd_long_a = "",
-	snd_long_u = "",
-	snd_long_o = "",
-	snd_long_i = "",
-	snd_long_m = "",
-	snd_long_n = "",
-
 	-- === Инструкции испытаний ===
+	-- Инструкция всегда общая и заканчивается на «вот эту букву:», после чего
+	-- играет letter_*. Так 6 файлов покрывают все 33 буквы вместо 198 комбинаций.
 	instr_letter_rain = "",
-	instr_echo_letter = "",
-	instr_syllable_bridge = "",
-	instr_bubbles = "",
-	instr_build_word = "",
+	instr_alphabet_ladder = "",
 	instr_tunnel_run = "",
+	instr_obstacle_course = "",
+	instr_bubbles = "",
+	instr_mirror = "",
+	instr_math_gates = "",
 
 	-- === Сюжет и навигация ===
 	story_intro = "",
-	story_island1_intro = "",
-	story_island2_intro = "",
-	story_island3_intro = "",
+	story_meet_letter = "", -- «Познакомься! Это…» + letter_*
+	story_stage_open = "", -- «Открылись новые буквы!»
+	story_stage_done = "", -- «Ты выучил всю ступень!»
 
 	-- === UI ===
 	ui_shop = "",
@@ -82,41 +69,32 @@ for i = 1, AudioRegistry.HINT_COUNT do
 	ids[string.format("hint_%02d", i)] = ""
 end
 
--- Реплики первого знакомства: по одной на каждую букву справочника.
+-- Названия букв: ключи создаются из справочника, чтобы список нельзя было забыть обновить.
 for letterId in Letters.all do
-	local key = Letters.expect(letterId).vo.intro
+	local key = Letters.expect(letterId).vo.name
 	if ids[key] == nil then
 		ids[key] = ""
 	end
 end
 
--- Слоги и слова: ключи создаются из конфигов, чтобы список нельзя было забыть обновить.
-for _, syllableId in Syllables.ids() do
-	local key = Syllables.expect(syllableId).vo
+--[[
+	Математика: десять чисел и куски фраз, из которых собирается любая задача
+	(«Сколько будет» + «два» + «плюс» + «два»). Ключи берутся из Config/Math,
+	чтобы список нельзя было забыть обновить, а сама сборка из кусков нужна ради
+	объёма записи: реплика на каждый пример — это под три сотни файлов.
+]]
+for _, key in MathConfig.voKeys() do
 	if ids[key] == nil then
 		ids[key] = ""
 	end
 end
-for _, wordId in Words.ids() do
-	local word = Words.expect(wordId)
-	if ids[word.vo] == nil then
-		ids[word.vo] = ""
-	end
-	if ids[word.voSyllabic] == nil then
-		ids[word.voSyllabic] = ""
-	end
-end
 
--- Музыка и вступления островов. Ключи живут в Config/Islands, но играет их клиент
--- через этот же реестр — иначе загруженным трекам некуда вписать id.
--- Лупы готовит tools/audio/prepare_music.py, соответствие файлов и id — в
--- assets/audio/MANIFEST.csv.
-for _, island in Islands.all do
-	if ids[island.music] == nil then
-		ids[island.music] = ""
-	end
-	if ids[island.voIntro] == nil then
-		ids[island.voIntro] = ""
+-- Музыка. Ключи живут в Config/Stages, но играет их клиент через этот же реестр —
+-- иначе загруженным трекам некуда вписать id. Лупы готовит tools/audio/prepare_music.py,
+-- соответствие файлов и id — в assets/audio/MANIFEST.csv.
+for _, key in Stages.THEMES do
+	if ids[key] == nil then
+		ids[key] = ""
 	end
 end
 
@@ -130,32 +108,33 @@ function AudioRegistry.requiredKeys(): { string }
 	local set: { [string]: boolean } = {}
 
 	for id in Letters.all do
-		local letter = Letters.expect(id)
-		set[letter.vo.sound] = true
-		set[letter.vo.intro] = true
-		if letter.vo.long then
-			set[letter.vo.long] = true
-		end
-		-- vo.name нужен только на 8-м острове, в обязательные для MVP не включаем
-	end
-
-	for _, id in Syllables.ids() do
-		set[Syllables.expect(id).vo] = true
-	end
-
-	for _, id in Words.ids() do
-		local word = Words.expect(id)
-		set[word.vo] = true
-		set[word.voSyllabic] = true
+		set[Letters.expect(id).vo.name] = true
 	end
 
 	for _, id in Challenges.ids() do
 		set[Challenges.expect(id).voInstruction] = true
 	end
 
-	for _, island in Islands.all do
-		set[island.music] = true
-		set[island.voIntro] = true
+	for _, stage in Stages.all do
+		set[stage.music] = true
+	end
+
+	for _, key in MathConfig.voKeys() do
+		set[key] = true
+	end
+
+	for _, key in { "story_intro", "story_meet_letter", "story_stage_open", "story_stage_done" } do
+		set[key] = true
+	end
+
+	for i = 1, AudioRegistry.PRAISE_COUNT do
+		set[string.format("praise_%02d", i)] = true
+	end
+	for i = 1, AudioRegistry.RETRY_COUNT do
+		set[string.format("retry_%02d", i)] = true
+	end
+	for i = 1, AudioRegistry.HINT_COUNT do
+		set[string.format("hint_%02d", i)] = true
 	end
 
 	local keys: { string } = {}

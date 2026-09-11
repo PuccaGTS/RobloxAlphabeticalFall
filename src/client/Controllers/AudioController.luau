@@ -5,7 +5,7 @@
 
 	Ключевые правила:
 	  · реплики НЕ накладываются — только очередь;
-	  · эталон звука (snd_/blend_/word_) нельзя прервать ничем;
+	  · название буквы (letter_) нельзя прервать ничем — это эталон;
 	  · на время любой реплики музыка и эмбиент опускаются до 30%;
 	  · кнопка «динамик» повторяет последнюю значимую реплику.
 ]]
@@ -27,12 +27,13 @@ local REPEAT_COOLDOWN = 0.5
 -- (docs/05-AUDIO-VO.md § 3), так что ждать дольше бессмысленно.
 local MAX_CLIP_SECONDS = 12
 
--- Приоритеты: чем больше, тем важнее. 3 = эталон звука, прерывать запрещено.
+-- Приоритеты: чем больше, тем важнее. 3 = название буквы, прерывать запрещено.
 local PRIORITY_BY_PREFIX: { { prefix: string, priority: number } } = {
-	{ prefix = "snd_", priority = 3 },
-	{ prefix = "blend_", priority = 3 },
-	{ prefix = "word_", priority = 3 },
-	{ prefix = "name_", priority = 3 },
+	{ prefix = "letter_", priority = 3 },
+	-- Число — такой же эталон, как название буквы: прерывать его нечем.
+	{ prefix = "num_", priority = 3 },
+	{ prefix = "mtask_", priority = 2 },
+	{ prefix = "mop_", priority = 2 },
 	{ prefix = "instr_", priority = 2 },
 	{ prefix = "story_", priority = 2 },
 	{ prefix = "praise_", priority = 1 },
@@ -63,6 +64,9 @@ local queue: { QueueItem } = {}
 local current: Sound? = nil
 local currentPriority = -1
 local lastRepeatable: string? = nil
+-- Задание из нескольких реплик («Сколько будет два плюс два»): кнопка «повторить»
+-- обязана повторить его целиком, а не последний кусок.
+local lastPhrase: { string }? = nil
 local lastRepeatAt = 0
 local ducked = false
 local pumping = false
@@ -198,13 +202,42 @@ function AudioController.speak(key: string): boolean
 		local priority = priorityOf(key)
 		if priority >= REPEATABLE_PRIORITY then
 			lastRepeatable = key
+			lastPhrase = nil
 		end
 		return false
 	end
 
 	table.insert(queue, { key = key, assetId = assetId, priority = priorityOf(key) })
+	if priorityOf(key) >= REPEATABLE_PRIORITY then
+		lastPhrase = nil
+	end
 	pump()
 	return true
+end
+
+--[[
+	Фраза: несколько реплик подряд как одно задание. Так говорит математика —
+	«Сколько будет» + «два» + «плюс» + «два» (docs/16-MATH.md § 5).
+
+	Возвращает false, если не прозвучало НИЧЕГО: часть кусков может быть ещё
+	не записана, и это не повод молчать целиком — ребёнок услышит то, что есть,
+	а недостающее увидит на воротах.
+]]
+function AudioController.speakPhrase(keys: { string }): boolean
+	ensureGroups()
+
+	local spoken = false
+	for _, key in keys do
+		if AudioController.speak(key) then
+			spoken = true
+		end
+	end
+
+	-- Фразу запоминаем целиком и всегда, даже если озвучки ещё нет: кнопка
+	-- «повторить» должна вести себя одинаково до и после записи реплик.
+	lastPhrase = table.clone(keys)
+	lastRepeatable = nil
+	return spoken
 end
 
 --[[
@@ -233,16 +266,32 @@ end
 
 -- Кнопка «динамик» на HUD. Самая нажимаемая кнопка в игре — держим её отзывчивой.
 function AudioController.repeatLast(): boolean
+	local phrase = lastPhrase
 	local key = lastRepeatable
-	if not key then
+	if not phrase and not key then
 		return false
 	end
+
 	local now = os.clock()
 	if now - lastRepeatAt < REPEAT_COOLDOWN then
 		return false
 	end
 	lastRepeatAt = now
-	return AudioController.speak(key)
+
+	if phrase then
+		local spoken = false
+		for _, item in phrase do
+			if AudioController.speak(item) then
+				spoken = true
+			end
+		end
+		-- speak() сбросил бы запомненную фразу, повторяя её же: возвращаем на место.
+		lastPhrase = phrase
+		lastRepeatable = nil
+		return spoken
+	end
+
+	return AudioController.speak(key :: string)
 end
 
 function AudioController.stopAll()
@@ -261,7 +310,7 @@ function AudioController.setVolume(groupName: string, volume: number)
 	tweenGroup(groupName, baseVolume[groupName] * factor, 0.1)
 end
 
--- Предзагрузка пачки реплик (обычно — всё аудио текущего острова) на экране загрузки.
+-- Предзагрузка пачки реплик (обычно — всё аудио текущей ступени) на экране загрузки.
 function AudioController.preload(keys: { string })
 	ensureGroups()
 
@@ -289,6 +338,15 @@ function AudioController.preload(keys: { string })
 	for _, sound in sounds do
 		sound:Destroy()
 	end
+end
+
+--[[
+	Группа звука по имени. Нужна эффектам: они играют мимо очереди реплик,
+	но обязаны подчиняться той же громкости и тому же приглушению на время речи.
+]]
+function AudioController.group(name: string): SoundGroup?
+	ensureGroups()
+	return groups[name]
 end
 
 function AudioController.init()
