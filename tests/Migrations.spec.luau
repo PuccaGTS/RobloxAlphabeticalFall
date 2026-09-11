@@ -578,6 +578,21 @@ return function()
 			end
 		)
 
+		it(
+			"у старого профиля появляется напоминание об отдыхе, PIN на месте",
+			function()
+				local profile = version6Profile()
+				profile.parent = { pinHash = "fnv1a-1000:abc", dailyLimitMin = 999 }
+
+				local migrated = Migrations.normalize(profile, NOW)
+
+				expect(migrated.parent.restReminder).to.equal(true)
+				expect(migrated.parent.pinHash).to.equal("fnv1a-1000:abc")
+				-- 999 минут родитель выставить не мог: это мусор, лимит выключен.
+				expect(migrated.parent.dailyLimitMin).to.equal(nil)
+			end
+		)
+
 		it("новый профиль начинает с Буквопада", function()
 			expect(ProfileTemplate.toSnapshot(ProfileTemplate.new(NOW)).tutorial).to.equal("catch")
 		end)

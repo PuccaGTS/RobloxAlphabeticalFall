@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ParentGate = require(Shared.Logic.ParentGate)
+local PlayLimit = require(Shared.Logic.PlayLimit)
 local Tutorial = require(Shared.Logic.Tutorial)
 local ParentReport = require(Shared.Logic.ParentReport)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
@@ -24,6 +25,7 @@ local RemoteDefs = require(Shared.Net.RemoteDefs)
 local ProfileService = require(script.Parent.ProfileService)
 local RateLimiter = require(script.Parent.RateLimiter)
 local TutorialService = require(script.Parent.TutorialService)
+local PlayLimitService = require(script.Parent.PlayLimitService)
 
 local ParentService = {}
 
@@ -84,12 +86,16 @@ end
 	  status — есть ли PIN и не идёт ли пауза;
 	  set    — задать PIN, если его ещё нет;
 	  enter  — войти по PIN;
-	  reset  — «забыл PIN»: сброс настроек родительского режима, прогресс ребёнка
-	           не трогается (docs/13 § 1). Перед ним клиент спрашивает взрослый
-	           вопрос — это барьер от ребёнка, а не от взломщика;
+	  reset  — «забыл PIN»: сбрасывается только PIN. Лимит времени и напоминание
+	           остаются: сброс защищён одним взрослым вопросом, и сними он лимит,
+	           ребёнок, осиливший 7 × 8, играл бы сколько хочет. Прогресс ребёнка
+	           не трогается вовсе (docs/13 § 1);
 	  leave  — закрыть родительский экран;
 	  skip_tutorial — пропустить обучение первых минут (docs/13 § 3: для второго
-	           ребёнка в семье). Только после входа по PIN.
+	           ребёнка в семье). Только после входа по PIN;
+	  set_limit — лимит времени в день: 0 (выключен), 15, 20, 30 или 45 минут;
+	  set_rest  — напоминание об отдыхе раз в 20 минут: вкл/выкл.
+	Настройки меняются только после входа по PIN.
 ]]
 local function onAuth(player: Player, request: any)
 	if not RateLimiter.allow(player, "ParentAuth", RemoteDefs.RATE_LIMITS.ParentAuth) then
@@ -153,6 +159,39 @@ local function onAuth(player: Player, request: any)
 		return refuse("wrong_pin", { attemptsLeft = left, lockedFor = ParentGate.lockedFor(guard, now) })
 	end
 
+	if action == "set_limit" then
+		if not isSignedIn(player) then
+			return refuse("not_signed_in")
+		end
+		local minutes = request.minutes
+		local limit = PlayLimit.sanitizeLimit(minutes)
+		if minutes ~= 0 and limit == nil then
+			return refuse("bad_limit")
+		end
+		ProfileService.update(player, function(p)
+			p.parent = PlayLimit.sanitizeParent(p.parent)
+			p.parent.dailyLimitMin = limit
+		end)
+		logChange(player, `daily_limit {limit or "off"}`)
+		PlayLimitService.recheck(player)
+		return { ok = true }
+	end
+
+	if action == "set_rest" then
+		if not isSignedIn(player) then
+			return refuse("not_signed_in")
+		end
+		if typeof(request.on) ~= "boolean" then
+			return refuse("bad_request")
+		end
+		ProfileService.update(player, function(p)
+			p.parent = PlayLimit.sanitizeParent(p.parent)
+			p.parent.restReminder = request.on
+		end)
+		logChange(player, `rest_reminder {if request.on then "on" else "off"}`)
+		return { ok = true }
+	end
+
 	if action == "skip_tutorial" then
 		if not isSignedIn(player) then
 			return refuse("not_signed_in")
@@ -164,7 +203,8 @@ local function onAuth(player: Player, request: any)
 
 	if action == "reset" then
 		ProfileService.update(player, function(p)
-			p.parent = { pinHash = nil, dailyLimitMin = nil }
+			p.parent = PlayLimit.sanitizeParent(p.parent)
+			p.parent.pinHash = nil
 		end)
 		ParentGate.registerSuccess(guard)
 		sessions[player] = nil
@@ -196,6 +236,11 @@ local function onReport(player: Player)
 	return {
 		report = ParentReport.build(profile, os.time()),
 		tutorialDone = Tutorial.isDone(Tutorial.sanitize(profile.tutorial)),
+		settings = {
+			limitMin = PlayLimit.sanitizeParent(profile.parent).dailyLimitMin,
+			restReminder = PlayLimit.sanitizeParent(profile.parent).restReminder,
+			playedTodayMin = math.floor(ProfileService.playedToday(player) / 60),
+		},
 		-- Время сервера: по нему клиент считает «повтор через 3 дня»,
 		-- часы планшета могут врать на сутки.
 		now = os.time(),

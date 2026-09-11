@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ParentGate = require(Shared.Logic.ParentGate)
+local PlayLimit = require(Shared.Logic.PlayLimit)
 local ParentReportText = require(Shared.Logic.ParentReportText)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
@@ -182,9 +183,89 @@ end
 local showPin -- объявлены заранее: экраны ссылаются друг на друга
 local showReport
 
+-- Ряд кнопок-вариантов: выбранный подсвечен. Для лимита и для напоминания.
+local function choices(
+	parent: Instance,
+	options: { { text: string, value: any } },
+	selected: any,
+	onPick: (value: any) -> ()
+)
+	local line = row(parent, 44)
+	for _, option in options do
+		local chosen = option.value == selected
+		local b = button(line, option.text, if chosen then ACCENT else KEY, 90)
+		b.TextColor3 = if chosen then Color3.fromRGB(30, 30, 40) else TEXT
+		b.Activated:Connect(function()
+			if not chosen then
+				onPick(option.value)
+			end
+		end)
+	end
+end
+
+--[[
+	Вкладка «Настройки» — docs/13-PARENT-MODE.md § 3: лимит времени в день
+	и напоминание об отдыхе. Меняет их сервер, и только после входа по PIN.
+]]
+local function showSettings(root: Instance, data: any)
+	local settings = data.settings or {}
+	local limit = settings.limitMin
+	local played = settings.playedTodayMin or 0
+
+	label(root, "Лимит времени в день", 24, TEXT, true)
+	label(
+		root,
+		if limit
+			then `Сегодня сыграно {played} мин из {limit}.`
+			else `Сегодня сыграно {played} мин. Лимит выключен.`,
+		20,
+		MUTED
+	)
+
+	local options = { { text = "Выкл", value = 0 } }
+	for _, minutes in PlayLimit.OPTIONS do
+		table.insert(options, { text = `{minutes} мин`, value = minutes })
+	end
+	choices(root, options, limit or 0, function(value)
+		if auth({ action = "set_limit", minutes = value }).ok then
+			settings.limitMin = if value == 0 then nil else value
+			data.settings = settings
+			showReport("Настройки", data)
+		end
+	end)
+	label(
+		root,
+		"Когда время выйдет, начатый забег доиграется до финиша, а новые занятия не начнутся. "
+			.. "Из игры ребёнка не выкинет: дом, магазин и Башня останутся. "
+			.. "Сброс PIN через «Забыли PIN?» лимит не снимает.",
+		18,
+		MUTED
+	)
+
+	label(root, "Напоминание об отдыхе", 24, TEXT, true)
+	label(
+		root,
+		"Раз в 20 минут голос предложит передохнуть. Игру оно не останавливает.",
+		18,
+		MUTED
+	)
+	choices(
+		root,
+		{ { text = "Вкл", value = true }, { text = "Выкл", value = false } },
+		settings.restReminder ~= false,
+		function(value)
+			if auth({ action = "set_rest", on = value }).ok then
+				settings.restReminder = value
+				data.settings = settings
+				showReport("Настройки", data)
+			end
+		end
+	)
+end
+
 -- ===== Отчёт =====================================================================
 
-local TABS = { "Главное", "Советы", "Подробно", "Дома" }
+local TABS = { "Главное", "Советы", "Подробно", "Дома", "Настройки" }
 
 local function linesFor(tab: string, data: any): { string }
 	if tab == "Главное" then
@@ -196,8 +277,10 @@ local function linesFor(tab: string, data: any): { string }
 		return ParentReportText.tips(data.report)
 	elseif tab == "Подробно" then
 		return ParentReportText.details(data.report, data.now)
+	elseif tab == "Дома" then
+		return ParentReportText.HOME
 	end
-	return ParentReportText.HOME
+	return {}
 end
 
 --[[
@@ -224,7 +307,7 @@ function showReport(tab: string?, cached: any?)
 
 	local tabs = row(root, 44)
 	for _, name in TABS do
-		local b = button(tabs, name, if name == current then ACCENT else KEY, 130)
+		local b = button(tabs, name, if name == current then ACCENT else KEY, 112)
 		b.TextColor3 = if name == current then Color3.fromRGB(30, 30, 40) else TEXT
 		b.Activated:Connect(function()
 			showReport(name, data)
@@ -238,6 +321,10 @@ function showReport(tab: string?, cached: any?)
 			l.TextSize = 26
 			l.Font = FONT_BOLD
 		end
+	end
+
+	if current == "Настройки" then
+		showSettings(root, data)
 	end
 
 	--[[

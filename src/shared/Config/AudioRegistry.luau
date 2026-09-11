@@ -128,6 +128,11 @@ function AudioRegistry.requiredKeys(): { string }
 		set[key] = true
 	end
 
+	-- Лимит времени и отдых (docs/13-PARENT-MODE.md § 3): прощание и совет передохнуть.
+	for _, key in { "ui_goodbye", "ui_rest_reminder" } do
+		set[key] = true
+	end
+
 	-- Голос обучения первых минут: без него стрелка есть, а что делать — непонятно.
 	for _, step in Tutorial.STEPS do
 		if step.vo then

@@ -18,6 +18,7 @@ local Levels = require(script.Parent.Parent.Config.Levels)
 local ProfileTemplate = require(script.Parent.Parent.Config.ProfileTemplate)
 local PlayLog = require(script.Parent.PlayLog)
 local Tutorial = require(script.Parent.Tutorial)
+local PlayLimit = require(script.Parent.PlayLimit)
 
 export type Step = (profile: any) -> ()
 
@@ -64,6 +65,11 @@ local Migrations = {}
 	[7] Появилось обучение первых минут: поле `tutorial`. Кто уже играл —
 	    есть звёздочки, буквы или вещи, — получает его пройденным: вести
 	    за руку к паду, на котором ребёнок был сто раз, значит мешать.
+
+	[8] У родителя появилось напоминание об отдыхе: `parent.restReminder`,
+	    включено. Заодно лимит времени приводится к разрешённым значениям:
+	    до этой версии его никто не писал, но в испорченном профиле там
+	    могло оказаться что угодно.
 ]]
 local STEPS: { [number]: Step } = {
 	[1] = function(profile)
@@ -143,6 +149,10 @@ local STEPS: { [number]: Step } = {
 		profile.tutorial = if Tutorial.hasPlayed(profile)
 			then Tutorial.finished()
 			else Tutorial.sanitize(profile.tutorial)
+	end,
+
+	[8] = function(profile)
+		profile.parent = PlayLimit.sanitizeParent(profile.parent)
 	end,
 }
 

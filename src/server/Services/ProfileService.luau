@@ -176,6 +176,23 @@ function ProfileService.update<T>(player: Player, mutate: (profile: any) -> T): 
 	return result
 end
 
+--[[
+	Сколько секунд ребёнок играл сегодня: записанное в историю плюс то, что
+	набежало с прошлого учёта и ещё не записано. Без хвоста лимит времени
+	срабатывал бы с опозданием до минуты.
+]]
+function ProfileService.playedToday(player: Player): number
+	local profile = profiles[player]
+	if not profile then
+		return 0
+	end
+	local now = os.time()
+	local recorded = PlayLog.secondsOn(profile.playLog, PlayLog.dayOf(now))
+	local since = playClock[player]
+	local pending = if since and PlayLog.dayOf(since) == PlayLog.dayOf(now) then now - since else 0
+	return recorded + math.max(0, pending)
+end
+
 function ProfileService.pushSnapshot(player: Player)
 	pushSnapshot(player)
 end

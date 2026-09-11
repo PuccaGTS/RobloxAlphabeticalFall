@@ -21,6 +21,7 @@ local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
 local ParentUI = require(UI.ParentUI)
+local DayOverScreen = require(UI.DayOverScreen)
 
 AudioController.init()
 SfxController.init()
@@ -62,6 +63,23 @@ HUD.build({
 })
 
 ParentUI.build()
+DayOverScreen.init(ParentUI.open)
+
+--[[
+	Время игры (docs/13-PARENT-MODE.md § 3). Решает сервер: он знает, сколько
+	сыграно сегодня и какой лимит выставил родитель. Клиент только показывает.
+]]
+RemoteDefs.event("PlayTime").OnClientEvent:Connect(function(payload: any)
+	local state = typeof(payload) == "table" and payload.state
+	if state == "over" then
+		DayOverScreen.show()
+	elseif state == "ok" then
+		DayOverScreen.hide()
+	elseif state == "rest" then
+		-- Совет, а не запрет: ничего не закрывается, игра идёт дальше.
+		HUD.toast("Давай отдохнём? Глазкам нужен перерыв 👀", 8)
+	end
+end)
 
 --[[
 	Срез профиля от сервера: единственный источник состояния для интерфейса.

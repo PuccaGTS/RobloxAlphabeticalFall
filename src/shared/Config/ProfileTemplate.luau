@@ -45,8 +45,11 @@ local ProfileTemplate = {}
 
 	Версия 8: обучение первых минут — поле `tutorial` со сделанными шагами
 	(Logic/Tutorial). Кто уже играл, получает его пройденным.
+
+	Версия 9: у родителя появилось напоминание об отдыхе — `parent.restReminder`,
+	по умолчанию включено (docs/13-PARENT-MODE.md § 3).
 ]]
-ProfileTemplate.VERSION = 8
+ProfileTemplate.VERSION = 9
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
@@ -81,7 +84,7 @@ function ProfileTemplate.new(now: number): Types.Profile
 		lastLoginDay = 0,
 		playLog = {},
 		settings = ProfileTemplate.defaultSettings(),
-		parent = { pinHash = nil, dailyLimitMin = nil },
+		parent = { pinHash = nil, dailyLimitMin = nil, restReminder = true },
 		stats = { totalPlayMin = 0, sessionsCount = 0, firstJoin = now },
 	}
 end

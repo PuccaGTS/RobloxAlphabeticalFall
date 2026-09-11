@@ -63,6 +63,22 @@ function ChallengeService.onAnswer(hook: (player: Player, spec: any, result: any
 	table.insert(answerHooks, hook)
 end
 
+--[[
+	Сторожа старта: любой из них может сказать «сейчас нельзя» — например,
+	вышло время на сегодня. Сторож сам сообщает ребёнку почему; ChallengeService
+	только не запускает испытание и не знает, кто и за что его остановил.
+]]
+local startGuards: { (player: Player, challengeId: string) -> boolean } = {}
+
+function ChallengeService.addStartGuard(guard: (player: Player, challengeId: string) -> boolean)
+	table.insert(startGuards, guard)
+end
+
+-- Идёт ли у игрока испытание. Лимит времени ждёт его конца, а не обрывает на бегу.
+function ChallengeService.isBusy(player: Player): boolean
+	return active[player] ~= nil
+end
+
 local function fire(hooks, ...)
 	for _, hook in hooks do
 		local ok, err = pcall(hook, ...)
@@ -216,6 +232,12 @@ local function onStart(player: Player, challengeId: any)
 	]]
 	if active[player] then
 		return
+	end
+
+	for _, guard in startGuards do
+		if not guard(player, challengeId) then
+			return
+		end
 	end
 
 	local letters = lettersFor(player, module)

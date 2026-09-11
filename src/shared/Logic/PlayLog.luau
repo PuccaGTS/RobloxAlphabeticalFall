@@ -94,6 +94,17 @@ function PlayLog.activeDays(log: { Types.PlayDay }, now: number, window: number)
 	return count
 end
 
+-- Сколько секунд записано за сутки day. Нужно лимиту времени: «сегодня уже 20 минут».
+function PlayLog.secondsOn(log: { Types.PlayDay }, day: number): number
+	local total = 0
+	for _, entry in log do
+		if entry.day == day and isCount(entry.sec) then
+			total += entry.sec
+		end
+	end
+	return total
+end
+
 --[[
 	Записывает порцию игрового времени: в историю дня, в общий счётчик минут
 	и в серию дней подряд. Отрицательное и нечисловое время молча игнорирует —

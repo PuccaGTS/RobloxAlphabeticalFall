@@ -28,6 +28,7 @@ local BaseService = require(Services.BaseService)
 local TunnelService = require(Services.TunnelService)
 local ParentService = require(Services.ParentService)
 local TutorialService = require(Services.TutorialService)
+local PlayLimitService = require(Services.PlayLimitService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -74,6 +75,7 @@ WorldService.start()
 BaseService.start() -- после мира: участки встают вокруг уже построенной площади
 ParentService.start()
 TutorialService.start() -- подписывается на хуки испытаний и магазина
+PlayLimitService.start() -- сторож старта испытаний: время на сегодня
 ProfileService.start() -- последним: он сразу начинает принимать игроков
 
 --[[

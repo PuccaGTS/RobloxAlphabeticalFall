@@ -187,7 +187,8 @@ export type Settings = {
 
 export type ParentData = {
 	pinHash: string?,
-	dailyLimitMin: number?,
+	dailyLimitMin: number?, -- nil — лимита нет; иначе 15 / 20 / 30 / 45, см. Logic/PlayLimit
+	restReminder: boolean, -- напоминать об отдыхе раз в 20 минут
 }
 
 export type StageProgress = {

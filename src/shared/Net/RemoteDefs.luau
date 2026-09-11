@@ -34,6 +34,11 @@ local EVENTS: { string } = {
 	"PlayPhrase",
 	"PlaySfx", -- S→C  короткий звуковой эффект по ключу из Config/Sfx
 	"OpenUI", -- S→C  объект мира просит открыть экран ("shop")
+	--[[
+		S→C  время игры: { state = "over" } — на сегодня всё, { state = "ok" } —
+		снова можно (родитель поднял лимит), { state = "rest" } — пора передохнуть.
+	]]
+	"PlayTime",
 }
 
 local FUNCTIONS: { string } = {
