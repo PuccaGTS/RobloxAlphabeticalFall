@@ -1,6 +1,8 @@
 --!strict
 --[[
-	Витрина магазина. 12 предметов вертикального среза.
+	Витрина магазина: 20 предметов — столько, сколько план первой играбельной
+	версии (docs/17-CONTENT-PLAN.md § 6). Цены разбросаны по трём тирам: после
+	первого же испытания по карману кепка, венок или усы, а ракета — это неделя.
 
 	Правила (docs/04-ECONOMY.md):
 	  · косметика НИЧЕГО не даёт в геймплее — только вид;
@@ -23,6 +25,7 @@ export type Piece = {
 	size: Vector3,
 	offset: CFrame, -- относительно точки крепления
 	material: Enum.Material?,
+	transparency: number?, -- стекло шлема и подобное; по умолчанию непрозрачно
 }
 
 export type Visual = { Piece }
@@ -55,6 +58,12 @@ local function piece(
 	material: Enum.Material?
 ): Piece
 	return { shape = shape, color = color, size = size, offset = offset, material = material }
+end
+
+-- Прозрачная деталь: стекло шлема видно, а лицо под ним — тоже.
+local function glass(part: Piece, transparency: number): Piece
+	part.transparency = transparency
+	return part
 end
 
 local function hat(
@@ -158,7 +167,150 @@ local Items: { [string]: ShopItem } = {
 		piece("Block", GOLD, Vector3.new(0.4, 1, 0.4), CFrame.new(0.7, 1.8, 0.85), Enum.Material.Neon),
 	}),
 
+	-- Венок = зелёный обруч + пять цветков по кругу
+	hat_flower = hat("hat_flower", "Венок", 20, 0, "🌼", {
+		piece(
+			"Cylinder",
+			Color3.fromRGB(110, 180, 90),
+			Vector3.new(0.3, 2.3, 2.3),
+			CFrame.new(0, 0.85, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
+		piece("Ball", Color3.fromRGB(255, 220, 90), Vector3.new(0.55, 0.55, 0.55), CFrame.new(0, 1, -1.1)),
+		piece(
+			"Ball",
+			Color3.fromRGB(250, 140, 190),
+			Vector3.new(0.55, 0.55, 0.55),
+			CFrame.new(-1.05, 1, -0.35)
+		),
+		piece(
+			"Ball",
+			Color3.fromRGB(255, 255, 255),
+			Vector3.new(0.55, 0.55, 0.55),
+			CFrame.new(1.05, 1, -0.35)
+		),
+		piece(
+			"Ball",
+			Color3.fromRGB(170, 140, 240),
+			Vector3.new(0.55, 0.55, 0.55),
+			CFrame.new(-0.65, 1, 0.9)
+		),
+		piece("Ball", Color3.fromRGB(255, 170, 90), Vector3.new(0.55, 0.55, 0.55), CFrame.new(0.65, 1, 0.9)),
+	}),
+	-- Поварской колпак = белый обод + пышная шапка
+	hat_chef = hat("hat_chef", "Поварской колпак", 70, 1, "👨‍🍳", {
+		piece("Block", Color3.fromRGB(245, 245, 245), Vector3.new(2.1, 0.7, 2.1), CFrame.new(0, 0.85, 0)),
+		piece("Ball", Color3.fromRGB(255, 255, 255), Vector3.new(2.5, 1.9, 2.5), CFrame.new(0, 1.9, 0)),
+	}),
+	-- Шлем космонавта = прозрачный шар вокруг головы + белое кольцо у шеи
+	hat_astronaut = hat("hat_astronaut", "Шлем космонавта", 250, 2, "🧑‍🚀", {
+		glass(
+			piece(
+				"Ball",
+				Color3.fromRGB(190, 225, 255),
+				Vector3.new(2.9, 2.9, 2.9),
+				CFrame.new(0, 0.15, 0),
+				Enum.Material.Glass
+			),
+			0.6
+		),
+		piece(
+			"Cylinder",
+			Color3.fromRGB(240, 240, 245),
+			Vector3.new(0.5, 2.6, 2.6),
+			CFrame.new(0, -1.15, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
+		piece(
+			"Ball",
+			Color3.fromRGB(255, 90, 80),
+			Vector3.new(0.35, 0.35, 0.35),
+			CFrame.new(0, 1.55, 0),
+			Enum.Material.Neon
+		),
+	}),
+
 	-- === Спина ===
+	-- Плащ = полотно за спиной, чуть отведённое назад, + застёжка
+	back_cape = {
+		id = "back_cape",
+		category = "back",
+		title = "Плащ",
+		price = 45,
+		tier = 0,
+		unlockStage = 1,
+		icon = "🦸",
+		visual = {
+			piece(
+				"Block",
+				Color3.fromRGB(210, 60, 70),
+				Vector3.new(2.2, 3, 0.15),
+				CFrame.new(0, -0.6, 0.75) * CFrame.Angles(math.rad(-10), 0, 0)
+			),
+			piece("Ball", GOLD, Vector3.new(0.45, 0.45, 0.45), CFrame.new(0, 0.9, 0.55), Enum.Material.Neon),
+		},
+	},
+	-- Панцирь = зелёный купол + светлые пятна
+	back_turtle = {
+		id = "back_turtle",
+		category = "back",
+		title = "Черепаший панцирь",
+		price = 110,
+		tier = 1,
+		unlockStage = 1,
+		icon = "🐢",
+		visual = {
+			piece("Ball", Color3.fromRGB(90, 150, 80), Vector3.new(2.3, 2.4, 1.4), CFrame.new(0, 0, 0.85)),
+			piece(
+				"Block",
+				Color3.fromRGB(160, 200, 110),
+				Vector3.new(0.7, 0.7, 0.2),
+				CFrame.new(0, 0.3, 1.52)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(160, 200, 110),
+				Vector3.new(0.55, 0.55, 0.2),
+				CFrame.new(-0.6, -0.4, 1.42)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(160, 200, 110),
+				Vector3.new(0.55, 0.55, 0.2),
+				CFrame.new(0.6, -0.4, 1.42)
+			),
+		},
+	},
+	-- Ракета = корпус + нос + крылышки + огонёк снизу
+	back_rocket = {
+		id = "back_rocket",
+		category = "back",
+		title = "Ракета",
+		price = 350,
+		tier = 2,
+		unlockStage = 1,
+		icon = "🚀",
+		visual = {
+			piece(
+				"Cylinder",
+				Color3.fromRGB(235, 235, 240),
+				Vector3.new(2.4, 1.1, 1.1),
+				CFrame.new(0, 0.2, 0.95) * CFrame.Angles(0, 0, math.rad(90))
+			),
+			piece("Ball", Color3.fromRGB(230, 80, 80), Vector3.new(1.1, 1.2, 1.1), CFrame.new(0, 1.5, 0.95)),
+			piece(
+				"Block",
+				Color3.fromRGB(230, 80, 80),
+				Vector3.new(1.8, 0.6, 0.2),
+				CFrame.new(0, -0.8, 0.95)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 170, 60),
+				Vector3.new(0.8, 0.9, 0.8),
+				CFrame.new(0, -1.35, 0.95),
+				Enum.Material.Neon
+			),
+		},
+	},
 	back_book = {
 		id = "back_book",
 		category = "back",
@@ -307,7 +459,46 @@ local Items: { [string]: ShopItem } = {
 		},
 	},
 
+	-- Усы = две половинки под носом, чуть вразлёт
+	face_mustache = {
+		id = "face_mustache",
+		category = "face",
+		title = "Весёлые усы",
+		price = 25,
+		tier = 0,
+		unlockStage = 1,
+		icon = "🥸",
+		visual = {
+			piece(
+				"Block",
+				Color3.fromRGB(80, 55, 40),
+				Vector3.new(0.6, 0.2, 0.15),
+				CFrame.new(-0.3, -0.2, -0.64) * CFrame.Angles(0, 0, math.rad(12))
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(80, 55, 40),
+				Vector3.new(0.6, 0.2, 0.15),
+				CFrame.new(0.3, -0.2, -0.64) * CFrame.Angles(0, 0, math.rad(-12))
+			),
+		},
+	},
+
 	-- === Следы ===
+	trail_snow = {
+		id = "trail_snow",
+		category = "trail",
+		title = "Снежинки",
+		price = 180,
+		tier = 1,
+		unlockStage = 1,
+		icon = "❄️",
+		trail = {
+			color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(150, 210, 255)),
+			lifetime = 1.3,
+			width = 2,
+		},
+	},
 	trail_stardust = {
 		id = "trail_stardust",
 		category = "trail",

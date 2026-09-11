@@ -103,5 +103,28 @@ return function()
 				expect(found).to.equal(true)
 			end
 		end)
+
+		-- docs/17-CONTENT-PLAN.md § 6: в первой играбельной версии двадцать вещей.
+		it(
+			"витрина первой версии — не меньше двадцати вещей",
+			function()
+				expect(Shop.count() >= 20).to.equal(true)
+			end
+		)
+
+		-- Сразу после первого испытания (около 25 ⭐) выбор должен быть, а не одна кепка.
+		it(
+			"по карману после первого испытания — больше одной вещи",
+			function()
+				local affordable = 0
+				for _, id in Shop.ids() do
+					local price = Shop.expect(id).price
+					if price and price <= 25 then
+						affordable += 1
+					end
+				end
+				expect(affordable >= 3).to.equal(true)
+			end
+		)
 	end)
 end

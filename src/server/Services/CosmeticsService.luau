@@ -85,6 +85,8 @@ local function attachVisual(character: Model, folder: Folder, item)
 		part.Size = piece.size
 		part.Color = piece.color
 		part.Material = piece.material or Enum.Material.SmoothPlastic
+		-- Прозрачность — для стекла: шлем космонавта не должен закрывать лицо.
+		part.Transparency = piece.transparency or 0
 		part.CanCollide = false
 		part.CanQuery = false
 		part.CanTouch = false
