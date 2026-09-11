@@ -4,10 +4,12 @@ local ParentReport = require(ReplicatedStorage.Shared.Logic.ParentReport)
 local ProfileTemplate = require(ReplicatedStorage.Shared.Config.ProfileTemplate)
 local MasteryRules = require(ReplicatedStorage.Shared.Logic.MasteryRules)
 local Letters = require(ReplicatedStorage.Shared.Config.Letters)
-local Words = require(ReplicatedStorage.Shared.Config.Words)
+local Stages = require(ReplicatedStorage.Shared.Config.Stages)
+local PlayLog = require(ReplicatedStorage.Shared.Logic.PlayLog)
 
 local NOW = 1770000000
 local DAY = 24 * 60 * 60
+local TODAY = PlayLog.dayOf(NOW)
 
 local function profileWith(letters, extra)
 	local profile = ProfileTemplate.new(NOW)
@@ -45,8 +47,9 @@ return function()
 			expect(report.letters.touched).to.equal(0)
 			expect(#report.letters.mastered).to.equal(0)
 			expect(#report.hard).to.equal(0)
-			expect(#report.syllables.read).to.equal(0)
-			expect(#report.words.collected).to.equal(0)
+			expect(report.alphabet.inOrder).to.equal(0)
+			expect(report.alphabet.total).to.equal(Letters.count())
+			expect(report.stages.total).to.equal(Stages.count())
 			expect(report.time.avgSessionMin).to.equal(0)
 			expect(report.letters.total).to.equal(Letters.count())
 		end)
@@ -106,6 +109,33 @@ return function()
 			local report = ParentReport.build(profile, NOW)
 			expect(report.time.avgSessionMin).to.equal(14)
 		end)
+
+		it("считает дни занятий за последнюю неделю", function()
+			local profile = ProfileTemplate.new(NOW)
+			profile.playLog = {
+				{ day = TODAY - 8, sec = 900 }, -- за окном недели
+				{ day = TODAY - 5, sec = 900 },
+				{ day = TODAY - 3, sec = 20 }, -- зашёл и вышел — не занимался
+				{ day = TODAY - 1, sec = 600 },
+				{ day = TODAY, sec = 300 },
+			}
+
+			local report = ParentReport.build(profile, NOW)
+
+			expect(report.time.activeDays).to.equal(3)
+			expect(report.time.windowDays).to.equal(7)
+		end)
+
+		it("не показывает серию, которая уже прервалась", function()
+			local profile = ProfileTemplate.new(NOW)
+			profile.dailyStreak = 12
+			profile.lastLoginDay = TODAY - 3
+
+			local report = ParentReport.build(profile, NOW)
+
+			expect(report.time.streakDays).to.equal(0)
+			expect(tipById(report, "streak")).to.never.be.ok()
+		end)
 	end)
 
 	describe("ParentReport.Трудные буквы", function()
@@ -146,84 +176,86 @@ return function()
 		it(
 			"советует пару слов, когда путаются похожие буквы",
 			function()
-				-- А и О заданы в справочнике как путающаяся пара
+				-- И и Й заданы в справочнике как пара, похожая по написанию
 				local report = ParentReport.build(
 					profileWith({
-						a = { correct = 5, wrong = 6 },
-						o = { correct = 5, wrong = 6 },
+						i = { correct = 5, wrong = 6 },
+						j = { correct = 5, wrong = 6 },
 					}),
 					NOW
 				)
 
 				local tip = tipById(report, "confusable")
 				expect(tip).to.be.ok()
-				expect(string.find(tip.text, Letters.expect("a").glyph, 1, true) ~= nil).to.equal(true)
+				expect(string.find(tip.text, Letters.expect("i").glyph, 1, true) ~= nil).to.equal(true)
 			end
 		)
 
 		it("молчит про путаницу, когда ошибок почти нет", function()
 			local report = ParentReport.build(
 				profileWith({
-					a = { correct = 20, wrong = 0 },
-					o = { correct = 20, wrong = 0 },
+					i = { correct = 20, wrong = 0 },
+					j = { correct = 20, wrong = 0 },
 				}),
 				NOW
 			)
 			expect(tipById(report, "confusable")).to.never.be.ok()
 		end)
 
+		--[[
+			Совет про порядок — главный в отчёте: он говорит родителю, что ребёнок
+			умеет вне игры. Проверяем и что он появляется, и что не появляется зря.
+		]]
 		it(
-			"предлагает прочитать слово, буквы которого уже изучены",
+			"предлагает назвать буквы, которые ребёнок знает подряд",
 			function()
-				local mama = Words.expect("mama")
 				local letters = {}
-				for _, letterId in mama.letters do
+				for index, letterId in Letters.ordered() do
+					if index > 4 then
+						break
+					end
 					letters[letterId] = { mastery = MasteryRules.LEARNED }
 				end
 
 				local report = ParentReport.build(profileWith(letters), NOW)
-				local tip = tipById(report, "ready_word")
+				local tip = tipById(report, "in_order")
 
 				expect(tip).to.be.ok()
-				expect(string.find(tip.text, mama.text, 1, true) ~= nil).to.equal(true)
+				expect(report.alphabet.inOrder).to.equal(4)
+				expect(string.find(tip.text, Letters.expect("a").glyph, 1, true) ~= nil).to.equal(true)
 			end
 		)
 
-		it(
-			"не предлагает слово, если хоть одна буква ещё не изучена",
-			function()
-				local mama = Words.expect("mama")
-				local letters = {}
-				for _, letterId in mama.letters do
-					letters[letterId] = { mastery = MasteryRules.FAMILIAR }
-				end
-				local report = ParentReport.build(profileWith(letters), NOW)
-				expect(tipById(report, "ready_word")).to.never.be.ok()
-			end
-		)
+		it("не считает буквы подряд, если пропущена первая", function()
+			local ordered = Letters.ordered()
+			local letters = {
+				[ordered[2]] = { mastery = MasteryRules.MASTERED },
+				[ordered[3]] = { mastery = MasteryRules.MASTERED },
+				[ordered[4]] = { mastery = MasteryRules.MASTERED },
+			}
 
-		it(
-			"не предлагает слово, которое ребёнок уже собрал",
-			function()
-				local mama = Words.expect("mama")
-				local letters = {}
-				for _, letterId in mama.letters do
-					letters[letterId] = { mastery = MasteryRules.MASTERED }
-				end
-				local profile = profileWith(letters)
-				for _, wordId in Words.ids() do
-					profile.words[wordId] = true
-				end
-				local report = ParentReport.build(profile, NOW)
-				expect(tipById(report, "ready_word")).to.never.be.ok()
-			end
-		)
+			local report = ParentReport.build(profileWith(letters), NOW)
+
+			expect(report.alphabet.inOrder).to.equal(0)
+			expect(tipById(report, "in_order")).to.never.be.ok()
+		end)
+
+		it("молчит, пока подряд знакомы меньше трёх букв", function()
+			local ordered = Letters.ordered()
+			local letters = {
+				[ordered[1]] = { mastery = MasteryRules.LEARNED },
+				[ordered[2]] = { mastery = MasteryRules.LEARNED },
+			}
+
+			expect(tipById(ParentReport.build(profileWith(letters), NOW), "in_order")).to.never.be.ok()
+		end)
 
 		it(
 			"хвалит за регулярность и сразу ограничивает аппетит",
 			function()
 				local profile = ProfileTemplate.new(NOW)
 				profile.dailyStreak = 6
+				profile.lastLoginDay = TODAY
 				local tip = tipById(ParentReport.build(profile, NOW), "streak")
 
 				expect(tip).to.be.ok()
@@ -245,6 +277,7 @@ return function()
 			end
 			local profile = profileWith(letters)
 			profile.dailyStreak = 30
+			profile.lastLoginDay = TODAY
 			profile.stats.totalPlayMin = 600
 			profile.stats.sessionsCount = 10
 
@@ -273,6 +306,7 @@ return function()
 				end
 				local profile = profileWith(letters)
 				profile.dailyStreak = 10
+				profile.lastLoginDay = TODAY
 				profile.stats.totalPlayMin = 600
 				profile.stats.sessionsCount = 10
 

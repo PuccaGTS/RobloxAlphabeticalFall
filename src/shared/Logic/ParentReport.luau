@@ -9,17 +9,16 @@
 	Тон отчёта задан докой и он же проверяется тестом: советы уважительные,
 	без обвинений, без сравнения ребёнка с другими детьми и без «купите, чтобы ускорить».
 
-	Ограничение, про которое стоит помнить: доки просят строку вида «занимался
-	6 дней из последних 7», но профиль хранит только серию подряд (dailyStreak)
-	и суммарное время. Поэтому здесь честно отдаётся серия, а посуточная история
-	появится, когда в профиле заведут её хранение.
+	Дни занятий и серия берутся из посуточной истории (Logic/PlayLog), а не из
+	голого поля dailyStreak: поле хранит серию на день последней игры и не знает,
+	что с тех пор ребёнок пропустил неделю.
 ]]
 
 local Types = require(script.Parent.Parent.Types)
 local Letters = require(script.Parent.Parent.Config.Letters)
-local Syllables = require(script.Parent.Parent.Config.Syllables)
-local Words = require(script.Parent.Parent.Config.Words)
+local Stages = require(script.Parent.Parent.Config.Stages)
 local MasteryRules = require(script.Parent.MasteryRules)
+local PlayLog = require(script.Parent.PlayLog)
 
 local ParentReport = {}
 
@@ -66,13 +65,21 @@ export type Report = {
 		familiar: { string },
 	},
 	hard: { HardLetter },
-	syllables: { read: { string }, total: number },
-	words: { collected: { string }, total: number },
+	--[[
+		Сколько букв ребёнок знает ПОДРЯД от начала алфавита. Именно это родитель
+		проверяет дома («назови по порядку»), и именно это отличает знание азбуки
+		от набора выученных значков.
+	]]
+	alphabet: { inOrder: number, total: number },
+	stages: { unlocked: number, total: number },
 	time: {
 		totalMin: number,
 		sessions: number,
 		avgSessionMin: number,
-		streakDays: number,
+		streakDays: number, -- серия на момент отчёта: пропущен день — ноль
+		-- «Занимался activeDays дней из последних windowDays»
+		activeDays: number,
+		windowDays: number,
 	},
 	reviewsDue: number, -- сколько букв уже ждут повторения на момент now
 	details: { LetterDetail },
@@ -87,26 +94,20 @@ local function accuracyOf(progress: Types.LetterProgress): number
 	return progress.correct / total
 end
 
--- Первое слово-иллюстрация буквы: нужно советам, чтобы предложить родителю
+-- Слово-иллюстрация буквы: нужно советам, чтобы предложить родителю
 -- не абстракцию, а конкретную пару слов.
-local function firstWordText(letterId: string): string?
+local function exampleWord(letterId: string): string?
 	local letter = Letters.get(letterId)
-	if letter == nil then
+	if letter == nil or letter.example == "" then
 		return nil
 	end
-	for _, wordId in letter.examples do
-		local word = Words.get(wordId)
-		if word ~= nil then
-			return word.text
-		end
-	end
-	return nil
+	return letter.example
 end
 
 --[[
 	Совет про путающуюся пару. Пары заданы в справочнике (confusableWith), а не
-	угадываются: путаница М/Н или Г/К — методический факт, а не статистика.
-	Берём ту пару, на которой ребёнок реально ошибается.
+	угадываются: похожие по написанию И/Й, Ш/Щ, Ь/Ъ — методический факт,
+	а не статистика. Берём ту пару, на которой ребёнок реально ошибается.
 ]]
 local function confusableTip(profile: Types.Profile): Tip?
 	local bestA, bestB, bestWrong = nil, nil, 0
@@ -136,59 +137,74 @@ local function confusableTip(profile: Types.Profile): Tip?
 
 	local glyphA = Letters.expect(bestA).glyph
 	local glyphB = Letters.expect(bestB).glyph
-	local wordA = firstWordText(bestA)
-	local wordB = firstWordText(bestB)
+	local wordA = exampleWord(bestA)
+	local wordB = exampleWord(bestB)
 
 	if wordA ~= nil and wordB ~= nil then
 		return {
 			id = "confusable",
-			text = `{glyphA} и {glyphB} путаются — это нормально в 5 лет. Дома произносите слова `
-				.. `{wordA} и {wordB}, пусть ребёнок покажет, что слышит первым.`,
+			text = `{glyphA} и {glyphB} путаются — это нормально в 5 лет. Напишите на бумаге `
+				.. `{wordA} и {wordB} и попросите ребёнка найти в них эти буквы.`,
 		}
 	end
 	return {
 		id = "confusable",
-		text = `{glyphA} и {glyphB} путаются — это нормально в 5 лет. Проговаривайте их дома `
-			.. `по очереди и просите ребёнка показать, какой звук он слышит.`,
+		text = `{glyphA} и {glyphB} путаются — это нормально в 5 лет. Напишите обе рядом `
+			.. `и попросите ребёнка назвать каждую.`,
 	}
 end
 
 --[[
-	Совет про слово, которое ребёнок уже может прочитать: все буквы изучены,
-	а само слово ещё не собрано. Это самая ценная строка отчёта — она показывает
-	родителю, что игра уже дала результат, применимый вне игры.
+	Сколько букв ребёнок знает подряд от начала алфавита.
+
+	Считаем именно подряд, а не общее число: азбука — это последовательность,
+	и «знает А, Б, В, Г» проверяемо дома, а «знает четыре буквы где-то в середине» нет.
 ]]
-local function readyWordTip(profile: Types.Profile): Tip?
-	for _, wordId in Words.ids() do
-		local word = Words.expect(wordId)
-		if profile.words[wordId] ~= true then
-			local ready = true
-			for _, letterId in word.letters do
-				local progress = profile.letters[letterId]
-				if progress == nil or progress.mastery < MasteryRules.LEARNED then
-					ready = false
-					break
-				end
-			end
-			if ready then
-				return {
-					id = "ready_word",
-					text = `Ребёнок уже знает все буквы слова {word.text} — попробуйте вместе `
-						.. `прочитать его на бумаге. Игра дала для этого всё необходимое.`,
-				}
-			end
+local function lettersInOrder(profile: Types.Profile): number
+	local count = 0
+	for _, letterId in Letters.ordered() do
+		local progress = profile.letters[letterId]
+		if progress == nil or progress.mastery < MasteryRules.LEARNED then
+			break
 		end
+		count += 1
 	end
-	return nil
+	return count
 end
 
-local function rhythmTips(profile: Types.Profile, avgSessionMin: number): { Tip }
+--[[
+	Совет про то, что ребёнок уже умеет вне игры: назвать первые буквы азбуки
+	по порядку. Это самая ценная строка отчёта — она показывает родителю
+	результат, применимый на бумаге, а не только на экране.
+]]
+local function inOrderTip(profile: Types.Profile): Tip?
+	local count = lettersInOrder(profile)
+	if count < 3 then
+		return nil
+	end
+
+	local glyphs: { string } = {}
+	for index, letterId in Letters.ordered() do
+		if index > count then
+			break
+		end
+		table.insert(glyphs, Letters.expect(letterId).glyph)
+	end
+
+	return {
+		id = "in_order",
+		text = `Ребёнок знает по порядку {count} букв: {table.concat(glyphs, " ")}. `
+			.. `Попросите назвать их дома вслух — по игре он это уже умеет.`,
+	}
+end
+
+local function rhythmTips(streakDays: number, avgSessionMin: number): { Tip }
 	local tips: { Tip } = {}
 
-	if profile.dailyStreak >= ParentReport.GOOD_STREAK_DAYS then
+	if streakDays >= ParentReport.GOOD_STREAK_DAYS then
 		table.insert(tips, {
 			id = "streak",
-			text = `Занимались {profile.dailyStreak} дней подряд — отличный темп. `
+			text = `Занимались {streakDays} дней подряд — отличный темп. `
 				.. `Больше 20 минут в день не нужно.`,
 		})
 	end
@@ -213,8 +229,7 @@ function ParentReport.build(profile: Types.Profile, now: number): Report
 	local touched = 0
 	local reviewsDue = 0
 
-	-- Порядок — методический, из программы, а не алфавитный: так родитель видит
-	-- ту же последовательность, по которой идёт ребёнок.
+	-- Порядок алфавитный: ровно та последовательность, по которой идёт ребёнок.
 	for _, letterId in Letters.ordered() do
 		local progress = profile.letters[letterId]
 		if progress ~= nil then
@@ -270,33 +285,28 @@ function ParentReport.build(profile: Types.Profile, now: number): Report
 		table.remove(hard)
 	end
 
-	local syllablesRead: { string } = {}
-	for _, syllableId in Syllables.ids() do
-		if profile.syllables[syllableId] == true then
-			table.insert(syllablesRead, Syllables.expect(syllableId).text)
-		end
-	end
-
-	local wordsCollected: { string } = {}
-	for _, wordId in Words.ids() do
-		if profile.words[wordId] == true then
-			table.insert(wordsCollected, Words.expect(wordId).text)
+	local unlockedStages = 0
+	for _, stage in Stages.all do
+		local state = profile.stages[stage.index]
+		if state ~= nil and state.unlocked then
+			unlockedStages += 1
 		end
 	end
 
 	local sessions = profile.stats.sessionsCount
 	local avgSessionMin = if sessions > 0 then profile.stats.totalPlayMin / sessions else 0
+	local streakDays = PlayLog.currentStreak(profile, now)
 
 	local tips: { Tip } = {}
 	local confusable = confusableTip(profile)
 	if confusable ~= nil then
 		table.insert(tips, confusable)
 	end
-	local readyWord = readyWordTip(profile)
-	if readyWord ~= nil then
-		table.insert(tips, readyWord)
+	local inOrder = inOrderTip(profile)
+	if inOrder ~= nil then
+		table.insert(tips, inOrder)
 	end
-	for _, tip in rhythmTips(profile, avgSessionMin) do
+	for _, tip in rhythmTips(streakDays, avgSessionMin) do
 		table.insert(tips, tip)
 	end
 	while #tips > ParentReport.MAX_TIPS do
@@ -312,13 +322,15 @@ function ParentReport.build(profile: Types.Profile, now: number): Report
 			familiar = familiar,
 		},
 		hard = hard,
-		syllables = { read = syllablesRead, total = Syllables.count() },
-		words = { collected = wordsCollected, total = #Words.ids() },
+		alphabet = { inOrder = lettersInOrder(profile), total = Letters.count() },
+		stages = { unlocked = unlockedStages, total = Stages.count() },
 		time = {
 			totalMin = profile.stats.totalPlayMin,
 			sessions = sessions,
 			avgSessionMin = avgSessionMin,
-			streakDays = profile.dailyStreak,
+			streakDays = streakDays,
+			activeDays = PlayLog.activeDays(profile.playLog, now, PlayLog.REPORT_WINDOW),
+			windowDays = PlayLog.REPORT_WINDOW,
 		},
 		reviewsDue = reviewsDue,
 		details = details,
