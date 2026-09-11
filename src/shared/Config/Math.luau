@@ -224,6 +224,22 @@ function Module.isUnlocked(stage: number, masteryOfStage: (stageId: string) -> n
 	return masteryOfStage(prev.id) >= MathConfig.UNLOCK_MIN_MASTERY
 end
 
+--[[
+	Ступень, которую играет портал: самая высокая из открытых подряд.
+	Считается одинаково на сервере (какие задачи строить) и на клиенте
+	(что написать над порталом), поэтому живёт здесь, а не в сервисе.
+]]
+function Module.current(masteryOfStage: (stageId: string) -> number): number
+	local highest = 1
+	for stage = 2, #Stages do
+		if not Module.isUnlocked(stage, masteryOfStage) then
+			break
+		end
+		highest = stage
+	end
+	return highest
+end
+
 -- ─────────────────────────── генератор ───────────────────────────
 
 local function shuffled(list: { number }, random: Random): { number }

@@ -15,6 +15,7 @@ local AudioController = require(Controllers.AudioController)
 local SfxController = require(Controllers.SfxController)
 local ChallengeController = require(Controllers.ChallengeController)
 local TowerController = require(Controllers.TowerController)
+local PortalSignController = require(Controllers.PortalSignController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -92,6 +93,7 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 	HUD.setStars(snapshot.stars or 0)
 	ShopUI.update(snapshot)
 	TowerController.update(snapshot)
+	PortalSignController.update(snapshot)
 end)
 
 --[[

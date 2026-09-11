@@ -95,6 +95,8 @@ export type Snapshot = {
 	-- Статусы ступеней математики: тот же вид, что у букв, ключ — id ступени.
 	math: { [string]: number },
 	stages: { [number]: boolean },
+	-- Пройденные уровни каждого мира: по ним клиент подписывает портал.
+	levels: { [string]: number },
 	base: { [string]: number },
 	inventory: { string },
 	equipped: Types.Equipped,
@@ -128,6 +130,7 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 		nextReview = nextReview,
 		math = math_,
 		stages = stages,
+		levels = Levels.sanitize(profile.levels),
 		base = table.clone(profile.base),
 		inventory = table.clone(profile.inventory),
 		equipped = {

@@ -80,6 +80,32 @@ return function()
 				return 3
 			end)).to.equal(false)
 		end)
+
+		it(
+			"портал играет самую высокую ступень из открытых подряд",
+			function()
+				local mastery = {}
+				local function of(stageId)
+					return mastery[stageId] or 0
+				end
+
+				expect(MathConfig.current(of)).to.equal(1)
+
+				mastery[MathConfig.expect(1).id] = 2
+				mastery[MathConfig.expect(2).id] = 2
+				expect(MathConfig.current(of)).to.equal(3)
+
+				-- Пропуск в цепочке: всё, что выше дыры, не считается.
+				mastery[MathConfig.expect(5).id] = 3
+				expect(MathConfig.current(of)).to.equal(3)
+			end
+		)
+
+		it("всё освоено — последняя ступень, а не дальше", function()
+			expect(MathConfig.current(function()
+				return 3
+			end)).to.equal(MathConfig.count())
+		end)
 	end)
 
 	describe("Math.Генератор", function()

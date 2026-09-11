@@ -255,16 +255,7 @@ function ProgressService.mathStage(player: Player): number
 		return 1
 	end
 
-	local of = mathMasteryOf(profile)
-	local highest = 1
-	for stage = 2, MathConfig.count() do
-		if MathConfig.isUnlocked(stage, of) then
-			highest = stage
-		else
-			break
-		end
-	end
-	return highest
+	return MathConfig.current(mathMasteryOf(profile))
 end
 
 --[[

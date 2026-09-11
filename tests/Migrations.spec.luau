@@ -550,6 +550,20 @@ return function()
 			expect(migrated.runs.tunnel_run.checkpoint).to.equal(2)
 		end)
 
+		it(
+			"срез для клиента отдаёт пройденные уровни — для таблички над порталом",
+			function()
+				local profile = ProfileTemplate.new(NOW)
+				profile.levels.letters = 4
+
+				local snapshot = ProfileTemplate.toSnapshot(profile)
+
+				expect(snapshot.levels.letters).to.equal(4)
+				snapshot.levels.letters = 11
+				expect(profile.levels.letters).to.equal(4)
+			end
+		)
+
 		it("испорченный счёт уровней не роняет вход в игру", function()
 			for _, broken in
 				{ "три", { letters = -4 }, { letters = 999 }, { letters = 2.7 }, { letters = 0 / 0 } }
