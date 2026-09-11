@@ -904,6 +904,105 @@ return function()
 	end)
 
 	--[[
+		Секрет уровня (docs/18-CONTENT-BACKLOG.md § 8): золотая буква на постаменте
+		в стороне от пути. Проверяем, что он есть у каждого уровня, стоит на своём
+		месте никому не мешая и засчитывается один раз.
+	]]
+	describe("TunnelRun — секрет уровня", function()
+		it(
+			"у каждого уровня один секрет с буквой своей ступени",
+			function()
+				for _, level in Levels.all do
+					for difficulty = 1, 5, 2 do
+						local spec = build(Letters.ordered(), difficulty, level.index)
+						local secret = spec.params.secret
+						expect(secret).to.be.ok()
+						expect(table.find(Levels.stage(level.index).letters, secret.letterId)).to.be.ok()
+						expect(secret.lane == 1 or secret.lane == Tunnel.LANE_COUNT).to.equal(true)
+						expect(secret.segment >= 1 and secret.segment <= spec.targetCount).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it("у свободной полосы секрета нет", function()
+			expect(ObstacleCourse.Build(nil, { "m", "a", "u" }, 3).params.secret).to.equal(nil)
+		end)
+
+		it(
+			"постамент никому не мешает: ни элементам, ни рядам, ни воротам",
+			function()
+				local half = Tunnel.SECRET_PEDESTAL.Z / 2
+				for _, level in Levels.all do
+					for difficulty = 1, 5 do
+						local spec = build(Letters.ordered(), difficulty, level.index)
+						local secret = spec.params.secret
+						local from, to = secret.z - half, secret.z + half
+						for _, obstacle in spec.params.obstacles do
+							local oFrom = obstacle.z - Tunnel.obstacleLead(obstacle.kind)
+							local oTo = obstacle.z + Tunnel.obstacleLength(obstacle.kind)
+							expect(to < oFrom or from > oTo).to.equal(true)
+						end
+						for _, row in spec.params.rows do
+							expect(math.abs(row.z - secret.z) >= half + Tunnel.COLLECT_SIZE / 2).to.equal(
+								true
+							)
+						end
+						local gate = spec.params.gates[secret.segment]
+						expect(to <= gate.z - Tunnel.CLEARANCE_BEFORE_GATE).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it("по тому же рецепту — тот же секрет", function()
+			local spec = build(nil, 4, 6)
+			local again = TunnelRun.Rebuild({
+				challengeId = spec.challengeId,
+				seed = spec.seed,
+				letters = spec.letters,
+				difficulty = spec.difficulty,
+				level = spec.level,
+				checkpoint = 0,
+				savedAt = 0,
+			})
+			expect(again.params.secret.z).to.equal(spec.params.secret.z)
+			expect(again.params.secret.lane).to.equal(spec.params.secret.lane)
+			expect(again.params.secret.letterId).to.equal(spec.params.secret.letterId)
+		end)
+
+		it("находится один раз за забег", function()
+			local spec = build(nil, 3, 2)
+			local state = stateFor(spec)
+			local first = TunnelRun.Validate(state, { kind = "secret" })
+			expect(first.handled).to.equal(true)
+			expect(first.secret).to.equal(true)
+			expect(first.letterId).to.equal(spec.params.secret.letterId)
+			expect(TunnelRun.Validate(state, { kind = "secret" }).handled).to.equal(false)
+		end)
+
+		it("найденный раньше не засчитывается", function()
+			local spec = build(nil, 3, 2)
+			spec.params.secret.found = true
+			expect(TunnelRun.Validate(stateFor(spec), { kind = "secret" }).handled).to.equal(false)
+		end)
+
+		it("в пройденном до выхода отрезке секрета нет", function()
+			local spec = build(nil, 3, 2)
+			local resumed = TunnelRun.Rebuild({
+				challengeId = spec.challengeId,
+				seed = spec.seed,
+				letters = spec.letters,
+				difficulty = spec.difficulty,
+				level = spec.level,
+				checkpoint = spec.targetCount,
+				savedAt = 0,
+			})
+			expect(TunnelRun.Validate(stateFor(resumed), { kind = "secret" }).handled).to.equal(false)
+		end)
+	end)
+
+	--[[
 		Полоса препятствий — тот же забег с перевёрнутыми пропорциями.
 		Проверяем ровно это: что она осталась забегом с буквами, а не превратилась
 		в паркур ради паркура.

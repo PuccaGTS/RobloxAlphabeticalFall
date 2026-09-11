@@ -285,6 +285,16 @@ local function onStart(player: Player, challengeId: any)
 	end
 	spec = spec or module.Build(player, letters, difficulty, track)
 
+	--[[
+		Найденный секрет уровня больше не появляется: план забега об этом не знает
+		(он собирается из рецепта и должен быть одинаковым), поэтому отметка ставится
+		здесь, поверх готового плана.
+	]]
+	local secret = spec.params.secret
+	if secret and spec.level and ProgressService.secretFound(player, spec.level) then
+		secret.found = true
+	end
+
 	local state = {
 		module = module,
 		spec = spec,
@@ -371,6 +381,24 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		голосом, ни следующего задания — иначе голос тараторил бы на каждом
 		шаге забега и перебивал задание ворот.
 	]]
+	--[[
+		Секрет уровня: голос называет золотую букву — это повторение, ради которого
+		секрет и сделан буквой, а не сундуком, — и за первую находку 15 ⭐.
+	]]
+	if result.secret then
+		local awarded = ProgressService.claimSecret(player, state.spec.level, result.letterId)
+		fire(answerHooks, player, state.spec, result)
+		RemoteDefs.event("PlaySfx"):FireClient(player, "reward")
+		local letter = Letters.get(result.letterId)
+		if letter then
+			playVO(player, letter.vo.name)
+		end
+		print(
+			`[Challenge] {player.Name} нашёл секрет уровня {state.spec.level}: +{awarded} ⭐`
+		)
+		return
+	end
+
 	if result.collect then
 		ProgressService.awardCollect(player, result.letterId)
 		fire(answerHooks, player, state.spec, result)

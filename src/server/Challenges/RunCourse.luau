@@ -35,6 +35,8 @@ local RunCourse = {}
 
 -- Соль генератора рядов букв: у них свой Random, чтобы не сдвигать ворота и препятствия.
 local ROW_SEED_SALT = 7919
+-- То же для секрета уровня.
+local SECRET_SEED_SALT = 104729
 
 --[[
 	Ряд букв на дорожке перед воротами: буква этого отрезка и одна отвлекающая —
@@ -201,13 +203,23 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 
 		local random = Random.new(seed)
 
-		local gates, obstacles, checkpoints, length, rows = CourseLayout.layout(random, {
+		--[[
+			Секрет уровня (docs/18-CONTENT-BACKLOG.md § 8): золотая буква ступени
+			на постаменте в стороне от пути. Только у уровней мира букв: свободная
+			полоса — это «побегать», а секрет — часть пути, который продолжается.
+		]]
+		local secretRandom = if level then Random.new(seed + SECRET_SEED_SALT) else nil
+		local secretSegment = if secretRandom then secretRandom:NextInteger(1, gateCount) else nil
+
+		local gates, obstacles, checkpoints, length, rows, secret = CourseLayout.layout(random, {
 			gateCount = gateCount,
 			obstacleCount = obstacleCount,
 			obstacleTier = obstacleTier,
 			rowsPerSegment = if params.collect then DifficultyCurve.pick(params.collect, difficulty) else 0,
 			rowRandom = Random.new(seed + ROW_SEED_SALT),
 			makeRow = makeRow,
+			secretSegment = secretSegment,
+			secretRandom = secretRandom,
 			makeGate = function(index: number, gateRandom: Random)
 				local targetId = targets[index]
 				local target = Letters.expect(targetId)
@@ -236,6 +248,13 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 			end,
 		})
 
+		if secret and secretRandom and level then
+			local fresh = Levels.stage(level.index).letters
+			local letter = Letters.expect(fresh[secretRandom:NextInteger(1, #fresh)])
+			secret.letterId = letter.id
+			secret.glyph = letter.glyph
+		end
+
 		--[[
 			Сколько сохранок уже пройдено: столько же ворот считаются взятыми,
 			и с этой точки TunnelService поставит ребёнка в туннель. Буква-цель
@@ -260,6 +279,7 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 				obstacles = obstacles,
 				checkpoints = checkpoints,
 				rows = rows,
+				secret = secret,
 				length = length,
 				slowSeconds = slowSeconds,
 				slowFactor = slowFactor,
@@ -356,6 +376,25 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 				row = row.index,
 				slot = action.slot,
 			}
+		end
+
+		--[[
+			Секрет уровня: коснулся золотой буквы на постаменте. Один раз за забег;
+			один раз навсегда — это уже забота ProgressService, он помнит найденные.
+			В пройденном до выхода отрезке секрета нет: туда ребёнок не вернётся.
+		]]
+		if action.kind == "secret" then
+			local secret = state.spec.params.secret
+			if
+				not secret
+				or secret.found
+				or state.secretTaken
+				or secret.segment <= (state.spec.params.resumeFrom or 0)
+			then
+				return { handled = false }
+			end
+			state.secretTaken = true
+			return { handled = true, secret = true, letterId = secret.letterId }
 		end
 
 		if action.kind ~= "gate" or typeof(action.gateIndex) ~= "number" then

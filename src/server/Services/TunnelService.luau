@@ -431,6 +431,75 @@ local function buildRows(model: Model, origin: CFrame, rows: { any }, player: Pl
 end
 
 --[[
+	Секрет уровня (docs/18-CONTENT-BACKLOG.md § 8): постамент в крайней дорожке
+	и над ним золотая буква, вокруг которой искрится. Мимо можно пробежать,
+	а можно запрыгнуть и коснуться — голос назовёт букву, и за первую
+	находку упадут звёздочки. Найденный однажды секрет больше не строится.
+]]
+local SECRET_GOLD = Color3.fromRGB(255, 205, 80)
+
+local function buildSecret(model: Model, origin: CFrame, secret: any, player: Player, resumeFrom: number)
+	if not secret or secret.found or secret.segment <= resumeFrom then
+		return
+	end
+
+	local x = Tunnel.laneOffset(secret.lane)
+	local pedestal = build(
+		"SecretPedestal",
+		Tunnel.SECRET_PEDESTAL,
+		origin * CFrame.new(x, Tunnel.SECRET_PEDESTAL.Y / 2, -secret.z),
+		Color3.fromRGB(190, 170, 140),
+		model
+	)
+	pedestal.Material = Enum.Material.Cobblestone
+
+	local tile = build(
+		"SecretTile",
+		Vector3.new(Tunnel.SECRET_SIZE, Tunnel.SECRET_SIZE, 0.6),
+		origin * CFrame.new(x, Tunnel.SECRET_PEDESTAL.Y + Tunnel.SECRET_LIFT, -secret.z),
+		SECRET_GOLD,
+		model
+	)
+	tile.CanCollide = false
+	tile.Material = Enum.Material.Neon
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "Glyph"
+	billboard.Size = UDim2.fromScale(1, 1)
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = 140
+	billboard.Parent = tile
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = secret.glyph
+	label.TextColor3 = Color3.fromRGB(120, 70, 10)
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.Parent = billboard
+
+	-- Искры: секрет должно быть видно издалека, иначе это не секрет, а пропажа.
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Rate = 6
+	sparkle.Lifetime = NumberRange.new(0.8, 1.4)
+	sparkle.Speed = NumberRange.new(1, 2)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Color = ColorSequence.new(SECRET_GOLD)
+	sparkle.LightEmission = 1
+	sparkle.Size = NumberSequence.new(0.4, 0)
+	sparkle.Parent = tile
+
+	tile.Touched:Connect(function(hit: BasePart)
+		local character = hit.Parent
+		if not character or Players:GetPlayerFromCharacter(character) ~= player then
+			return
+		end
+		ChallengeService.submitAction(player, { kind = "secret" })
+	end)
+end
+
+--[[
 	Приваривает деталь к анкерной: связка ездит вместе с ней, но толкает мягко.
 	Нужно маятнику — верёвка и шар должны ходить за подвесом.
 ]]
@@ -1000,6 +1069,7 @@ function TunnelService.spawn(player: Player, spec: any)
 	end
 	buildObstacles(model, origin, spec.params.obstacles)
 	buildRows(model, origin, spec.params.rows or {}, player, spec.params.resumeFrom or 0)
+	buildSecret(model, origin, spec.params.secret, player, spec.params.resumeFrom or 0)
 	buildFinish(model, origin, length, player)
 
 	local character = player.Character
@@ -1125,6 +1195,16 @@ function TunnelService.start()
 
 	ChallengeService.onAnswer(function(player: Player, spec: any, result: any)
 		if not TunnelService.isRun(spec.challengeId) then
+			return
+		end
+
+		-- Найденный секрет исчезает вместе с искрами: постамент остаётся — место находки.
+		if result.secret then
+			local run = runs[player]
+			local tile = run and run.model:FindFirstChild("SecretTile")
+			if tile then
+				tile:Destroy()
+			end
 			return
 		end
 

@@ -475,6 +475,51 @@ function ProgressService.clearRun(player: Player, challengeId: string)
 	end)
 end
 
+-- ===== Секреты уровней ===========================================================
+
+local SECRET_ID = "secret"
+
+--[[
+	Найден ли секрет этого уровня. Хранится в stages[уровень].chests —
+	поле заведено под сундуки ещё в первой версии профиля и пустовало.
+	Номер уровня совпадает с номером ступени (Config/Levels).
+]]
+function ProgressService.secretFound(player: Player, level: number): boolean
+	local profile = ProfileService.get(player)
+	local state = profile and profile.stages[level]
+	return state ~= nil and typeof(state.chests) == "table" and table.find(state.chests, SECRET_ID) ~= nil
+end
+
+--[[
+	Секрет найден впервые: 15 ⭐ — награда «секретный сундук» из docs/04-ECONOMY.md § 2,
+	один раз на сундук. Найденный повторно не даёт ничего: это не ферма.
+	Возвращает, сколько начислено.
+]]
+function ProgressService.claimSecret(player: Player, level: number, letterId: string): number
+	if ProgressService.secretFound(player, level) then
+		return 0
+	end
+	local recorded = ProfileService.update(player, function(profile)
+		--[[
+			Ступени заводим подряд до нужной, а не одну её: таблица ступеней с дырой
+			посередине — разреженный массив, и DataStore такой сохраняет плохо.
+		]]
+		for index = 1, level do
+			if not profile.stages[index] then
+				profile.stages[index] = { unlocked = index == 1, chests = {} }
+			end
+		end
+		local state = profile.stages[level]
+		state.chests = if typeof(state.chests) == "table" then state.chests else {}
+		table.insert(state.chests, SECRET_ID)
+		return true
+	end)
+	if not recorded then
+		return 0
+	end
+	return EconomyService.award(player, "secret_chest", Economy.REWARDS.secretChest, letterId)
+end
+
 -- ===== Уровни мира букв ==========================================================
 
 --[[

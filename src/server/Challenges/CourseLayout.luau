@@ -73,6 +73,9 @@ function CourseLayout.layout(
 		rowsPerSegment: number?,
 		rowRandom: Random?,
 		makeRow: ((gate: { [string]: any }, random: Random) -> { { [string]: any } })?,
+		-- Секрет уровня: на каком отрезке он спрятан и свой генератор места.
+		secretSegment: number?,
+		secretRandom: Random?,
 	}
 )
 	local catalog = Obstacles.upToTier(plan.obstacleTier)
@@ -89,6 +92,7 @@ function CourseLayout.layout(
 	local obstacles = {}
 	local checkpoints = {}
 	local rows = {}
+	local secret = nil
 	local previousId: string? = nil
 
 	local z = Tunnel.START_RUNWAY
@@ -114,7 +118,17 @@ function CourseLayout.layout(
 			end
 		end
 
-		local segment = Tunnel.segmentLength(plan.obstacleCount, rowCount)
+		--[[
+			Секрет получает свою клетку перед одним из препятствий отрезка —
+			как ряд букв, только в крайней дорожке и на постаменте.
+		]]
+		local secretBefore: number? = nil
+		local secretRandom = plan.secretRandom
+		if plan.secretSegment == index and secretRandom and plan.obstacleCount > 0 and #catalog > 0 then
+			secretBefore = secretRandom:NextInteger(1, plan.obstacleCount)
+		end
+
+		local segment = Tunnel.segmentLength(plan.obstacleCount, rowCount + (if secretBefore then 1 else 0))
 
 		--[[
 			Отрезок режется на клетки: клетка ряда букв (если он здесь есть), потом
@@ -130,6 +144,14 @@ function CourseLayout.layout(
 		for step = 1, plan.obstacleCount do
 			if rowBefore[step] then
 				table.insert(rowZs, cursor + Tunnel.ROW_PLACE)
+				cursor += Tunnel.ROW_PITCH
+			end
+			if secretBefore == step and secretRandom then
+				secret = {
+					segment = index,
+					z = cursor + Tunnel.ROW_PITCH / 2,
+					lane = if secretRandom:NextInteger(1, 2) == 1 then 1 else Tunnel.LANE_COUNT,
+				}
 				cursor += Tunnel.ROW_PITCH
 			end
 
@@ -193,7 +215,7 @@ function CourseLayout.layout(
 		table.insert(checkpoints, { index = index, z = z + Tunnel.CHECKPOINT_OFFSET })
 	end
 
-	return gates, obstacles, checkpoints, z + Tunnel.FINISH_RUNWAY, rows
+	return gates, obstacles, checkpoints, z + Tunnel.FINISH_RUNWAY, rows, secret
 end
 
 return CourseLayout
