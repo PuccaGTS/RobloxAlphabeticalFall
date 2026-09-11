@@ -20,21 +20,29 @@ AlphabetFall/
 ├── src/
 │   ├── shared/               → ReplicatedStorage.Shared
 │   │   ├── Config/
-│   │   │   ├── Letters.luau          -- 33 буквы, звуки, слова
-│   │   │   ├── Syllables.luau        -- ~180 слогов
-│   │   │   ├── Words.luau            -- банк слов
-│   │   │   ├── Islands.luau          -- состав островов
+│   │   │   ├── Letters.luau          -- 33 буквы: имя, место в алфавите, ступень
+│   │   │   ├── Stages.luau           -- 11 ступеней по три буквы
+│   │   │   ├── Obstacles.luau        -- каталог элементов полосы
+│   │   │   ├── Tunnel.luau           -- геометрия забегов
 │   │   │   ├── Shop.luau             -- предметы и цены
 │   │   │   ├── Challenges.luau       -- параметры сложности
 │   │   │   └── AudioRegistry.luau    -- vo_key → rbxassetid
 │   │   ├── Logic/
 │   │   │   ├── MasteryRules.luau     -- переходы статусов буквы (чистая функция)
 │   │   │   ├── ReviewScheduler.luau  -- интервальное повторение
+│   │   │   ├── ParentReport.luau     -- отчёт родителю
+│   │   │   ├── Migrations.luau       -- версии профиля
 │   │   │   └── DifficultyCurve.luau  -- адаптивная сложность
 │   │   ├── Net/RemoteDefs.luau       -- единый реестр Remote'ов
 │   │   └── Types.luau
 │   ├── server/               → ServerScriptService.Server
 │   │   ├── init.server.luau
+│   │   ├── Challenges/                  -- модули испытаний: Build/Validate/Finish
+│   │   │   ├── LetterRain.luau
+│   │   │   ├── AlphabetLadder.luau
+│   │   │   ├── RunCourse.luau           -- общий план забега
+│   │   │   ├── TunnelRun.luau           -- туннель: ворота часто
+│   │   │   └── ObstacleCourse.luau      -- полоса: препятствий много
 │   │   └── Services/
 │   │       ├── ProfileService.luau      -- загрузка/сохранение профиля
 │   │       ├── ProgressService.luau     -- статусы букв, XP, освоение
@@ -42,6 +50,9 @@ AlphabetFall/
 │   │       ├── EconomyService.luau      -- ⭐ начисления и траты
 │   │       ├── ShopService.luau         -- покупки, инвентарь
 │   │       ├── CosmeticsService.luau    -- надевание аксессуаров, питомцы
+│   │       ├── WorldService.luau        -- площадь: порталы, пады занятий, магазин
+│   │       ├── BaseService.luau         -- участки игроков: дома и их улучшения
+│   │       ├── TunnelService.luau       -- геометрия забегов и сохранки
 │   │       ├── MonetizationService.luau -- Game Passes, Dev Products
 │   │       ├── AnalyticsService.luau
 │   │       └── ParentService.luau
@@ -50,7 +61,8 @@ AlphabetFall/
 │       ├── Controllers/
 │       │   ├── AudioController.luau     -- очередь VO, дакинг музыки
 │       │   ├── ChallengeController.luau -- презентация испытаний
-│       │   ├── EchoController.luau      -- режимы A/B/C микрофона
+│       │   ├── LadderController.luau    -- «Алфавитная лестница»
+│       │   ├── TowerController.luau     -- Башня прогресса
 │       │   ├── UIController.luau
 │       │   ├── CameraController.luau
 │       │   └── TutorialController.luau
@@ -66,7 +78,7 @@ AlphabetFall/
 ## 3. Архитектурные принципы
 
 1. **Сервер — источник истины.** Клиент не решает, засчитан ли ответ, сколько ⭐ начислить
-   и открыт ли остров. Клиент только показывает и отправляет намерения.
+   и открыта ли ступень. Клиент только показывает и отправляет намерения.
 2. **Конфиг отделён от логики.** Все числа (цены, скорости, пороги) — в `shared/Config`.
    Ни одного «магического числа» в сервисах.
 3. **Чистая логика тестируема.** `MasteryRules`, `ReviewScheduler`, `DifficultyCurve` —
@@ -97,15 +109,17 @@ type Profile = {
     level: number,
     xp: number,
     letters: {[string]: LetterProgress},   -- ключ = letterId ("m", "a", ...)
-    syllables: {[string]: boolean},
-    words: {[string]: boolean},
-    islands: {[number]: {unlocked: boolean, bossDone: boolean, chests: {string}}},
+    stages: {[number]: {unlocked: boolean, chests: {string}}},
+    runs: {[string]: SavedRun},    -- незаконченные забеги, см. 09-DATA-SCHEMA § 8.2
+    base: {[string]: number},      -- участок: уровень дома, крыши, двора, забора
     inventory: {string},           -- id предметов
     equipped: {hat: string?, back: string?, face: string?, trail: string?, pets: {string}},
     dailyStreak: number,
-    lastLoginDay: number,
-    settings: {music: number, sfx: number, echoMode: string, subtitles: boolean},
-    parent: {pinHash: string?, dailyLimitMin: number?, echoConsent: boolean},
+    lastLoginDay: number,          -- последний день, засчитанный в серию
+    playLog: {{day: number, sec: number}},  -- история занятий, см. 09-DATA-SCHEMA § 8.4
+    settings: {music: number, sfx: number, voice: number, subtitles: boolean,
+               slowSpeech: boolean, hideRobux: boolean},
+    parent: {pinHash: string?, dailyLimitMin: number?},
     stats: {totalPlayMin: number, sessionsCount: number, firstJoin: number},
 }
 ```
@@ -118,7 +132,7 @@ type Profile = {
 - **Поле `version` и функции миграции** — с первого дня. Схема будет меняться,
   а профили детей терять нельзя.
 - Профиль никогда не отправляется клиенту целиком — только нужные срезы
-  (звёзды, инвентарь, прогресс текущего острова).
+  (звёзды, инвентарь, статусы букв, открытые ступени).
 
 ## 5. Контракт испытания
 
@@ -158,7 +172,6 @@ export type ChallengeModule = {
 | `BuyItem` | C→S | покупка (id предмета) |
 | `EquipItem` | C→S | надеть/снять |
 | `PlayVO` | S→C | попросить клиент проиграть реплику по vo_key |
-| `EchoReport` | C→S | факт «сказал» (режим A/B), без аудиоданных |
 | `ParentAuth` | C→S | вход в родительский режим (PIN) |
 
 **Rate limiting на каждом Remote** (например, `ChallengeAction` ≤ 20/с) —
@@ -181,12 +194,12 @@ export type ChallengeModule = {
 Целевое устройство — планшет 4 ГБ RAM. Бюджеты:
 
 - **30 FPS минимум** на целевом устройстве, 60 — на ПК.
-- Не более **~800 частей** в зоне видимости; острова разделены на стриминг-зоны
+- Не более **~800 частей** в зоне видимости; забег каждого игрока стоит на своём участке карты
   (`StreamingEnabled = true`).
 - Буквы — **MeshPart** с общим `SurfaceAppearance`, не Union и не CSG в рантайме.
 - Максимум 2 динамических источника света на кадр, тени — только от персонажа.
 - UI — переиспользование пула элементов, никаких пересозданий `Frame` каждый кадр.
-- Аудио: предзагрузка островной пачки VO, выгрузка при смене острова.
+- Аудио: предзагрузка букв текущей и следующей ступени, выгрузка остального.
 - Никакой физики у питомцев/букв: `AlignPosition` + `Anchored`, движение через
   `TweenService`/`RunService` без коллизий.
 
@@ -196,14 +209,13 @@ export type ChallengeModule = {
 
 ```
 session_start / session_end (длительность)
-challenge_start (id, island, difficulty)
+challenge_start (id, stage, difficulty)
 letter_answer (letterId, challengeId, correct, reactionMs, hintsUsed)
 mastery_change (letterId, from, to)
-syllable_first_read (syllableId)
-word_first_built (wordId)
+stage_opened (stageIndex)
+run_checkpoint (challengeId, checkpoint) / run_resumed (challengeId, checkpoint)
 economy_earn / economy_spend (source, amount, balance)
 shop_purchase (itemId, price)
-echo_mode (mode A/B/C)
 parent_open / parent_setting_change
 error_client / error_server
 ```
@@ -220,11 +232,13 @@ error_client / error_server
 
 ## 11. Порядок работ по коду (после утверждения доков)
 
-1. Rojo-скелет, `Types`, `Config/Letters` на 9 букв, пустые сервисы.
-2. `ProfileService` + сохранение/загрузка + миграции.
-3. `AudioController` с очередью и дакингом (без него ничего не проверить на слух).
-4. Испытание «Буквопад» целиком по контракту §5.
-5. `ProgressService` + `MasteryRules` + юнит-тесты.
-6. `EconomyService` + магазин из 6 предметов + `CosmeticsService`.
-7. «Эхо-буква» (режим A) и «Мост слогов».
-8. Хаб, Башня, туториал первых 10 минут.
+1. ~~Rojo-скелет, `Types`, `Config/Letters`, пустые сервисы.~~ Сделано.
+2. ~~`ProfileService` + сохранение/загрузка + миграции.~~ Сделано.
+3. ~~`AudioController` с очередью и дакингом.~~ Сделано.
+4. ~~Испытание «Буквопад» целиком по контракту § 5.~~ Сделано.
+5. ~~`ProgressService` + `MasteryRules` + юнит-тесты.~~ Сделано.
+6. ~~`EconomyService` + магазин + `CosmeticsService`.~~ Сделано.
+7. ~~«Алфавитная лестница», забеги: туннель и полоса препятствий.~~ Сделано.
+8. ~~Хаб и Башня.~~ Сделано. Туториал первых 10 минут — впереди.
+9. ~~Сохранка забега в профиле: переживает выход из игры.~~ Сделано.
+   Спавн с двумя порталами и уровни — впереди ([14-TUNNEL-MODE.md](14-TUNNEL-MODE.md)).
