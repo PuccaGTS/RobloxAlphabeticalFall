@@ -1,7 +1,12 @@
 --!nonstrict
 --[[
-	Прогресс обучения: применяет ответы к профилю, двигает статусы букв,
-	планирует повторения, открывает острова и заказывает награды у EconomyService.
+	Прогресс обучения: применяет ответы к профилю, двигает статусы букв и ступеней
+	счёта, планирует повторения, открывает ступени алфавита и заказывает награды
+	у EconomyService.
+
+	Ветки обучения две — буквы и математика, — и они не блокируют друг друга
+	(docs/16-MATH.md § 6). Правила освоения у них общие, поэтому применение ответа
+	написано дважды по форме, но опирается на один и тот же MasteryRules.
 
 	Это единственное место, где ответ ребёнка превращается в изменение прогресса.
 	Испытания сюда только сообщают факты — решение принимается здесь.
@@ -11,9 +16,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
-local Islands = require(Shared.Config.Islands)
-local Syllables = require(Shared.Config.Syllables)
-local Words = require(Shared.Config.Words)
+local Stages = require(Shared.Config.Stages)
+local MathConfig = require(Shared.Config.Math)
 local Economy = require(Shared.Config.Economy)
 local MasteryRules = require(Shared.Logic.MasteryRules)
 local ReviewScheduler = require(Shared.Logic.ReviewScheduler)
@@ -53,10 +57,10 @@ local function progressFor(profile, letterId: string, now: number)
 end
 
 --[[
-	Пересчитывает открытые острова. Вызывается после каждого изменения статуса буквы.
-	Возвращает список индексов островов, открывшихся именно сейчас.
+	Пересчитывает открытые ступени. Вызывается после каждого изменения статуса буквы.
+	Возвращает список индексов ступеней, открывшихся именно сейчас.
 ]]
-function ProgressService.refreshIslands(profile): { number }
+function ProgressService.refreshStages(profile): { number }
 	local opened: { number } = {}
 
 	local function masteryOf(letterId: string): number
@@ -64,25 +68,25 @@ function ProgressService.refreshIslands(profile): { number }
 		return if p then p.mastery else 0
 	end
 
-	for _, island in Islands.all do
-		local state = profile.islands[island.index]
+	for _, stage in Stages.all do
+		local state = profile.stages[stage.index]
 		if not state then
-			state = { unlocked = false, bossDone = false, chests = {} }
-			profile.islands[island.index] = state
+			state = { unlocked = false, chests = {} }
+			profile.stages[stage.index] = state
 		end
 
-		if not state.unlocked and Islands.isUnlocked(island.index, masteryOf) then
+		if not state.unlocked and Stages.isUnlocked(stage.index, masteryOf) then
 			state.unlocked = true
-			table.insert(opened, island.index)
+			table.insert(opened, stage.index)
 		end
 	end
 
 	return opened
 end
 
-function ProgressService.unlockedIslandIndex(profile): number
+function ProgressService.unlockedStageIndex(profile): number
 	local highest = 1
-	for index, state in profile.islands do
+	for index, state in profile.stages do
 		if state.unlocked and index > highest then
 			highest = index
 		end
@@ -90,12 +94,17 @@ function ProgressService.unlockedIslandIndex(profile): number
 	return highest
 end
 
--- Буквы открытых островов в методическом порядке — вход для планировщика повторений.
+--[[
+	Буквы открытых ступеней в алфавитном порядке — вход для планировщика повторений.
+
+	Список всегда является началом алфавита без пропусков: ступени идут подряд,
+	и это то, на что опирается «Алфавитная лестница», спрашивая «какая следующая».
+]]
 function ProgressService.availableLetters(profile): { string }
-	local maxIsland = ProgressService.unlockedIslandIndex(profile)
+	local maxStage = ProgressService.unlockedStageIndex(profile)
 	local ids: { string } = {}
 	for _, id in Letters.ordered() do
-		if Letters.expect(id).island <= maxIsland then
+		if Letters.expect(id).stage <= maxStage then
 			table.insert(ids, id)
 		end
 	end
@@ -113,7 +122,7 @@ end
 export type AnswerOutcome = {
 	mastery: number,
 	transition: MasteryRules.Transition?,
-	openedIslands: { number },
+	openedStages: { number },
 	starsAwarded: number,
 	difficulty: number,
 }
@@ -140,7 +149,7 @@ function ProgressService.applyAnswer(player: Player, answer): AnswerOutcome?
 	local outcome: AnswerOutcome = {
 		mastery = 0,
 		transition = nil,
-		openedIslands = {},
+		openedStages = {},
 		starsAwarded = 0,
 		difficulty = DifficultyCurve.DEFAULT_LEVEL,
 	}
@@ -155,7 +164,7 @@ function ProgressService.applyAnswer(player: Player, answer): AnswerOutcome?
 		outcome.transition = transition
 
 		if transition then
-			outcome.openedIslands = ProgressService.refreshIslands(p)
+			outcome.openedStages = ProgressService.refreshStages(p)
 		end
 
 		-- Адаптивная сложность живёт на пару (игрок × испытание).
@@ -189,47 +198,260 @@ function ProgressService.applyAnswer(player: Player, answer): AnswerOutcome?
 		end
 	end
 
+	--[[
+		Открылась новая ступень — значит, предыдущая пройдена. Награда идёт за неё:
+		это самая крупная разовая выплата в игре, и получить её можно только учась.
+	]]
+	for _, index in outcome.openedStages do
+		outcome.starsAwarded += EconomyService.award(
+			player,
+			"stage_cleared",
+			Economy.REWARDS.stageCleared,
+			tostring(index - 1)
+		)
+	end
+
 	return outcome
 end
 
--- Первое прочтение слога: награда один раз за слог.
-function ProgressService.markSyllableRead(player: Player, syllableId: string): boolean
-	local profile = ProfileService.get(player)
-	if not profile or not Syllables.get(syllableId) then
-		return false
-	end
-	if profile.syllables[syllableId] then
-		return false
-	end
+-- ===== Математика ================================================================
 
-	ProfileService.update(player, function(p)
-		p.syllables[syllableId] = true
-	end)
-	EconomyService.award(player, "syllable_first_read", Economy.REWARDS.syllableFirstRead, syllableId)
-	return true
+--[[
+	Прогресс по счёту устроен так же, как по буквам, и обслуживается тем же кодом:
+	MasteryRules и ReviewScheduler не знают, что именно осваивается (docs/16-MATH.md § 4).
+	Разница ровно одна, и она вынужденная — испытание у математики пока одно,
+	поэтому для перехода в «изученную» хватает успехов в одном типе. Появятся
+	«Весы» и сбор предметов — вернём двойку, как у букв.
+]]
+local MATH_MIN_TYPES = 1
+
+local function mathProgressFor(profile, stageId: string, now: number)
+	profile.math = if typeof(profile.math) == "table" then profile.math else {}
+	local existing = profile.math[stageId]
+	if existing then
+		return existing
+	end
+	local fresh = MasteryRules.newProgress(now)
+	profile.math[stageId] = fresh
+	return fresh
 end
 
--- Первое собранное слово: награда один раз за слово.
-function ProgressService.markWordBuilt(player: Player, wordId: string): boolean
-	local profile = ProfileService.get(player)
-	if not profile or not Words.get(wordId) then
-		return false
+local function mathMasteryOf(profile): (stageId: string) -> number
+	return function(stageId: string): number
+		local progress = if typeof(profile.math) == "table" then profile.math[stageId] else nil
+		return if progress then progress.mastery else 0
 	end
-	if profile.words[wordId] then
-		return false
+end
+
+--[[
+	Самая высокая открытая ступень счёта. Именно её и играет ребёнок: выбирать
+	ступень руками он не может (и не должен — читать он ещё не умеет), а нижние
+	ступени возвращаются к нему повторениями внутри своей же ступени.
+]]
+function ProgressService.mathStage(player: Player): number
+	local profile = ProfileService.get(player)
+	if not profile then
+		return 1
 	end
 
+	local of = mathMasteryOf(profile)
+	local highest = 1
+	for stage = 2, MathConfig.count() do
+		if MathConfig.isUnlocked(stage, of) then
+			highest = stage
+		else
+			break
+		end
+	end
+	return highest
+end
+
+--[[
+	Применяет один ответ на воротах с числами.
+
+	Зеркало ProgressService.applyAnswer, и отличия перечислимы: осваивается ступень,
+	а не буква; типов испытаний пока один; ступени математики открываются сами
+	из статусов и отдельного поля в профиле не имеют.
+
+	Награда — та же, что за букву. Счёт ребёнку даётся не легче алфавита,
+	и платить за него меньше не за что.
+]]
+function ProgressService.applyMathAnswer(player: Player, answer): AnswerOutcome?
+	local profile = ProfileService.get(player)
+	if not profile then
+		return nil
+	end
+
+	local stage = MathConfig.byId(answer.letterId)
+	if not stage then
+		warn(
+			`[ProgressService] ответ по неизвестной ступени счёта: {answer.letterId}`
+		)
+		return nil
+	end
+
+	local now = os.time()
+	local outcome: AnswerOutcome = {
+		mastery = 0,
+		transition = nil,
+		openedStages = {},
+		starsAwarded = 0,
+		difficulty = DifficultyCurve.DEFAULT_LEVEL,
+	}
+
 	ProfileService.update(player, function(p)
-		p.words[wordId] = true
+		local before = mathProgressFor(p, stage.id, now)
+		local updated, transition = MasteryRules.applyAnswer(before, answer, now, MATH_MIN_TYPES)
+		updated = ReviewScheduler.schedule(updated, answer.correct, now)
+		p.math[stage.id] = updated
+
+		outcome.mastery = updated.mastery
+		outcome.transition = transition
+
+		local level = p.difficulty[answer.challengeId] or DifficultyCurve.DEFAULT_LEVEL
+		local adjusted = DifficultyCurve.apply(level, streaksFor(player, answer.challengeId), answer.correct)
+		streaksByPlayer[player][answer.challengeId] = adjusted.streaks
+		p.difficulty[answer.challengeId] = adjusted.level
+		outcome.difficulty = adjusted.level
 	end)
-	EconomyService.award(player, "word_first_built", Economy.REWARDS.wordFirstBuilt, wordId)
-	return true
+
+	if answer.correct then
+		outcome.starsAwarded += EconomyService.award(
+			player,
+			"correct_answer",
+			Economy.REWARDS.correctAnswer,
+			stage.id
+		)
+	end
+
+	local transition = outcome.transition
+	if transition then
+		local reward = Economy.rewardForMasteryTransition(transition.from, transition.to)
+		if reward > 0 then
+			local source = if transition.to >= MasteryRules.MASTERED then "math_mastered" else "math_learned"
+			outcome.starsAwarded += EconomyService.award(player, source, reward, stage.id)
+		end
+	end
+
+	return outcome
 end
 
 -- Итог испытания: 1..3 звезды, но не меньше гарантированного минимума.
 function ProgressService.finishChallenge(player: Player, challengeId: string, stars: number): number
 	local reward = Economy.rewardForChallenge(stars)
 	return EconomyService.award(player, "challenge_result", reward, challengeId)
+end
+
+-- ===== Сохранки забегов ==========================================================
+
+--[[
+	Забег не заканчивается выходом из игры.
+
+	Сохранка живёт в профиле, а не в памяти забега: ребёнок закрыл планшет
+	посреди уровня — назавтра он продолжает с той же арки, а не с начала.
+	Это прямое требование docs/14-TUNNEL-MODE.md § 3.3, и оно важнее экономии
+	места в DataStore: начинать сначала то, что уже пройдено, — главный способ
+	отбить у ребёнка желание проходить.
+
+	Храним не геометрию, а рецепт: сид, буквы и сложность. Из них план забега
+	собирается заново тем же кодом и получается тем же самым.
+]]
+local function isSavedRun(value: any, challengeId: string): boolean
+	if typeof(value) ~= "table" then
+		return false
+	end
+	if value.challengeId ~= challengeId then
+		return false
+	end
+	if typeof(value.seed) ~= "number" or typeof(value.difficulty) ~= "number" then
+		return false
+	end
+	if typeof(value.checkpoint) ~= "number" or value.checkpoint < 1 then
+		return false
+	end
+	--[[
+		Букв может не быть вовсе: в математическом забеге их нет по существу,
+		и там рецепт держится на ступени счёта.
+	]]
+	if typeof(value.letters) ~= "table" then
+		return false
+	end
+	for _, letterId in value.letters do
+		if not Letters.get(letterId) then
+			return false
+		end
+	end
+	if #value.letters == 0 then
+		return MathConfig.get(value.stage) ~= nil
+	end
+	if #value.letters < 2 then
+		return false
+	end
+	return true
+end
+
+--[[
+	Незаконченный забег этого испытания, если он есть.
+
+	Мусор и записи от старых версий контента молча отбрасываются: ребёнок
+	в худшем случае начнёт забег сначала, и это лучше, чем ошибка на входе.
+]]
+function ProgressService.savedRun(player: Player, challengeId: string)
+	local profile = ProfileService.get(player)
+	if not profile or typeof(profile.runs) ~= "table" then
+		return nil
+	end
+
+	local saved = profile.runs[challengeId]
+	if not isSavedRun(saved, challengeId) then
+		return nil
+	end
+	return saved
+end
+
+--[[
+	Записывает пройденную сохранку. Назад точка не двигается: пробежать арку
+	второй раз, вернувшись к ней после падения, — не повод потерять путь.
+]]
+function ProgressService.saveRunCheckpoint(player: Player, spec, checkpointIndex: number)
+	if typeof(checkpointIndex) ~= "number" or checkpointIndex < 1 then
+		return
+	end
+
+	ProfileService.update(player, function(profile)
+		profile.runs = if typeof(profile.runs) == "table" then profile.runs else {}
+
+		local existing = profile.runs[spec.challengeId]
+		if
+			typeof(existing) == "table"
+			and existing.seed == spec.seed
+			and typeof(existing.checkpoint) == "number"
+			and existing.checkpoint >= checkpointIndex
+		then
+			return
+		end
+
+		profile.runs[spec.challengeId] = {
+			challengeId = spec.challengeId,
+			seed = spec.seed,
+			letters = table.clone(spec.letters),
+			difficulty = spec.difficulty,
+			-- Ступень счёта — часть рецепта наравне с сидом: без неё вернувшийся
+			-- ребёнок получил бы тот же туннель с другими задачами.
+			stage = spec.stage,
+			checkpoint = checkpointIndex,
+			savedAt = os.time(),
+		}
+	end)
+end
+
+-- Забег пройден до финиша: продолжать нечего, следующий раз строится новый.
+function ProgressService.clearRun(player: Player, challengeId: string)
+	ProfileService.update(player, function(profile)
+		if typeof(profile.runs) == "table" then
+			profile.runs[challengeId] = nil
+		end
+	end)
 end
 
 function ProgressService.start()

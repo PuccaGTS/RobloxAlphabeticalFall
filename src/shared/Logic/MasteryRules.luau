@@ -1,7 +1,7 @@
 --!strict
 --[[
 	Правила освоения буквы. Чистая логика без Roblox API — покрыта тестами.
-	Формализует docs/01-GDD.md § 4 и docs/02-LEARNING.md § 9.
+	Формализует docs/01-GDD.md § 4 и docs/02-LEARNING.md § 8.
 
 	0 незнакомая → 1 знакомая  : один успех
 	1 знакомая   → 2 изученная : >= 3 успехов в >= 2 разных типах испытаний
@@ -62,17 +62,25 @@ end
 --[[
 	Применяет один ответ и возвращает НОВЫЙ прогресс (исходный не мутируется)
 	плюс переход статуса, если он произошёл.
+
+	minTypes — сколько РАЗНЫХ испытаний должны были дать успех. По умолчанию два:
+	буква, узнанная только в буквопаде, ещё не выучена. Математике сейчас честно
+	передаётся единица: испытание у неё пока одно — ворота с числами, и требовать
+	двух значило бы запереть вторую ступень счёта навсегда. Как появятся «Весы»
+	и сбор предметов (docs/16-MATH.md § 3.2–3.3), параметр вернётся к двум.
 ]]
 function MasteryRules.applyAnswer(
 	progress: Types.LetterProgress,
 	answer: Types.Answer,
-	now: number
+	now: number,
+	minTypes: number?
 ): (Types.LetterProgress, Transition?)
 	local next_: Types.LetterProgress = table.clone(progress)
 	next_.types = table.clone(progress.types)
 	next_.lastSeen = now
 
 	local plausible = answer.reactionMs >= MasteryRules.MIN_PLAUSIBLE_REACTION_MS
+	local typesNeeded = minTypes or MasteryRules.LEARNED_MIN_TYPES
 
 	if not answer.correct then
 		next_.wrong += 1
@@ -100,8 +108,7 @@ function MasteryRules.applyAnswer(
 	if from == MasteryRules.UNKNOWN then
 		to = MasteryRules.FAMILIAR
 	elseif from == MasteryRules.FAMILIAR then
-		local enough = next_.correct >= MasteryRules.LEARNED_MIN_CORRECT
-			and #next_.types >= MasteryRules.LEARNED_MIN_TYPES
+		local enough = next_.correct >= MasteryRules.LEARNED_MIN_CORRECT and #next_.types >= typesNeeded
 		if enough then
 			to = MasteryRules.LEARNED
 		end
@@ -109,7 +116,7 @@ function MasteryRules.applyAnswer(
 		local learnedAt = next_.learnedAt or now
 		local gapOk = (now - learnedAt) >= MasteryRules.MASTERED_MIN_GAP_SECONDS
 		local enough = next_.correct >= MasteryRules.MASTERED_MIN_CORRECT
-			and #next_.types >= MasteryRules.MASTERED_MIN_TYPES
+			and #next_.types >= math.min(typesNeeded, MasteryRules.MASTERED_MIN_TYPES)
 			and next_.avgReactionMs > 0
 			and next_.avgReactionMs < MasteryRules.MASTERED_MAX_AVG_REACTION_MS
 			and answer.hintsUsed == 0
@@ -133,7 +140,7 @@ function MasteryRules.applyAnswer(
 	return next_, { letterId = answer.letterId, from = from, to = to }
 end
 
--- Доля букв набора, дошедших хотя бы до статуса «изученная». Нужна для открытия островов.
+-- Доля букв набора, дошедших хотя бы до статуса «изученная». Нужна для открытия ступеней.
 function MasteryRules.learnedRatio(
 	progressByLetter: { [string]: Types.LetterProgress },
 	letterIds: { string }

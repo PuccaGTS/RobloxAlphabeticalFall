@@ -41,7 +41,7 @@ export type ShopItem = {
 	robuxProduct: number?,
 	grantedBy: string?, -- например "letter_mastered:m"
 	tier: number,
-	unlockIsland: number,
+	unlockStage: number,
 	visual: Visual?,
 	trail: TrailVisual?,
 	icon: string, -- пока эмодзи, потом rbxassetid
@@ -71,7 +71,7 @@ local function hat(
 		title = title,
 		price = price,
 		tier = tier,
-		unlockIsland = 1,
+		unlockStage = 1,
 		icon = icon,
 		visual = visual,
 	}
@@ -165,7 +165,7 @@ local Items: { [string]: ShopItem } = {
 		title = "Рюкзак-азбука",
 		price = 60,
 		tier = 1,
-		unlockIsland = 1,
+		unlockStage = 1,
 		icon = "🎒",
 		visual = {
 			piece("Block", Color3.fromRGB(200, 80, 60), Vector3.new(1.9, 2.1, 0.9), CFrame.new(0, 0, 0.9)),
@@ -195,7 +195,7 @@ local Items: { [string]: ShopItem } = {
 		title = "Крылья из букв",
 		price = 200,
 		tier = 2,
-		unlockIsland = 1,
+		unlockStage = 1,
 		icon = "🪽",
 		visual = {
 			piece(
@@ -236,7 +236,7 @@ local Items: { [string]: ShopItem } = {
 		title = "Очки",
 		price = 35,
 		tier = 0,
-		unlockIsland = 1,
+		unlockStage = 1,
 		icon = "🤓",
 		visual = {
 			piece(
@@ -277,7 +277,7 @@ local Items: { [string]: ShopItem } = {
 		title = "Маска буквёнка",
 		price = 90,
 		tier = 1,
-		unlockIsland = 1,
+		unlockStage = 1,
 		icon = "🎭",
 		visual = {
 			piece(
@@ -314,7 +314,7 @@ local Items: { [string]: ShopItem } = {
 		title = "Звёздная пыль",
 		price = 150,
 		tier = 1,
-		unlockIsland = 1,
+		unlockStage = 1,
 		icon = "✨",
 		trail = {
 			color = ColorSequence.new(Color3.fromRGB(255, 240, 160), Color3.fromRGB(255, 180, 60)),
@@ -328,7 +328,7 @@ local Items: { [string]: ShopItem } = {
 		title = "Радуга",
 		price = 300,
 		tier = 2,
-		unlockIsland = 1,
+		unlockStage = 1,
 		icon = "🌈",
 		trail = {
 			color = ColorSequence.new({

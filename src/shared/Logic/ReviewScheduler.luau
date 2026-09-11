@@ -63,7 +63,7 @@ end
 --[[
 	Формирует очередь букв на сессию.
 
-	availableLetterIds — буквы открытых островов В МЕТОДИЧЕСКОМ ПОРЯДКЕ
+	availableLetterIds — буквы открытых ступеней В АЛФАВИТНОМ ПОРЯДКЕ
 	(Config/Letters.ordered), чтобы новая буква бралась именно следующая по программе.
 ]]
 function ReviewScheduler.buildQueue(

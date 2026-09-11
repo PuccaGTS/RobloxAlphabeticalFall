@@ -18,7 +18,8 @@ local Letters = require(Shared.Config.Letters)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local AudioController = require(script.Parent.AudioController)
-local BridgeController = require(script.Parent.BridgeController)
+local SfxController = require(script.Parent.SfxController)
+local LadderController = require(script.Parent.LadderController)
 local HUD = require(script.Parent.Parent.UI.HUD)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
 
@@ -221,21 +222,21 @@ end
 
 local function onSpec(newSpec: any)
 	cleanup()
-	BridgeController.stop()
+	LadderController.stop()
 	announceIntro(newSpec)
 
 	-- Каждое испытание рисуется своим модулем: общего у них только сеть и HUD.
-	if newSpec.challengeId == "syllable_bridge" then
+	if newSpec.challengeId == "alphabet_ladder" then
 		activeChallengeId = newSpec.challengeId
-		BridgeController.start(newSpec)
+		LadderController.start(newSpec)
 		return
 	end
 
 	--[[
-		Туннель рисует сервер: ворота и стены — настоящая геометрия мира, а не
-		клиентские декорации. Клиенту остаётся только показать, что ловить.
+		Забеги рисует сервер: ворота, стены и препятствия — настоящая геометрия мира,
+		а не клиентские декорации. Клиенту остаётся только показать, что искать.
 	]]
-	if newSpec.challengeId == "tunnel_run" then
+	if newSpec.challengeId == "tunnel_run" or newSpec.challengeId == "obstacle_course" then
 		activeChallengeId = newSpec.challengeId
 		activeTargetGlyph = newSpec.params.targetGlyph
 		HUD.showTarget(newSpec.params.targetGlyph, 0, newSpec.targetCount)
@@ -243,6 +244,24 @@ local function onSpec(newSpec: any)
 		task.delay(0.6, function()
 			AudioController.speak(newSpec.params.targetVO)
 		end)
+		return
+	end
+
+	--[[
+		Ворота с числами. На HUD только пример («2 + 2»), и то не всегда: у задания
+		«беги на цифру три» показывать нечего вовсе. Ответ ребёнок обязан услышать
+		и посчитать — напиши мы его сверху, и задание свелось бы к поиску такой же
+		картинки, а считать стало бы незачем.
+
+		Задачу произносит сервер: она меняется у каждых ворот, и клиент о смене
+		узнаёт только из обратной связи.
+	]]
+	if newSpec.challengeId == "math_gates" then
+		activeChallengeId = newSpec.challengeId
+		activeTargetGlyph = nil
+		local prompt = newSpec.params.taskPrompt
+		HUD.showTarget(if prompt ~= "" then prompt else nil, 0, newSpec.targetCount)
+		HUD.toast("Слушай задание и беги в нужные ворота", 4)
 		return
 	end
 
@@ -272,19 +291,45 @@ local function onSpec(newSpec: any)
 	heartbeat = RunService.Heartbeat:Connect(onHeartbeat)
 end
 
+--[[
+	Звук ответа. Играет раньше любой реплики и не ждёт её: ребёнок должен понять,
+	что ход засчитан, в тот же миг, когда коснулся ворот, — иначе он тычет ещё раз.
+
+	Промах звучит нейтрально и тихо: ошибка стоит времени, а не самооценки.
+]]
+local function feedbackSound(correct: boolean)
+	SfxController.play(if correct then "correct" else "miss")
+end
+
 local function onFeedback(feedback: any)
-	if activeChallengeId == "syllable_bridge" then
-		-- букву-цель для следующей секции выставит сам мост
-		BridgeController.feedback(feedback)
+	feedbackSound(feedback.correct == true)
+
+	if activeChallengeId == "alphabet_ladder" then
+		-- букву-цель для следующей ступени выставит сама лестница
+		LadderController.feedback(feedback)
 		return
 	end
 
-	if activeChallengeId == "tunnel_run" then
+	if activeChallengeId == "math_gates" then
+		local prompt = feedback.nextPrompt
+		HUD.showTarget(if prompt and prompt ~= "" then prompt else nil, feedback.caught, feedback.targetCount)
+		--[[
+			Промах: называем число, в ворота с которым ребёнок вбежал. Дальше сервер
+			повторит задачу целиком — «это четыре, а нам нужно пять» складывается
+			из двух реплик и не требует ни одной новой записи.
+		]]
+		if not feedback.correct and feedback.tappedValue then
+			AudioController.speak(`num_{feedback.tappedValue}`)
+		end
+		return
+	end
+
+	if activeChallengeId == "tunnel_run" or activeChallengeId == "obstacle_course" then
 		HUD.showTarget(activeTargetGlyph, feedback.caught, feedback.targetCount)
 		if not feedback.correct and feedback.tappedLetterId then
 			local tapped = Letters.get(feedback.tappedLetterId)
 			if tapped then
-				AudioController.speak(tapped.vo.sound)
+				AudioController.speak(tapped.vo.name)
 			end
 		end
 		return
@@ -303,12 +348,12 @@ local function onFeedback(feedback: any)
 	end
 
 	-- Промах: называем букву, по которой ребёнок попал, потом снова цель.
-	-- «Это П. А нам нужна М» — так ошибка становится подсказкой, а не наказанием.
+	-- «Это буква П. А нам нужна М» — так ошибка становится подсказкой, а не наказанием.
 	if not feedback.correct and feedback.tappedLetterId then
 		local tapped = Letters.get(feedback.tappedLetterId)
 		if tapped then
 			task.delay(0.5, function()
-				AudioController.speak(tapped.vo.sound)
+				AudioController.speak(tapped.vo.name)
 				task.wait(0.7)
 				if spec then
 					AudioController.speak(spec.params.targetVO)
@@ -320,9 +365,21 @@ end
 
 local function onEnd(result: any)
 	cleanup()
-	BridgeController.stop()
+	LadderController.stop()
 	activeChallengeId = nil
 	activeTargetGlyph = nil
+
+	--[[
+		Финиш звучит всегда, награда — только если она была. Молчаливый конец
+		испытания читается как «ничего не произошло», а именно в этот момент
+		ребёнок ждёт, что его похвалят.
+	]]
+	SfxController.play("finish")
+	if (result.stars_awarded or 0) > 0 then
+		task.delay(0.5, function()
+			SfxController.play("reward")
+		end)
+	end
 
 	local stars = string.rep("⭐", math.clamp(result.stars or 1, 1, 3))
 	if (result.stars_awarded or 0) > 0 then

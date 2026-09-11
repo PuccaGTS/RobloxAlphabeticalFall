@@ -6,7 +6,7 @@
 	кнопка «динамик» всегда на месте, текста ребёнку читать не нужно.
 
 	Это серый ящик: пропорции и логика верные, арта нет.
-	Кнопка «Играть» — временная, до появления хаба с порталами островов.
+	Кнопка «Играть» — временная, до появления хаба с порталами миров.
 ]]
 
 local Players = game:GetService("Players")
@@ -112,16 +112,21 @@ function HUD.build(callbacks: { onRepeat: () -> (), onStart: () -> () })
 	shopButton.Activated:Connect(callbacks.onShop)
 
 	-- Дубли падов из хаба: ребёнок может не дойти до пада, а взрослому нужен быстрый
-	-- способ проверить обе механики. Уберём, когда хаб обрастёт навигацией.
+	-- способ проверить механики. Уберём, когда хаб обрастёт навигацией.
 	local startButton =
-		makeButton("Start", "Буквы", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.28, 0.85))
+		makeButton("Start", "Буквы", UDim2.fromScale(0.18, 0.1), UDim2.fromScale(0.21, 0.85))
 	startButton.Parent = screen
 	startButton.Activated:Connect(callbacks.onStart)
 
-	local bridgeButton =
-		makeButton("Bridge", "Слоги", UDim2.fromScale(0.2, 0.1), UDim2.fromScale(0.52, 0.85))
-	bridgeButton.Parent = screen
-	bridgeButton.Activated:Connect(callbacks.onBridge)
+	local ladderButton =
+		makeButton("Ladder", "Лестница", UDim2.fromScale(0.18, 0.1), UDim2.fromScale(0.41, 0.85))
+	ladderButton.Parent = screen
+	ladderButton.Activated:Connect(callbacks.onLadder)
+
+	local mathButton =
+		makeButton("Math", "Числа", UDim2.fromScale(0.18, 0.1), UDim2.fromScale(0.61, 0.85))
+	mathButton.Parent = screen
+	mathButton.Activated:Connect(callbacks.onMath)
 
 	-- Сообщение поверх всего: без него любой отказ выглядит как «игра сломалась»
 	local toast = Instance.new("TextLabel")

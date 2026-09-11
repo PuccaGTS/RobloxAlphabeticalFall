@@ -53,7 +53,7 @@ local function onBuy(player: Player, itemId: any)
 		return
 	end
 
-	if item.unlockIsland > ProgressService.unlockedIslandIndex(profile) then
+	if item.unlockStage > ProgressService.unlockedStageIndex(profile) then
 		return
 	end
 

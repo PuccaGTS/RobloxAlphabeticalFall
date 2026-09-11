@@ -21,15 +21,19 @@ local ProgressService = require(script.Parent.ProgressService)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 local LetterRain = require(script.Parent.Parent.Challenges.LetterRain)
-local SyllableBridge = require(script.Parent.Parent.Challenges.SyllableBridge)
+local AlphabetLadder = require(script.Parent.Parent.Challenges.AlphabetLadder)
 local TunnelRun = require(script.Parent.Parent.Challenges.TunnelRun)
+local ObstacleCourse = require(script.Parent.Parent.Challenges.ObstacleCourse)
+local MathGates = require(script.Parent.Parent.Challenges.MathGates)
 
 local ChallengeService = {}
 
 local MODULES = {
 	[LetterRain.id] = LetterRain,
-	[SyllableBridge.id] = SyllableBridge,
+	[AlphabetLadder.id] = AlphabetLadder,
 	[TunnelRun.id] = TunnelRun,
+	[ObstacleCourse.id] = ObstacleCourse,
+	[MathGates.id] = MathGates,
 }
 
 local active: { [Player]: any } = {}
@@ -76,6 +80,19 @@ local function playVO(player: Player, key: string, interrupt: boolean?)
 	RemoteDefs.event("PlayVO"):FireClient(player, key, interrupt == true)
 end
 
+--[[
+	Фраза из нескольких реплик подряд — так говорит математика: «Сколько будет» +
+	«два» + «плюс» + «два». Для ребёнка это одно задание, поэтому и уходит оно
+	одним сообщением: клиент запомнит фразу целиком, и кнопка «повторить» повторит
+	её всю, а не последний кусок.
+]]
+local function playPhrase(player: Player, keys: { string }?, interrupt: boolean?)
+	if typeof(keys) ~= "table" or #keys == 0 then
+		return
+	end
+	RemoteDefs.event("PlayPhrase"):FireClient(player, keys, interrupt == true)
+end
+
 local function finish(player: Player, reason: string)
 	local state = active[player]
 	if not state then
@@ -84,6 +101,15 @@ local function finish(player: Player, reason: string)
 	active[player] = nil
 
 	fire(finishedHooks, player, state.spec, reason)
+
+	--[[
+		Дошёл до финиша — сохранка больше не нужна: следующий раз это будет
+		новый забег с новым сидом. Любой другой исход (вышел домой, тайм-аут,
+		закрыл игру) сохранку оставляет: именно ради него она и заводилась.
+	]]
+	if reason == "completed" and state.module.Rebuild then
+		ProgressService.clearRun(player, state.module.id)
+	end
 
 	local result = state.module.Finish(state)
 
@@ -119,8 +145,13 @@ local function finish(player: Player, reason: string)
 end
 
 --[[
-	Собирает буквы для задания: очередь повторений, дополненная доступными буквами,
-	если планировщик дал слишком мало (например, в самом начале игры).
+	Собирает буквы для задания: сначала очередь повторений, следом все остальные
+	доступные буквы.
+
+	Порядок здесь и есть договор с испытаниями: первая буква — то, что планировщик
+	просит показать сегодня, остальные — материал для отвлекающих вариантов.
+	Хвост из всех доступных букв нужен «Алфавитной лестнице»: она поднимается
+	по соседним буквам, и ей нужен весь отрезок азбуки, а не выборка из него.
 ]]
 local function lettersFor(player: Player, module): { string }?
 	local profile = ProfileService.get(player)
@@ -136,15 +167,10 @@ local function lettersFor(player: Player, module): { string }?
 		seen[id] = true
 	end
 
-	if #letters < module.minLetters then
-		for _, id in ProgressService.availableLetters(profile) do
-			if not seen[id] then
-				seen[id] = true
-				table.insert(letters, id)
-			end
-			if #letters >= module.minLetters then
-				break
-			end
+	for _, id in ProgressService.availableLetters(profile) do
+		if not seen[id] then
+			seen[id] = true
+			table.insert(letters, id)
 		end
 	end
 
@@ -188,9 +214,41 @@ local function onStart(player: Player, challengeId: any)
 	end
 
 	local difficulty = ProgressService.difficultyFor(player, challengeId)
-	local spec = module.Build(player, letters, difficulty)
 
-	active[player] = {
+	--[[
+		Ступень счёта выбирает не ребёнок, а прогресс: читать он не умеет, а меню
+		ступеней ему и не нужно — играется самая высокая открытая. Испытаниям
+		по буквам этот аргумент не нужен, и они его не берут.
+	]]
+	local mathStage = if module.usesMathStage then ProgressService.mathStage(player) else nil
+
+	--[[
+		Незаконченный забег продолжается, а не начинается заново.
+
+		Испытание умеет это, если объявило Rebuild: тогда план собирается из рецепта,
+		лежащего в профиле, и ребёнок оказывается в том же туннеле на той же арке.
+		Испытания без сохранок (Буквопад, Лестница) идут обычным путём.
+
+		Битую запись из DataStore тихо выбрасываем и строим новый забег: испорченный
+		профиль не повод не пустить ребёнка в игру.
+	]]
+	local saved = if module.Rebuild then ProgressService.savedRun(player, challengeId) else nil
+	local spec
+	if saved then
+		local ok, rebuilt = pcall(module.Rebuild, saved)
+		if ok then
+			spec = rebuilt
+		else
+			warn(
+				`[ChallengeService] сохранка {challengeId} не восстановилась: {rebuilt}`
+			)
+			ProgressService.clearRun(player, challengeId)
+			saved = nil
+		end
+	end
+	spec = spec or module.Build(player, letters, difficulty, mathStage)
+
+	local state = {
 		module = module,
 		spec = spec,
 		startedAt = os.clock(),
@@ -201,20 +259,29 @@ local function onStart(player: Player, challengeId: any)
 		missed = 0,
 		answers = {},
 	}
+	active[player] = state
+
+	if saved and module.Resume then
+		module.Resume(state)
+	end
 
 	--[[
 		Знакомство с новой буквой — до инструкции.
 
-		Порядок реплик важен: сначала «Это буква М, она говорит м-м-м»,
-		и только потом «лови вот эту». Сперва ребёнку показывают, кто это,
-		и лишь затем просят с ней что-то сделать.
+		Порядок реплик важен: сначала «Познакомься! Это буква М», и только потом
+		«лови вот эту». Сперва ребёнку показывают, кто это, и лишь затем просят
+		с ней что-то сделать.
+
+		Реплик две, а не одна: общее «познакомься» плюс название буквы. Так на все
+		33 буквы уходит 34 записи вместо 33 отдельных знакомств — см. docs/05-AUDIO-VO.md § 2.
 	]]
 	local targetLetter = spec.params.targetLetter
 	if targetLetter and ProgressService.isFirstMeeting(player, targetLetter) then
 		local letter = Letters.get(targetLetter)
 		if letter then
 			spec.params.introGlyph = letter.glyph
-			playVO(player, letter.vo.intro, true)
+			playVO(player, "story_meet_letter", true)
+			playVO(player, letter.vo.name)
 		end
 	end
 
@@ -223,13 +290,20 @@ local function onStart(player: Player, challengeId: any)
 	RemoteDefs.event("ChallengeSpec"):FireClient(player, spec)
 	playVO(player, Challenges.expect(challengeId).voInstruction)
 
+	--[[
+		Задача первых ворот звучит сразу за инструкцией: у ворот с числами задание
+		своё на каждые ворота, и без этого ребёнок побежал бы к первым, не услышав,
+		что от него хотят.
+	]]
+	playPhrase(player, spec.params.taskVO)
+
 	-- Страховка: испытание не может висеть вечно, даже если клиент замолчал.
 	-- Когда падать больше нечему, испытание обязано закончиться само и сразу:
 	-- «поймал 4 из 5, и ничего не происходит» — это ощущение поломки.
 	local timeout = math.min(module.duration(spec), Challenges.expect(challengeId).maxSeconds)
 	task.delay(timeout + 1, function()
-		local state = active[player]
-		if state and state.spec == spec then
+		local current = active[player]
+		if current and current.spec == spec then
 			finish(player, "timeout")
 		end
 	end)
@@ -263,8 +337,14 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		return
 	end
 
+	--[[
+		Что именно осваивается, решает испытание: буква или ступень счёта. Формат
+		ответа при этом один и тот же — правила освоения у обеих веток общие
+		(docs/16-MATH.md § 4).
+	]]
+	local isMath = result.topic == "math"
 	local answer = {
-		letterId = result.letterId,
+		letterId = if isMath then result.topicId else result.letterId,
 		challengeId = state.module.id,
 		correct = result.correct,
 		reactionMs = result.reactionMs,
@@ -272,13 +352,10 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 	}
 	table.insert(state.answers, answer)
 
-	local outcome = ProgressService.applyAnswer(player, answer)
+	local outcome = if isMath
+		then ProgressService.applyMathAnswer(player, answer)
+		else ProgressService.applyAnswer(player, answer)
 	fire(answerHooks, player, state.spec, result)
-
-	-- Прочитанный впервые слог — отдельная награда, один раз за слог.
-	if result.syllableId then
-		ProgressService.markSyllableRead(player, result.syllableId)
-	end
 
 	local voKey = if result.correct
 		then randomVO("praise", AudioRegistry.PRAISE_COUNT)
@@ -295,16 +372,27 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		vo = voKey,
 		-- буква, по которой ребёнок промахнулся: клиент озвучит «Это П. А нам нужна М»
 		tappedLetterId = if result.correct then nil else result.tappedLetterId,
-		syllableVO = result.syllableVO,
-		syllableText = result.syllableText,
+		-- «Алфавитная лестница» отдаёт взятую букву: клиент напишет её на ступени
+		stepVO = result.stepVO,
+		stepGlyph = result.stepGlyph,
+		-- Ворота с числами: во что ребёнок вбежал и какой пример его ждёт дальше
+		tappedValue = result.tappedValue,
+		nextPrompt = result.nextPrompt,
 		mastery = if outcome then outcome.mastery else nil,
 	})
 
-	-- Сначала слитный слог, и только потом похвала: эталон звучания важнее реакции.
-	if result.syllableVO then
-		playVO(player, result.syllableVO)
+	-- Сначала название взятой буквы, и только потом похвала: эталон важнее реакции.
+	if result.stepVO then
+		playVO(player, result.stepVO)
 	end
 	playVO(player, voKey)
+
+	--[[
+		После реакции — задача следующих ворот (или та же самая, если ребёнок
+		ошибся). Порядок именно такой: сперва короткое «молодец», потом новое
+		задание, иначе задание перебивается похвалой и его не слышно.
+	]]
+	playPhrase(player, result.voAfter)
 
 	if result.finished then
 		finish(player, "completed")

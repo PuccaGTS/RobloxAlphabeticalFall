@@ -1,19 +1,22 @@
 --!nocheck
 --[[
 	Инварианты контента. Эти тесты — единственная защита от ошибок в конфигах,
-	которые иначе всплывут уже на ребёнке: слово из невыученных букв, слог без озвучки,
-	буква-«путаница», которой нет в алфавите.
+	которые иначе всплывут уже на ребёнке: пропущенная буква алфавита, ступень
+	из чужих букв, буква без озвучки.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 
 local Letters = require(Shared.Config.Letters)
-local Syllables = require(Shared.Config.Syllables)
-local Words = require(Shared.Config.Words)
-local Islands = require(Shared.Config.Islands)
+local Stages = require(Shared.Config.Stages)
+local Obstacles = require(Shared.Config.Obstacles)
+local Tunnel = require(Shared.Config.Tunnel)
 local Challenges = require(Shared.Config.Challenges)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
+local MathConfig = require(Shared.Config.Math)
+
+local ALPHABET = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
 
 return function()
 	describe("Config: буквы", function()
@@ -23,19 +26,36 @@ return function()
 			end
 		end)
 
-		it(
-			"у каждой буквы есть звук, а тянущиеся имеют растянутую версию",
-			function()
-				for _, id in Letters.ordered() do
-					local letter = Letters.expect(id)
-					expect(letter.vo.sound).to.be.a("string")
-					expect(#letter.vo.sound > 0).to.equal(true)
-					if letter.sustainable and letter.kind ~= "sign" then
-						expect(letter.vo.long).to.be.ok()
-					end
-				end
+		it("в справочнике весь алфавит и ровно один раз", function()
+			expect(Letters.count()).to.equal(33)
+
+			local built = ""
+			for _, id in Letters.ordered() do
+				built ..= Letters.expect(id).glyph
 			end
-		)
+			expect(built).to.equal(ALPHABET)
+		end)
+
+		it("порядок сплошной: от 1 до 33 без дыр", function()
+			local seen = {}
+			for _, id in Letters.ordered() do
+				local order = Letters.expect(id).order
+				expect(seen[order]).to.equal(nil)
+				seen[order] = id
+			end
+			for order = 1, 33 do
+				expect(seen[order]).to.be.ok()
+			end
+		end)
+
+		it("у каждой буквы есть название и слово-пример", function()
+			for _, id in Letters.ordered() do
+				local letter = Letters.expect(id)
+				expect(letter.vo.name).to.be.a("string")
+				expect(#letter.vo.name > 0).to.equal(true)
+				expect(#letter.example > 0).to.equal(true)
+			end
+		end)
 
 		it("буквы-путаницы существуют в алфавите", function()
 			for _, id in Letters.ordered() do
@@ -46,156 +66,206 @@ return function()
 			end
 		end)
 
-		it("внутри острова порядок букв не дублируется", function()
-			local seen = {}
-			for _, id in Letters.ordered() do
-				local letter = Letters.expect(id)
-				local key = letter.island .. ":" .. letter.order
-				expect(seen[key]).to.equal(nil)
-				seen[key] = id
-			end
-		end)
-	end)
-
-	describe("Config: слоги", function()
-		it("генерируются и не пустые", function()
-			expect(Syllables.count() > 0).to.equal(true)
-		end)
-
-		it("состоят из существующих букв", function()
-			for _, id in Syllables.ids() do
-				local syllable = Syllables.expect(id)
-				expect(Letters.get(syllable.vowel)).to.be.ok()
-				if syllable.consonant then
-					expect(Letters.get(syllable.consonant)).to.be.ok()
-				end
-			end
-		end)
-
 		it(
-			"не содержат запрещённых сочетаний ЖЫ/ШЫ/ЧЫ/ЩЫ/ЦЫ",
+			"следующая буква — соседняя по алфавиту, у Я её нет",
 			function()
-				for _, id in Syllables.ids() do
-					local syllable = Syllables.expect(id)
-					if syllable.consonant and syllable.kind == "open" then
-						local pair = syllable.consonant .. "_" .. syllable.vowel
-						local forbidden = pair == "zh_y"
-							or pair == "sh_y"
-							or pair == "ch_y"
-							or pair == "shch_y"
-							or pair == "c_y"
-						expect(forbidden).to.equal(false)
-					end
+				local ordered = Letters.ordered()
+				for index = 1, #ordered - 1 do
+					local next_ = Letters.after(ordered[index])
+					expect(next_).to.be.ok()
+					expect(next_.id).to.equal(ordered[index + 1])
 				end
-			end
-		)
-
-		it("открываются не раньше островов своих букв", function()
-			for _, id in Syllables.ids() do
-				local syllable = Syllables.expect(id)
-				local vowelIsland = Letters.expect(syllable.vowel).island
-				expect(syllable.minIsland >= vowelIsland).to.equal(true)
-				if syllable.consonant then
-					expect(syllable.minIsland >= Letters.expect(syllable.consonant).island).to.equal(true)
-				end
-			end
-		end)
-
-		it(
-			"закрытые слоги не даются раньше третьего острова",
-			function()
-				for _, id in Syllables.ids() do
-					local syllable = Syllables.expect(id)
-					if syllable.kind == "closed" then
-						expect(syllable.minIsland >= 3).to.equal(true)
-					end
-				end
+				expect(Letters.after(ordered[#ordered])).to.equal(nil)
+				expect(Letters.before(ordered[1])).to.equal(nil)
 			end
 		)
 	end)
 
-	describe("Config: слова", function()
-		it("написание совпадает с набором букв", function()
-			for _, id in Words.ids() do
-				local word = Words.expect(id)
-				local built = ""
-				for _, letterId in word.letters do
-					built ..= Letters.expect(letterId).glyph
-				end
-				expect(built).to.equal(word.text)
+	describe("Config: ступени", function()
+		it("одиннадцать ступеней по три буквы", function()
+			expect(Stages.count()).to.equal(11)
+			for _, stage in Stages.all do
+				expect(#stage.letters).to.equal(3)
 			end
 		end)
 
-		it(
-			"не содержат букв с более позднего острова, чем сами доступны",
-			function()
-				for _, id in Words.ids() do
-					local word = Words.expect(id)
-					for _, letterId in word.letters do
-						local letter = Letters.expect(letterId)
-						expect(letter.island <= word.minIsland).to.equal(true)
-					end
+		--[[
+			Главное свойство разбиения: буквы открытых ступеней — это всегда начало
+			алфавита без пропусков. На нём стоит «Алфавитная лестница»: спросить
+			«какая следующая» можно только там, где следующая уже открыта.
+		]]
+		it("ступени идут подряд и покрывают весь алфавит", function()
+			local expectedOrder = 1
+			for index = 1, Stages.count() do
+				for _, id in Stages.expect(index).letters do
+					expect(Letters.expect(id).order).to.equal(expectedOrder)
+					expectedOrder += 1
 				end
 			end
-		)
+			expect(expectedOrder - 1).to.equal(Letters.count())
+		end)
 
-		it("разбиты на слоги без потери букв", function()
-			for _, id in Words.ids() do
-				local word = Words.expect(id)
-				expect(table.concat(word.syllables, "")).to.equal(word.text)
+		it("подпись ступени совпадает с её буквами", function()
+			for _, stage in Stages.all do
+				local glyphs = {}
+				for _, id in stage.letters do
+					table.insert(glyphs, Letters.expect(id).glyph)
+				end
+				expect(stage.glyphs).to.equal(table.concat(glyphs, " "))
 			end
 		end)
 
-		it("доступны только при выученных буквах", function()
-			local known = { m = true, a = true }
-			local available = Words.available(known)
-
-			expect(table.find(available, "mama")).to.be.ok()
-			expect(table.find(available, "papa")).never.to.be.ok()
-		end)
-	end)
-
-	describe("Config: острова", function()
-		it(
-			"состав островов совпадает со справочником букв",
-			function()
-				for _, island in Islands.all do
-					expect(#island.letters).to.equal(#Letters.byIsland(island.index))
-				end
-			end
-		)
-
-		it("первый остров открыт всегда", function()
-			expect(Islands.isUnlocked(1, function()
+		it("первая ступень открыта всегда", function()
+			expect(Stages.isUnlocked(1, function()
 				return 0
 			end)).to.equal(true)
 		end)
 
 		it(
-			"следующий остров требует 80% изученных букв предыдущего",
+			"следующая ступень требует 80% изученных букв предыдущей",
 			function()
-				local first = Letters.byIsland(1)
+				local first = Stages.expect(1).letters
 				local learned = {}
 
 				local function masteryOf(id)
 					return if learned[id] then 2 else 0
 				end
 
-				expect(Islands.isUnlocked(2, masteryOf)).to.equal(false)
+				expect(Stages.isUnlocked(2, masteryOf)).to.equal(false)
 
 				for _, id in first do
 					learned[id] = true
 				end
-				expect(Islands.isUnlocked(2, masteryOf)).to.equal(true)
+				expect(Stages.isUnlocked(2, masteryOf)).to.equal(true)
 			end
 		)
 
 		it("ссылается только на существующие испытания", function()
-			for _, island in Islands.all do
-				for _, challengeId in island.challenges do
+			for _, stage in Stages.all do
+				expect(#stage.challenges > 0).to.equal(true)
+				for _, challengeId in stage.challenges do
 					expect(Challenges.get(challengeId)).to.be.ok()
 				end
 			end
+		end)
+	end)
+
+	describe("Config: препятствия", function()
+		it(
+			"каталог не пустой и все элементы базовые построены",
+			function()
+				expect(#Obstacles.ids() > 0).to.equal(true)
+				expect(#Obstacles.upToTier(1) > 0).to.equal(true)
+			end
+		)
+
+		it(
+			"элемент занимает не больше дорожек, чем их есть",
+			function()
+				for _, id in Obstacles.ids() do
+					local obstacle = Obstacles.expect(id)
+					expect(obstacle.lanes >= 1).to.equal(true)
+					expect(obstacle.lanes <= 3).to.equal(true)
+				end
+			end
+		)
+
+		--[[
+			Перекрывать все три дорожки нельзя ничем: элемент, который нельзя обойти
+			и нельзя перепрыгнуть, останавливает ребёнка насовсем.
+		]]
+		it("ни один элемент не перекрывает путь целиком", function()
+			for _, id in Obstacles.ids() do
+				local obstacle = Obstacles.expect(id)
+				if obstacle.blocking then
+					expect(obstacle.lanes < 3).to.equal(true)
+				end
+			end
+		end)
+
+		it("средний ряд заведён и он не первый попавшийся", function()
+			local tier2 = 0
+			for _, id in Obstacles.upToTier(2) do
+				if Obstacles.expect(id).tier == 2 then
+					tier2 += 1
+				end
+			end
+			expect(tier2).to.equal(5)
+		end)
+
+		--[[
+			Живой элемент (качается, ездит, гаснет) обязан занимать одну дорожку:
+			две соседние остаются свободными, и ребёнок вправе просто обойти его
+			и не связываться. Иначе движение становится обязательным экзаменом
+			на реакцию — ровно тем, чего игра не делает.
+		]]
+		it("живой элемент всегда можно обойти", function()
+			for _, id in Obstacles.ids() do
+				local obstacle = Obstacles.expect(id)
+				if obstacle.moving then
+					expect(obstacle.lanes).to.equal(1)
+					expect(obstacle.blocking).to.equal(false)
+					expect(obstacle.tier >= 2).to.equal(true)
+				end
+			end
+		end)
+
+		--[[
+			Длина элемента вдоль бега не больше шага полосы: иначе соседние элементы
+			налезают друг на друга и отрезок превращается в кашу.
+		]]
+		it("ни один элемент не длиннее шага полосы", function()
+			local lengths = {
+				gap = Tunnel.GAP_LENGTH,
+				beam = Tunnel.BEAM_LENGTH,
+				steps = Tunnel.STEP_COUNT * 2 * Tunnel.STEP_RUN,
+				platform = Tunnel.PLATFORM_TRAVEL + Tunnel.PLATFORM_LENGTH,
+				fading = Tunnel.FADE_SPAN,
+				trampoline = Tunnel.TRAMPOLINE_LENGTH,
+				ice = Tunnel.ICE_LENGTH,
+			}
+			for id, length in lengths do
+				expect(Obstacles.get(id)).to.be.ok()
+				expect(length <= Tunnel.OBSTACLE_PITCH).to.equal(true)
+			end
+		end)
+
+		--[[
+			Исчезающие плиты не должны гаснуть две подряд: иначе дорожка на время
+			превращается в сплошную яму, и элемент начинает требовать точного шага.
+			Сдвиг фаз — треть цикла, значит «нет» обязано быть короче этой трети.
+		]]
+		it("две плиты подряд не гаснут никогда", function()
+			local cycle = Tunnel.FADE_SOLID_SECONDS + Tunnel.FADE_GONE_SECONDS
+			expect(Tunnel.FADE_GONE_SECONDS < cycle / Tunnel.FADE_TILE_COUNT).to.equal(true)
+			-- Плита держится не меньше окна на решение: три секунды, см. 14-TUNNEL-MODE § 6.
+			expect(Tunnel.FADE_SOLID_SECONDS >= 3).to.equal(true)
+		end)
+
+		--[[
+			Ничто не движется быстрее ребёнка: шар маятника и платформа проходят
+			свой путь медленнее, чем ребёнок идёт пешком.
+		]]
+		it("живое движется медленнее, чем ребёнок бежит", function()
+			local ball = (Tunnel.PENDULUM_ROPE + Tunnel.PENDULUM_BALL / 2)
+				* math.sin(Tunnel.PENDULUM_SWING)
+				* 2
+			expect(ball / Tunnel.PENDULUM_SECONDS < Tunnel.WALK_SPEED).to.equal(true)
+			expect(Tunnel.PLATFORM_TRAVEL / Tunnel.PLATFORM_SECONDS < Tunnel.WALK_SPEED).to.equal(true)
+
+			-- И шар не залезает в соседние дорожки: обойти его можно всегда.
+			local arm = Tunnel.PENDULUM_ROPE + Tunnel.PENDULUM_BALL / 2
+			local reach = arm * math.sin(Tunnel.PENDULUM_SWING) + Tunnel.PENDULUM_BALL / 2
+			expect(reach <= Tunnel.LANE_WIDTH / 2).to.equal(true)
+
+			--[[
+				В крайней точке дуги рядом с шаром остаётся широкий проход:
+				ребёнок проходит его же дорожкой, не подгадывая момент.
+			]]
+			local free = Tunnel.LANE_WIDTH / 2
+				+ arm * math.sin(Tunnel.PENDULUM_SWING)
+				- Tunnel.PENDULUM_BALL / 2
+			expect(free >= 4).to.equal(true)
 		end)
 	end)
 
@@ -214,6 +284,15 @@ return function()
 				end
 			end
 		)
+
+		it("испытания больше не учат звукам и слогам", function()
+			local forbidden = { sound_to_letter = true, letter_to_sound = true, blend = true, word = true }
+			for _, id in Challenges.ids() do
+				for _, trains in Challenges.expect(id).trains do
+					expect(forbidden[trains]).to.equal(nil)
+				end
+			end
+		end)
 	end)
 
 	describe("Config: озвучка", function()
@@ -228,9 +307,75 @@ return function()
 			end
 		)
 
-		it("реестр содержит звуки всех букв и все слоги", function()
+		it("в реестре есть название каждой буквы", function()
 			local required = AudioRegistry.requiredKeys()
-			expect(#required >= Letters.count() + Syllables.count()).to.equal(true)
+			for _, id in Letters.ordered() do
+				expect(table.find(required, Letters.expect(id).vo.name)).to.be.ok()
+			end
 		end)
+
+		--[[
+			Потолок объёма записи. Он тут не ради красоты: концепция сменилась именно
+			потому, что 600 реплик со звуками записать не вышло. Если список снова
+			начнёт разрастаться, тест обязан об этом сказать.
+
+			Математика влезла в этот же потолок и не подвинула его: задача собирается
+			из кусков («Сколько будет» + «два» + «плюс» + «два»), а не пишется
+			на каждый пример.
+		]]
+		it("реплик остаётся немного: не больше сотни", function()
+			expect(#AudioRegistry.requiredKeys() <= 100).to.equal(true)
+		end)
+
+		it("в реестре есть все реплики математики", function()
+			local required = AudioRegistry.requiredKeys()
+			for _, key in MathConfig.voKeys() do
+				if table.find(required, key) == nil then
+					error(`ключа «{key}» нет в реестре озвучки`)
+				end
+			end
+		end)
+	end)
+
+	describe("Config: математика", function()
+		--[[
+			Проёмов в воротах не больше, чем дорожек в туннеле. Ступень, попросившая
+			четыре варианта, построила бы ворота, в которые нельзя войти: четвёртый
+			проём просто некуда поставить.
+		]]
+		it("вариантов ступени не больше, чем дорожек", function()
+			for stage = 1, MathConfig.count() do
+				local spec = MathConfig.expect(stage)
+				expect(spec.choices >= 2).to.equal(true)
+				expect(spec.choices <= Tunnel.LANE_COUNT).to.equal(true)
+			end
+		end)
+
+		it(
+			"у ворот с числами есть параметры на все пять сложностей",
+			function()
+				expect(Challenges.get("math_gates")).to.be.ok()
+				for name, values in Tunnel.MATH_PARAMS do
+					if #values ~= 5 then
+						error(`MATH_PARAMS.{name}: ожидалось 5 значений, а не {#values}`)
+					end
+				end
+			end
+		)
+
+		--[[
+			Ворот в забеге столько же или меньше, чем задач, которые ступень способна
+			выдать разными: иначе половина ворот повторяет одно и то же, и ребёнок
+			перестаёт считать уже на третьих.
+
+			Проверяем самое узкое место — первую ступень: там всего три числа.
+		]]
+		it(
+			"задач ступени хватает, чтобы ворота не повторялись подряд",
+			function()
+				local first = MathConfig.expect(1)
+				expect(first.max - first.min + 1 >= first.choices).to.equal(true)
+			end
+		)
 	end)
 end

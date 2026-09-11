@@ -12,9 +12,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 local Letters = require(Shared.Config.Letters)
-local Syllables = require(Shared.Config.Syllables)
-local Words = require(Shared.Config.Words)
-local Islands = require(Shared.Config.Islands)
+local Stages = require(Shared.Config.Stages)
+local Obstacles = require(Shared.Config.Obstacles)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 
 local Services = script:WaitForChild("Services")
@@ -25,6 +24,7 @@ local ChallengeService = require(Services.ChallengeService)
 local CosmeticsService = require(Services.CosmeticsService)
 local ShopService = require(Services.ShopService)
 local WorldService = require(Services.WorldService)
+local BaseService = require(Services.BaseService)
 local TunnelService = require(Services.TunnelService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
@@ -33,11 +33,10 @@ RemoteDefs.init()
 local function reportContentState()
 	print(
 		string.format(
-			"[AlphabetFall] контент: букв %d, слогов %d, слов %d, островов %d",
+			"[AlphabetFall] контент: букв %d, ступеней %d, препятствий %d",
 			Letters.count(),
-			Syllables.count(),
-			#Words.ids(),
-			Islands.count()
+			Stages.count(),
+			#Obstacles.ids()
 		)
 	)
 
@@ -70,6 +69,7 @@ TunnelService.start() -- подписывается на хуки испытан
 CosmeticsService.start()
 ShopService.start()
 WorldService.start()
+BaseService.start() -- после мира: участки встают вокруг уже построенной площади
 ProfileService.start() -- последним: он сразу начинает принимать игроков
 
 --[[

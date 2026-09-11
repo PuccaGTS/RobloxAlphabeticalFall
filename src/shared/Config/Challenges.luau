@@ -3,6 +3,15 @@
 	Параметры испытаний по уровням сложности 1..5.
 	Ни одного «магического числа» в коде испытаний — только отсюда.
 	См. docs/03-CHALLENGES.md и docs/09-DATA-SCHEMA.md § 8.
+
+	Чему вообще учат испытания (поле trains):
+	  recognize — узнать букву, когда её назвали вслух;
+	  name      — вспомнить название буквы, увидев её;
+	  order     — знать, какая буква идёт следующей в алфавите;
+	  shape     — отличить букву от похожей по начертанию.
+
+	Испытаний на звук, слог и чтение слова здесь больше нет — игра учит алфавит,
+	см. docs/02-LEARNING.md § 1.
 ]]
 
 export type ChallengeMeta = {
@@ -20,7 +29,7 @@ local Challenges: { [string]: ChallengeMeta } = {
 		id = "letter_rain",
 		title = "Буквопад",
 		voInstruction = "instr_letter_rain",
-		trains = { "recognize", "sound_to_letter" },
+		trains = { "recognize" },
 		minLetters = 2,
 		maxSeconds = 120,
 		params = {
@@ -36,45 +45,73 @@ local Challenges: { [string]: ChallengeMeta } = {
 		},
 	},
 
-	echo_letter = {
-		id = "echo_letter",
-		title = "Эхо-буква",
-		voInstruction = "instr_echo_letter",
-		trains = { "letter_to_sound" },
-		minLetters = 1,
-		maxSeconds = 90,
-		params = {
-			repeats = { 3, 3, 3, 4, 4 },
-			listenWindowSec = { 4, 4, 3.5, 3, 3 }, -- сколько ждём ребёнка перед подсказкой
-			holdBonusSec = { 3, 3, 3, 3, 3 }, -- «тянучка» в режиме B, см. docs/06-MICROPHONE.md
-		},
-	},
-
-	syllable_bridge = {
-		id = "syllable_bridge",
-		title = "Мост слогов",
-		voInstruction = "instr_syllable_bridge",
-		trains = { "letter_to_sound", "blend" },
+	--[[
+		«Алфавитная лестница» заняла место, на котором раньше стоял «Мост слогов»:
+		тот же ритм (одна ступень за раз, выбор из нескольких плит), но учит она
+		не слиянию звуков, а порядку букв. Это единственное испытание, которое
+		спрашивает «что дальше», а не «где эта».
+	]]
+	alphabet_ladder = {
+		id = "alphabet_ladder",
+		title = "Алфавитная лестница",
+		voInstruction = "instr_alphabet_ladder",
+		trains = { "order", "name" },
 		minLetters = 2,
 		maxSeconds = 150,
 		params = {
-			sections = { 4, 4, 5, 5, 6 }, -- сколько слогов в мосту
-			vowelChoices = { 2, 3, 3, 4, 4 }, -- из скольких гласных выбирать
+			rungs = { 4, 4, 5, 5, 6 }, -- сколько ступеней в лестнице
+			choices = { 2, 3, 3, 4, 4 }, -- из скольких плит выбирать
 			hintAfterSec = { 8, 8, 10, 12, 12 },
-			missCooldown = { 1.6, 1.4, 1.2, 1.1, 1.0 }, -- пауза на подсказку, см. LetterRain
+			missCooldown = { 1.6, 1.4, 1.2, 1.1, 1.0 },
 		},
 	},
 
 	--[[
-		Туннель — единственное испытание, чьи параметры живут не здесь, а в Config/Tunnel:
-		там геометрия, дорожки и расстояния, и разрывать их надвое бессмысленно.
+		Туннель и полоса препятствий — единственные испытания, чьи параметры живут
+		не здесь, а в Config/Tunnel: там геометрия, дорожки и расстояния,
+		и разрывать их надвое бессмысленно.
 	]]
 	tunnel_run = {
 		id = "tunnel_run",
 		title = "Азбучный туннель",
 		voInstruction = "instr_tunnel_run",
-		trains = { "recognize", "sound_to_letter" },
+		trains = { "recognize" },
 		minLetters = 2,
+		maxSeconds = 600,
+		params = {},
+	},
+
+	--[[
+		«Полоса препятствий» — тот же забег, но перевёрнутый пропорциями:
+		препятствий много, ворот мало. Она нужна не для обучения, а для отдыха
+		от него — и поэтому звёздочки в ней даются всё равно только за буквы
+		на воротах, см. docs/19-OBSTACLES.md § 4.
+	]]
+	obstacle_course = {
+		id = "obstacle_course",
+		title = "Полоса препятствий",
+		voInstruction = "instr_obstacle_course",
+		trains = { "recognize" },
+		minLetters = 2,
+		maxSeconds = 600,
+		params = {},
+	},
+
+	--[[
+		«Ворота с числами» — вход в мир математики. Устройство то же, что у туннеля
+		с буквами: коридор, стена с проёмами, над каждым ответ. Отличие одно, и оно
+		принципиальное: задача меняется у КАЖДЫХ ворот, потому что счёт тренируется
+		повторением разных примеров, а не одним числом на весь забег
+		(docs/16-MATH.md § 3.1).
+
+		Параметры, как и у забегов с буквами, живут в Config/Tunnel — там геометрия.
+	]]
+	math_gates = {
+		id = "math_gates",
+		title = "Ворота с числами",
+		voInstruction = "instr_math_gates",
+		trains = { "count" },
+		minLetters = 0, -- буквы этому испытанию не нужны вовсе
 		maxSeconds = 600,
 		params = {},
 	},
@@ -83,7 +120,7 @@ local Challenges: { [string]: ChallengeMeta } = {
 		id = "bubbles",
 		title = "Пузыри",
 		voInstruction = "instr_bubbles",
-		trains = { "recognize", "sound_to_letter" },
+		trains = { "recognize" },
 		minLetters = 2,
 		maxSeconds = 100,
 		params = {
@@ -94,17 +131,22 @@ local Challenges: { [string]: ChallengeMeta } = {
 		},
 	},
 
-	build_word = {
-		id = "build_word",
-		title = "Собери слово",
-		voInstruction = "instr_build_word",
-		trains = { "recognize", "blend", "word" },
-		minLetters = 3,
-		maxSeconds = 180,
+	--[[
+		«Зеркало» лечит классическую дошкольную беду — зеркальное написание
+		(Я, Р, З, Э, Ю). Пока звуки были главными, оно было второстепенным;
+		теперь, когда буква узнаётся глазами и по названию, оно стало по делу.
+	]]
+	mirror = {
+		id = "mirror",
+		title = "Зеркало",
+		voInstruction = "instr_mirror",
+		trains = { "shape", "recognize" },
+		minLetters = 1,
+		maxSeconds = 100,
 		params = {
-			wordLength = { 3, 3, 4, 4, 5 },
-			showImage = { 1, 1, 1, 1, 0 }, -- 0 = только по звучанию
-			hintAfterSec = { 10, 10, 12, 14, 15 },
+			rounds = { 4, 5, 5, 6, 6 },
+			variants = { 2, 3, 3, 4, 4 }, -- сколько вариантов написания показываем
+			hintAfterSec = { 8, 8, 10, 10, 12 },
 		},
 	},
 }

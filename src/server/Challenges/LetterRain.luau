@@ -2,8 +2,9 @@
 --[[
 	Испытание «Буквопад» — ядро MVP. См. docs/03-CHALLENGES.md § 1.
 
-	С неба падают буквы, ребёнок ловит нужную. Провалить нельзя: промах по чужой букве
-	ничего не отнимает, счётчик не падает, испытание просто идёт дальше.
+	Голос называет букву («Лови вот эту букву! Буква М»), с неба падают буквы,
+	ребёнок ловит нужную. Провалить нельзя: промах по чужой букве ничего не отнимает,
+	счётчик не падает, испытание просто идёт дальше.
 
 	Контракт модуля испытания: Build → Validate (много раз) → Finish.
 	Позиции и состав букв генерирует СЕРВЕР, клиент их только рисует.
@@ -19,7 +20,7 @@ local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 local LetterRain = {}
 
 LetterRain.id = "letter_rain"
-LetterRain.trains = { "recognize", "sound_to_letter" }
+LetterRain.trains = { "recognize" }
 LetterRain.minLetters = 2
 
 local FALL_HEIGHT = 30 -- studs, с какой высоты падают буквы
@@ -115,7 +116,7 @@ function LetterRain.Build(_player: Player, letters: { string }, difficulty: numb
 		params = {
 			targetLetter = targetId,
 			targetGlyph = Letters.expect(targetId).glyph,
-			targetVO = Letters.expect(targetId).vo.sound,
+			targetVO = Letters.expect(targetId).vo.name,
 			items = items,
 			fallSpeed = fallSpeed,
 			fallHeight = FALL_HEIGHT,

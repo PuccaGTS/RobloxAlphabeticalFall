@@ -9,17 +9,42 @@
 ]]
 
 local Types = require(script.Parent.Parent.Types)
+local Base = require(script.Parent.Base)
 
 local ProfileTemplate = {}
 
-ProfileTemplate.VERSION = 1
+--[[
+	Версия 2: игра перешла с обучения звукам на обучение алфавиту.
+	Из профиля ушли `syllables` и `words` (слоги и слова больше не изучаются),
+	`islands` стали `stages`, из настроек ушёл режим эха.
+
+	Версия 4: у игрока появился участок на спавне — поле `base` с уровнем
+	каждой категории построек (docs/15-HOME-BASE.md § 8).
+
+	Версия 3: сохранка забега переехала в профиль. Появилось поле `runs`,
+	а `stages[i].checkpoint` ушло: оно описывало точку на «пути ступени», которого
+	в игре так и не завелось, и ни разу не было записано. Настоящая сохранка
+	принадлежит забегу, а не ступени алфавита, — см. Types.SavedRun.
+
+	Обычно поле не удаляется в той же версии, в которой перестало использоваться,
+	но здесь мы вправе резать сразу: игра не опубликована, живых профилей нет,
+	и тащить пустые таблицы в DataStore не за чем.
+
+	Версия 5: открылся мир математики — поле `math` с прогрессом по ступеням счёта.
+	Оно отдельное от `letters`, потому что математика и буквы не блокируют друг друга
+	(docs/16-MATH.md § 6), а устроено точно так же: ступень осваивается по тем же
+	правилам, что и буква.
+
+	Версия 6: посуточная история занятий — поле `playLog`. Без неё отчёт родителя
+	не может сказать «занимался 6 дней из последних 7» (docs/13-PARENT-MODE.md § 2).
+]]
+ProfileTemplate.VERSION = 6
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
 		music = 0.6,
 		sfx = 0.7,
 		voice = 1, -- голос всегда громче остального, см. docs/13-PARENT-MODE.md
-		echoMode = "A", -- честное эхо; режим B включает только родитель
 		subtitles = false,
 		slowSpeech = false,
 		hideRobux = false,
@@ -33,18 +58,20 @@ function ProfileTemplate.new(now: number): Types.Profile
 		level = 1,
 		xp = 0,
 		letters = {},
-		syllables = {},
-		words = {},
-		islands = {
-			[1] = { unlocked = true, bossDone = false, chests = {} },
+		math = {},
+		stages = {
+			[1] = { unlocked = true, chests = {} },
 		},
+		runs = {},
+		base = Base.newProgress(),
 		inventory = {},
 		equipped = { hat = nil, back = nil, face = nil, trail = nil, pets = {} },
 		difficulty = {},
 		dailyStreak = 0,
 		lastLoginDay = 0,
+		playLog = {},
 		settings = ProfileTemplate.defaultSettings(),
-		parent = { pinHash = nil, dailyLimitMin = nil, echoConsent = false },
+		parent = { pinHash = nil, dailyLimitMin = nil },
 		stats = { totalPlayMin = 0, sessionsCount = 0, firstJoin = now },
 	}
 end
@@ -60,14 +87,14 @@ export type Snapshot = {
 	xp: number,
 	mastery: { [string]: number },
 	nextReview: { [string]: number },
-	syllables: { [string]: boolean },
-	words: { [string]: boolean },
-	islands: { [number]: boolean },
+	-- Статусы ступеней математики: тот же вид, что у букв, ключ — id ступени.
+	math: { [string]: number },
+	stages: { [number]: boolean },
+	base: { [string]: number },
 	inventory: { string },
 	equipped: Types.Equipped,
 	dailyStreak: number,
 	settings: Types.Settings,
-	echoConsent: boolean,
 }
 
 function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
@@ -78,9 +105,14 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 		nextReview[letterId] = progress.nextReview
 	end
 
-	local islands: { [number]: boolean } = {}
-	for index, state in profile.islands do
-		islands[index] = state.unlocked
+	local math_: { [string]: number } = {}
+	for stageId, progress in profile.math do
+		math_[stageId] = progress.mastery
+	end
+
+	local stages: { [number]: boolean } = {}
+	for index, state in profile.stages do
+		stages[index] = state.unlocked
 	end
 
 	return {
@@ -89,9 +121,9 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 		xp = profile.xp,
 		mastery = mastery,
 		nextReview = nextReview,
-		syllables = table.clone(profile.syllables),
-		words = table.clone(profile.words),
-		islands = islands,
+		math = math_,
+		stages = stages,
+		base = table.clone(profile.base),
 		inventory = table.clone(profile.inventory),
 		equipped = {
 			hat = profile.equipped.hat,
@@ -102,7 +134,6 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 		},
 		dailyStreak = profile.dailyStreak,
 		settings = table.clone(profile.settings),
-		echoConsent = profile.parent.echoConsent,
 	}
 end
 

@@ -13,21 +13,106 @@
 ]]
 
 local Types = require(script.Parent.Parent.Types)
+local Base = require(script.Parent.Parent.Config.Base)
 local ProfileTemplate = require(script.Parent.Parent.Config.ProfileTemplate)
+local PlayLog = require(script.Parent.PlayLog)
 
 export type Step = (profile: any) -> ()
 
 local Migrations = {}
 
 --[[
-	Шаги миграции. Пока структура профиля первой версии — шагов нет.
-	Пример будущего шага:
+	Шаги миграции.
 
-		[1] = function(profile)
-			profile.parent = profile.parent or { echoConsent = false }
-		end,
+	[1] Переход на обучение алфавиту: игра перестала учить звукам и слогам.
+	    Слоги и слова из профиля уходят целиком, острова становятся ступенями,
+	    режим эха уезжает вместе с испытанием, которому он служил.
+
+	    Прогресс по буквам НЕ трогаем: буква остаётся буквой, и всё, что ребёнок
+	    про неё уже знает, переносится как есть. Ступень у буквы теперь другая,
+	    но статусы освоения от ступени не зависят.
+
+	[2] Сохранка забега переехала в профиль: появилось поле `runs`,
+	    а `stages[i].checkpoint` убрано. Поле описывало точку на «пути ступени»
+	    и ни разу не было записано, так что терять при удалении нечего.
+
+	[3] У игрока появился участок на спавне: поле `base` с уровнем каждой
+	    категории построек. Пустой участок — это все нули, а не отсутствие поля.
+
+	[4] Открылся мир математики: поле `math` с прогрессом по ступеням счёта.
+	    У старого профиля его быть не может — математике до этой версии негде
+	    было храниться, — так что шаг только заводит пустую таблицу и чинит
+	    испорченную. Прогресс по буквам он не трогает вовсе: две ветки обучения
+	    независимы (docs/16-MATH.md § 6).
+
+	[5] Появилась посуточная история занятий: поле `playLog`. Прошлое восстановить
+	    не из чего — время по дням раньше не писалось, — поэтому история
+	    начинается пустой. Серию dailyStreak шаг не трогает: её тоже никто
+	    не писал, и там ноль.
 ]]
-local STEPS: { [number]: Step } = {}
+local STEPS: { [number]: Step } = {
+	[1] = function(profile)
+		profile.syllables = nil
+		profile.words = nil
+
+		if typeof(profile.islands) == "table" then
+			local stages: { [number]: any } = {}
+			for index, state in profile.islands do
+				if typeof(index) == "number" and typeof(state) == "table" then
+					stages[index] = {
+						unlocked = state.unlocked == true,
+						checkpoint = 0,
+						chests = if typeof(state.chests) == "table" then state.chests else {},
+					}
+				end
+			end
+			-- Первая ступень открыта всегда, чем бы ни был испорчен профиль.
+			stages[1] = stages[1] or { unlocked = true, checkpoint = 0, chests = {} }
+			stages[1].unlocked = true
+			profile.stages = stages
+			profile.islands = nil
+		end
+
+		if typeof(profile.settings) == "table" then
+			profile.settings.echoMode = nil
+		end
+		if typeof(profile.parent) == "table" then
+			profile.parent.echoConsent = nil
+		end
+	end,
+
+	[2] = function(profile)
+		if typeof(profile.stages) == "table" then
+			for _, state in profile.stages do
+				if typeof(state) == "table" then
+					state.checkpoint = nil
+				end
+			end
+		end
+
+		-- Незаконченных забегов у старого профиля быть не может: до этой версии
+		-- их негде было хранить. Заводим пустую таблицу, дальше её наполняет игра.
+		if typeof(profile.runs) ~= "table" then
+			profile.runs = {}
+		end
+	end,
+
+	[3] = function(profile)
+		-- Sanitize и заводит пустой участок, и чинит испорченный: у старого профиля
+		-- построек нет вовсе, а у битого могут оказаться чужие ключи и дробные уровни.
+		profile.base = Base.sanitize(profile.base)
+	end,
+
+	[4] = function(profile)
+		if typeof(profile.math) ~= "table" then
+			profile.math = {}
+		end
+	end,
+
+	[5] = function(profile)
+		profile.playLog = PlayLog.sanitize(profile.playLog)
+	end,
+}
 
 Migrations.STEPS = STEPS
 
@@ -102,7 +187,15 @@ end
 -- Полный проход: миграции + достройка полей. Именно это вызывает ProfileService.
 function Migrations.normalize(profile: any, now: number): Types.Profile
 	local migrated = Migrations.apply(profile, ProfileTemplate.VERSION)
-	return Migrations.fillDefaults(migrated, now)
+	local normalized = Migrations.fillDefaults(migrated, now)
+	--[[
+		Историю занятий чистим на каждом входе, а не только в шаге миграции:
+		в неё пишут перед каждым сохранением, и одна битая запись у профиля
+		уже текущей версии уронила бы учёт времени — а вместе с ним и сохранение.
+		Записей не больше четырёх недель, так что это дёшево.
+	]]
+	normalized.playLog = PlayLog.sanitize(normalized.playLog)
+	return normalized
 end
 
 return Migrations

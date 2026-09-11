@@ -1,10 +1,14 @@
 --!strict
 --[[
-	Справочник букв. Единственный источник истины по алфавиту.
-	MVP: 9 букв (острова 1 и 2). Полная таблица всех 33 — docs/09-DATA-SCHEMA.md.
+	Справочник букв. Единственный источник истины по алфавиту: все 33 буквы,
+	в алфавитном порядке. Полная таблица с пояснениями — docs/09-DATA-SCHEMA.md.
 
-	ВАЖНО: vo.sound — это ЗВУК буквы ("м"), а не её название ("эм").
-	См. docs/02-LEARNING.md, правило 1.
+	ВАЖНО: vo.name — это НАЗВАНИЕ буквы («Буква М»), а не её звук («м»).
+	Игра учит алфавит: узнать букву, назвать её, знать, где она стоит.
+	Звуки, слоги и чтение сюда не входят — почему, написано в docs/02-LEARNING.md § 1.
+
+	Файл сгенерирован по таблице и правится целиком, а не по одной букве:
+	порядок, ступени и ключи озвучки должны оставаться согласованными.
 ]]
 
 local Types = require(script.Parent.Parent.Types)
@@ -15,117 +19,181 @@ local COLOR_HARD = Color3.fromRGB(52, 116, 214) -- синий
 local COLOR_SIGN = Color3.fromRGB(150, 150, 155) -- серый
 
 local Letters: { [string]: Types.Letter } = {
-	-- ===== Остров 1 · Поющий берег (гласные) =====================================
+	-- ===== Ступень 1 · Первые три (А Б В) =============================================
 	a = {
 		id = "a",
 		glyph = "А",
 		glyphLower = "а",
 		kind = "vowel",
-		sustainable = true,
-		island = 1,
 		order = 1,
+		stage = 1,
 		color = COLOR_VOWEL,
-		vo = { sound = "snd_a", long = "snd_long_a", intro = "intro_a", name = "name_a" },
-		examples = { "mama", "banan" },
-		confusableWith = { "o" },
-	},
-	u = {
-		id = "u",
-		glyph = "У",
-		glyphLower = "у",
-		kind = "vowel",
-		sustainable = true,
-		island = 1,
-		order = 2,
-		color = COLOR_VOWEL,
-		vo = { sound = "snd_u", long = "snd_long_u", intro = "intro_u", name = "name_u" },
-		examples = { "puma" },
-		confusableWith = { "o" },
-	},
-	o = {
-		id = "o",
-		glyph = "О",
-		glyphLower = "о",
-		kind = "vowel",
-		sustainable = true,
-		island = 1,
-		order = 3,
-		color = COLOR_VOWEL,
-		vo = { sound = "snd_o", long = "snd_long_o", intro = "intro_o", name = "name_o" },
-		examples = { "nota" },
-		confusableWith = { "a", "u" },
-	},
-	i = {
-		id = "i",
-		glyph = "И",
-		glyphLower = "и",
-		kind = "vowel",
-		sustainable = true,
-		island = 1,
-		order = 4,
-		color = COLOR_VOWEL,
-		vo = { sound = "snd_i", long = "snd_long_i", intro = "intro_i", name = "name_i" },
-		examples = { "bint" },
+		vo = { name = "letter_a" },
+		example = "АРБУЗ",
 		confusableWith = {},
-	},
-
-	-- ===== Остров 2 · Мягкие холмы (губные согласные) =============================
-	m = {
-		id = "m",
-		glyph = "М",
-		glyphLower = "м",
-		kind = "consonant",
-		voiced = true,
-		sustainable = true,
-		island = 2,
-		order = 1,
-		color = COLOR_HARD,
-		vo = { sound = "snd_m", long = "snd_long_m", intro = "intro_m", name = "name_m" },
-		examples = { "mama", "puma" },
-		confusableWith = { "n" },
-	},
-	p = {
-		id = "p",
-		glyph = "П",
-		glyphLower = "п",
-		kind = "consonant",
-		voiced = false,
-		sustainable = false,
-		island = 2,
-		order = 2,
-		color = COLOR_HARD,
-		vo = { sound = "snd_p", intro = "intro_p", name = "name_p" },
-		examples = { "papa", "puma" },
-		confusableWith = { "b" },
 	},
 	b = {
 		id = "b",
 		glyph = "Б",
 		glyphLower = "б",
 		kind = "consonant",
-		voiced = true,
-		sustainable = false,
-		island = 2,
-		order = 3,
+		order = 2,
+		stage = 1,
 		color = COLOR_HARD,
-		vo = { sound = "snd_b", intro = "intro_b", name = "name_b" },
-		examples = { "banan", "bant", "bum" },
-		confusableWith = { "p" },
+		vo = { name = "letter_b" },
+		example = "БАНАН",
+		confusableWith = { "v" },
+	},
+	v = {
+		id = "v",
+		glyph = "В",
+		glyphLower = "в",
+		kind = "consonant",
+		order = 3,
+		stage = 1,
+		color = COLOR_HARD,
+		vo = { name = "letter_v" },
+		example = "ВОЛК",
+		confusableWith = { "b" },
 	},
 
-	-- ===== Остров 3 · Стучащая долина (частично, для MVP) ========================
-	t = {
-		id = "t",
-		glyph = "Т",
-		glyphLower = "т",
+	-- ===== Ступень 2 · Гости (Г Д Е) ==================================================
+	g = {
+		id = "g",
+		glyph = "Г",
+		glyphLower = "г",
 		kind = "consonant",
-		voiced = false,
-		sustainable = false,
-		island = 3,
-		order = 1,
+		order = 4,
+		stage = 2,
 		color = COLOR_HARD,
-		vo = { sound = "snd_t", intro = "intro_t", name = "name_t" },
-		examples = { "nota", "bant", "bint" },
+		vo = { name = "letter_g" },
+		example = "ГУСЬ",
+		confusableWith = { "t" },
+	},
+	d = {
+		id = "d",
+		glyph = "Д",
+		glyphLower = "д",
+		kind = "consonant",
+		order = 5,
+		stage = 2,
+		color = COLOR_HARD,
+		vo = { name = "letter_d" },
+		example = "ДОМ",
+		confusableWith = {},
+	},
+	ye = {
+		id = "ye",
+		glyph = "Е",
+		glyphLower = "е",
+		kind = "vowel",
+		order = 6,
+		stage = 2,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_ye" },
+		example = "ЕЛЬ",
+		confusableWith = { "yo" },
+	},
+
+	-- ===== Ступень 3 · Ёжики (Ё Ж З) ==================================================
+	yo = {
+		id = "yo",
+		glyph = "Ё",
+		glyphLower = "ё",
+		kind = "vowel",
+		order = 7,
+		stage = 3,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_yo" },
+		example = "ЁЖ",
+		confusableWith = { "ye" },
+	},
+	zh = {
+		id = "zh",
+		glyph = "Ж",
+		glyphLower = "ж",
+		kind = "consonant",
+		order = 8,
+		stage = 3,
+		color = COLOR_HARD,
+		vo = { name = "letter_zh" },
+		example = "ЖУК",
+		confusableWith = {},
+	},
+	z = {
+		id = "z",
+		glyph = "З",
+		glyphLower = "з",
+		kind = "consonant",
+		order = 9,
+		stage = 3,
+		color = COLOR_HARD,
+		vo = { name = "letter_z" },
+		example = "ЗОНТ",
+		confusableWith = { "e" },
+	},
+
+	-- ===== Ступень 4 · Иголки (И Й К) =================================================
+	i = {
+		id = "i",
+		glyph = "И",
+		glyphLower = "и",
+		kind = "vowel",
+		order = 10,
+		stage = 4,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_i" },
+		example = "ИГЛА",
+		confusableWith = { "j", "n" },
+	},
+	j = {
+		id = "j",
+		glyph = "Й",
+		glyphLower = "й",
+		kind = "consonant",
+		order = 11,
+		stage = 4,
+		color = COLOR_HARD,
+		vo = { name = "letter_j" },
+		example = "ЧАЙ",
+		confusableWith = { "i" },
+	},
+	k = {
+		id = "k",
+		glyph = "К",
+		glyphLower = "к",
+		kind = "consonant",
+		order = 12,
+		stage = 4,
+		color = COLOR_HARD,
+		vo = { name = "letter_k" },
+		example = "КОТ",
+		confusableWith = {},
+	},
+
+	-- ===== Ступень 5 · Лесная тропа (Л М Н) ===========================================
+	l = {
+		id = "l",
+		glyph = "Л",
+		glyphLower = "л",
+		kind = "consonant",
+		order = 13,
+		stage = 5,
+		color = COLOR_HARD,
+		vo = { name = "letter_l" },
+		example = "ЛУНА",
+		confusableWith = {},
+	},
+	m = {
+		id = "m",
+		glyph = "М",
+		glyphLower = "м",
+		kind = "consonant",
+		order = 14,
+		stage = 5,
+		color = COLOR_HARD,
+		vo = { name = "letter_m" },
+		example = "МЯЧ",
 		confusableWith = {},
 	},
 	n = {
@@ -133,14 +201,240 @@ local Letters: { [string]: Types.Letter } = {
 		glyph = "Н",
 		glyphLower = "н",
 		kind = "consonant",
-		voiced = true,
-		sustainable = true,
-		island = 3,
-		order = 3,
+		order = 15,
+		stage = 5,
 		color = COLOR_HARD,
-		vo = { sound = "snd_n", long = "snd_long_n", intro = "intro_n", name = "name_n" },
-		examples = { "nota", "banan", "bint" },
-		confusableWith = { "m" },
+		vo = { name = "letter_n" },
+		example = "НОС",
+		confusableWith = { "i", "p" },
+	},
+
+	-- ===== Ступень 6 · Облака (О П Р) =================================================
+	o = {
+		id = "o",
+		glyph = "О",
+		glyphLower = "о",
+		kind = "vowel",
+		order = 16,
+		stage = 6,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_o" },
+		example = "ОБЛАКО",
+		confusableWith = { "s" },
+	},
+	p = {
+		id = "p",
+		glyph = "П",
+		glyphLower = "п",
+		kind = "consonant",
+		order = 17,
+		stage = 6,
+		color = COLOR_HARD,
+		vo = { name = "letter_p" },
+		example = "ПАПА",
+		confusableWith = { "n" },
+	},
+	r = {
+		id = "r",
+		glyph = "Р",
+		glyphLower = "р",
+		kind = "consonant",
+		order = 18,
+		stage = 6,
+		color = COLOR_HARD,
+		vo = { name = "letter_r" },
+		example = "РЫБА",
+		confusableWith = {},
+	},
+
+	-- ===== Ступень 7 · Солнечный мост (С Т У) =========================================
+	s = {
+		id = "s",
+		glyph = "С",
+		glyphLower = "с",
+		kind = "consonant",
+		order = 19,
+		stage = 7,
+		color = COLOR_HARD,
+		vo = { name = "letter_s" },
+		example = "СОК",
+		confusableWith = { "o" },
+	},
+	t = {
+		id = "t",
+		glyph = "Т",
+		glyphLower = "т",
+		kind = "consonant",
+		order = 20,
+		stage = 7,
+		color = COLOR_HARD,
+		vo = { name = "letter_t" },
+		example = "ТОРТ",
+		confusableWith = { "g" },
+	},
+	u = {
+		id = "u",
+		glyph = "У",
+		glyphLower = "у",
+		kind = "vowel",
+		order = 21,
+		stage = 7,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_u" },
+		example = "УТКА",
+		confusableWith = {},
+	},
+
+	-- ===== Ступень 8 · Фонарики (Ф Х Ц) ===============================================
+	f = {
+		id = "f",
+		glyph = "Ф",
+		glyphLower = "ф",
+		kind = "consonant",
+		order = 22,
+		stage = 8,
+		color = COLOR_HARD,
+		vo = { name = "letter_f" },
+		example = "ФОНАРЬ",
+		confusableWith = {},
+	},
+	h = {
+		id = "h",
+		glyph = "Х",
+		glyphLower = "х",
+		kind = "consonant",
+		order = 23,
+		stage = 8,
+		color = COLOR_HARD,
+		vo = { name = "letter_h" },
+		example = "ХЛЕБ",
+		confusableWith = {},
+	},
+	c = {
+		id = "c",
+		glyph = "Ц",
+		glyphLower = "ц",
+		kind = "hissing",
+		order = 24,
+		stage = 8,
+		color = COLOR_HARD,
+		vo = { name = "letter_c" },
+		example = "ЦВЕТОК",
+		confusableWith = { "shch" },
+	},
+
+	-- ===== Ступень 9 · Чащоба (Ч Ш Щ) =================================================
+	ch = {
+		id = "ch",
+		glyph = "Ч",
+		glyphLower = "ч",
+		kind = "hissing",
+		order = 25,
+		stage = 9,
+		color = COLOR_HARD,
+		vo = { name = "letter_ch" },
+		example = "ЧАЙНИК",
+		confusableWith = {},
+	},
+	sh = {
+		id = "sh",
+		glyph = "Ш",
+		glyphLower = "ш",
+		kind = "hissing",
+		order = 26,
+		stage = 9,
+		color = COLOR_HARD,
+		vo = { name = "letter_sh" },
+		example = "ШАР",
+		confusableWith = { "shch" },
+	},
+	shch = {
+		id = "shch",
+		glyph = "Щ",
+		glyphLower = "щ",
+		kind = "hissing",
+		order = 27,
+		stage = 9,
+		color = COLOR_HARD,
+		vo = { name = "letter_shch" },
+		example = "ЩЁТКА",
+		confusableWith = { "sh", "c" },
+	},
+
+	-- ===== Ступень 10 · Три тихони (Ъ Ы Ь) =============================================
+	hard = {
+		id = "hard",
+		glyph = "Ъ",
+		glyphLower = "ъ",
+		kind = "sign",
+		order = 28,
+		stage = 10,
+		color = COLOR_SIGN,
+		vo = { name = "letter_hard" },
+		example = "ПОДЪЕЗД",
+		confusableWith = { "soft" },
+	},
+	y = {
+		id = "y",
+		glyph = "Ы",
+		glyphLower = "ы",
+		kind = "vowel",
+		order = 29,
+		stage = 10,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_y" },
+		example = "СЫР",
+		confusableWith = { "soft" },
+	},
+	soft = {
+		id = "soft",
+		glyph = "Ь",
+		glyphLower = "ь",
+		kind = "sign",
+		order = 30,
+		stage = 10,
+		color = COLOR_SIGN,
+		vo = { name = "letter_soft" },
+		example = "СОЛЬ",
+		confusableWith = { "hard", "y" },
+	},
+
+	-- ===== Ступень 11 · Эхо-финал (Э Ю Я) ==============================================
+	e = {
+		id = "e",
+		glyph = "Э",
+		glyphLower = "э",
+		kind = "vowel",
+		order = 31,
+		stage = 11,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_e" },
+		example = "ЭСКИМО",
+		confusableWith = { "z" },
+	},
+	yu = {
+		id = "yu",
+		glyph = "Ю",
+		glyphLower = "ю",
+		kind = "vowel",
+		order = 32,
+		stage = 11,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_yu" },
+		example = "ЮЛА",
+		confusableWith = {},
+	},
+	ya = {
+		id = "ya",
+		glyph = "Я",
+		glyphLower = "я",
+		kind = "vowel",
+		order = 33,
+		stage = 11,
+		color = COLOR_VOWEL,
+		vo = { name = "letter_ya" },
+		example = "ЯБЛОКО",
+		confusableWith = {},
 	},
 }
 
@@ -150,6 +444,8 @@ Module.all = Letters
 Module.COLOR_VOWEL = COLOR_VOWEL
 Module.COLOR_HARD = COLOR_HARD
 Module.COLOR_SIGN = COLOR_SIGN
+
+Module.COUNT = 33
 
 function Module.get(id: string): Types.Letter?
 	return Letters[id]
@@ -161,47 +457,51 @@ function Module.expect(id: string): Types.Letter
 	return letter
 end
 
--- Все id, отсортированные по методическому порядку (остров, затем order внутри острова).
+-- Все id в алфавитном порядке: А, Б, В … Я. Он же порядок изучения.
 function Module.ordered(): { string }
 	local ids: { string } = {}
 	for id in Letters do
 		table.insert(ids, id)
 	end
 	table.sort(ids, function(a: string, b: string): boolean
-		local la, lb = Letters[a], Letters[b]
-		if la.island ~= lb.island then
-			return la.island < lb.island
-		end
-		return la.order < lb.order
+		return Letters[a].order < Letters[b].order
 	end)
 	return ids
 end
 
-function Module.byIsland(island: number): { string }
+function Module.byStage(stage: number): { string }
 	local ids: { string } = {}
 	for _, id in Module.ordered() do
-		if Letters[id].island == island then
+		if Letters[id].stage == stage then
 			table.insert(ids, id)
 		end
 	end
 	return ids
+end
+
+-- Буква по месту в алфавите: 1 → А, 33 → Я. Нужна «Алфавитной лестнице».
+function Module.at(order: number): Types.Letter?
+	for _, letter in Letters do
+		if letter.order == order then
+			return letter
+		end
+	end
+	return nil
+end
+
+-- Следующая буква алфавита. Для Я возвращает nil — дальше ничего нет.
+function Module.after(id: string): Types.Letter?
+	return Module.at(Module.expect(id).order + 1)
+end
+
+function Module.before(id: string): Types.Letter?
+	return Module.at(Module.expect(id).order - 1)
 end
 
 function Module.vowels(): { string }
 	local ids: { string } = {}
 	for _, id in Module.ordered() do
 		if Letters[id].kind == "vowel" then
-			table.insert(ids, id)
-		end
-	end
-	return ids
-end
-
-function Module.consonants(): { string }
-	local ids: { string } = {}
-	for _, id in Module.ordered() do
-		local kind = Letters[id].kind
-		if kind == "consonant" or kind == "hissing" then
 			table.insert(ids, id)
 		end
 	end

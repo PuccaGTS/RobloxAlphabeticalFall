@@ -21,8 +21,18 @@ local EVENTS: { string } = {
 	"ChallengeEnd", -- S→C  итог и награда
 	"BuyItem", -- C→S
 	"EquipItem", -- C→S
+	"BuildUpgrade", -- C→S  улучшить постройку на своём участке
+	"BaseAssigned", -- S→C  выдан участок: где он стоит (туда переезжает Башня)
 	"PlayVO", -- S→C  проиграть реплику по vo_key
-	"EchoReport", -- C→S  факт «сказал» (без аудиоданных!)
+	--[[
+		S→C  проиграть фразу, собранную из нескольких реплик подряд.
+
+		Нужна математике: «Сколько будет» + «два» + «плюс» + «два» — это четыре
+		записи, но для ребёнка одно задание, и кнопка «повторить» обязана повторять
+		его целиком, а не последний кусок (docs/16-MATH.md § 5).
+	]]
+	"PlayPhrase",
+	"PlaySfx", -- S→C  короткий звуковой эффект по ключу из Config/Sfx
 	"OpenUI", -- S→C  объект мира просит открыть экран ("shop")
 }
 
@@ -37,7 +47,7 @@ local RATE_LIMITS: { [string]: number } = {
 	ChallengeAction = 20,
 	BuyItem = 4,
 	EquipItem = 8,
-	EchoReport = 4,
+	BuildUpgrade = 4,
 }
 
 local RemoteDefs = {}

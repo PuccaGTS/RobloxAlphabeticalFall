@@ -17,6 +17,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ProfileTemplate = require(Shared.Config.ProfileTemplate)
 local Migrations = require(Shared.Logic.Migrations)
+local PlayLog = require(Shared.Logic.PlayLog)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local DataBackend = require(script.Parent.DataBackend)
@@ -31,6 +32,8 @@ local backend: DataBackend.Backend? = nil
 local profiles: { [Player]: any } = {}
 local loading: { [Player]: boolean } = {}
 local failed: { [Player]: string } = {}
+-- Момент, до которого время игрока уже записано в историю занятий.
+local playClock: { [Player]: number } = {}
 local started = false
 
 local function keyFor(player: Player): string
@@ -45,11 +48,29 @@ local function pushSnapshot(player: Player)
 	RemoteDefs.event("ProfileSnapshot"):FireClient(player, ProfileTemplate.toSnapshot(profile))
 end
 
+--[[
+	Переносит время с прошлого учёта в историю занятий. Зовётся перед каждым
+	сохранением, так что в DataStore время уходит с точностью до минуты,
+	а при выходе — до секунды.
+]]
+local function accountPlay(player: Player)
+	local profile = profiles[player]
+	local since = playClock[player]
+	if not profile or not since then
+		return
+	end
+	local now = os.time()
+	PlayLog.addPlay(profile, now, now - since)
+	playClock[player] = now
+end
+
 local function saveProfile(player: Player, release: boolean): boolean
 	local profile = profiles[player]
 	if not profile or not backend then
 		return false
 	end
+
+	accountPlay(player)
 
 	local ok, err = backend:saveAsync(keyFor(player), profile, release)
 	if not ok then
@@ -93,6 +114,7 @@ local function loadProfile(player: Player)
 
 	profile.stats.sessionsCount += 1
 	profiles[player] = profile
+	playClock[player] = now
 
 	-- Первое сохранение сразу: фиксируем блокировку и версию за собой.
 	saveProfile(player, false)
@@ -107,6 +129,7 @@ local function releaseProfile(player: Player)
 	if profiles[player] then
 		saveProfile(player, true)
 		profiles[player] = nil
+		playClock[player] = nil
 	elseif backend and not loading[player] then
 		backend:releaseAsync(keyFor(player))
 	end

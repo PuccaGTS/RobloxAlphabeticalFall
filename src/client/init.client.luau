@@ -12,6 +12,7 @@ local Letters = require(Shared.Config.Letters)
 
 local Controllers = script:WaitForChild("Controllers")
 local AudioController = require(Controllers.AudioController)
+local SfxController = require(Controllers.SfxController)
 local ChallengeController = require(Controllers.ChallengeController)
 local TowerController = require(Controllers.TowerController)
 local UI = script:WaitForChild("UI")
@@ -19,6 +20,7 @@ local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
 
 AudioController.init()
+SfxController.init()
 ChallengeController.init()
 TowerController.init()
 
@@ -33,36 +35,89 @@ ShopUI.build({
 
 HUD.build({
 	onRepeat = function()
+		SfxController.play("tap")
 		AudioController.repeatLast()
 	end,
 	onShop = function()
+		SfxController.play("tap")
 		ShopUI.setOpen(not ShopUI.isOpen())
 	end,
 	onStart = function()
 		ChallengeController.start("letter_rain")
 	end,
-	onBridge = function()
-		ChallengeController.start("syllable_bridge")
+	onLadder = function()
+		ChallengeController.start("alphabet_ladder")
+	end,
+	onMath = function()
+		ChallengeController.start("math_gates")
 	end,
 })
 
--- Срез профиля от сервера: единственный источник состояния для интерфейса.
+--[[
+	Срез профиля от сервера: единственный источник состояния для интерфейса.
+
+	Здесь же ловится покупка. Клиент не знает, удалась ли она — решает сервер, —
+	но видит, что вещей стало больше, и этого достаточно, чтобы звякнуть.
+	Отдельного «покупка прошла» ради звука заводить не за чем.
+]]
+local knownItems = -1
+
 RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any)
 	if typeof(snapshot) ~= "table" then
 		return
 	end
+
+	local items = #(snapshot.inventory or {})
+	if knownItems >= 0 and items > knownItems then
+		SfxController.play("purchase")
+	end
+	knownItems = items
+
+	-- Громкости из настроек профиля. Голос всегда громче остального — это правило
+	-- родительского режима (docs/13-PARENT-MODE.md § 3), и оно живёт в настройках.
+	local settings = snapshot.settings
+	if typeof(settings) == "table" then
+		AudioController.setVolume("Music", settings.music or 0.6)
+		AudioController.setVolume("SFX", settings.sfx or 0.7)
+		AudioController.setVolume("VO", settings.voice or 1)
+	end
+
 	HUD.setStars(snapshot.stars or 0)
 	ShopUI.update(snapshot)
 	TowerController.update(snapshot)
+end)
+
+--[[
+	Сервер просит проиграть эффект: сохранка пройдена, падение. Клиент о таких
+	событиях не знает — они целиком про геометрию забега, а она живёт на сервере.
+]]
+RemoteDefs.event("PlaySfx").OnClientEvent:Connect(function(key: string)
+	if typeof(key) == "string" then
+		SfxController.play(key)
+	end
 end)
 
 -- Объект в мире просит открыть экран (пад магазина в хабе).
 RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string)
 	if screen == "shop" then
 		ShopUI.setOpen(true)
-	elseif screen == "locked_island" then
-		HUD.toast("Этот остров ещё спит. Поучись ещё немножко!", 3)
+	elseif screen == "locked_stage" then
+		HUD.toast("Эти буквы ещё спят. Поучись ещё немножко!", 3)
+	elseif screen == "need_stars" then
+		HUD.toast(
+			"Звёздочек пока не хватает. Занимайся — и накопишь!",
+			3
+		)
 	end
+end)
+
+--[[
+	Сервер выдал участок: Азбучная Башня переезжает во двор ребёнка.
+	До этого момента Башни нет вовсе — ставить её посреди площади, где стоят
+	порталы, значит загородить вход в мир (docs/15-HOME-BASE.md § 4).
+]]
+RemoteDefs.event("BaseAssigned").OnClientEvent:Connect(function(position: Vector3)
+	TowerController.placeAt(position)
 end)
 
 -- Сервер просит проиграть реплику: единственный канал озвучки между сервером и клиентом.
@@ -77,14 +132,30 @@ RemoteDefs.event("PlayVO").OnClientEvent:Connect(function(key: string, interrupt
 	end
 end)
 
--- Предзагружаем звуки букв первого острова: задержка перед звуком буквы недопустима.
+--[[
+	Задание, собранное из нескольких реплик: «Сколько будет» + «два» + «плюс» + «два».
+	Для ребёнка это одно задание, поэтому и кнопка «повторить» повторяет его целиком.
+]]
+RemoteDefs.event("PlayPhrase").OnClientEvent:Connect(function(keys: { string }, interrupt: boolean?)
+	if typeof(keys) ~= "table" or #keys == 0 then
+		return
+	end
+	if interrupt == true then
+		AudioController.stopAll()
+	end
+	AudioController.speakPhrase(keys)
+end)
+
+--[[
+	Предзагружаем названия букв первых двух ступеней: задержка перед буквой недопустима.
+	Две, а не одна: вторая открывается быстро, и подгружать её в момент открытия —
+	значит поймать паузу ровно там, где ребёнок ждёт новую букву.
+]]
 task.defer(function()
 	local keys: { string } = {}
-	for _, id in Letters.byIsland(1) do
-		local letter = Letters.expect(id)
-		table.insert(keys, letter.vo.sound)
-		if letter.vo.long then
-			table.insert(keys, letter.vo.long)
+	for _, stage in { 1, 2 } do
+		for _, id in Letters.byStage(stage) do
+			table.insert(keys, Letters.expect(id).vo.name)
 		end
 	end
 	AudioController.preload(keys)

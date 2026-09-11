@@ -9,11 +9,15 @@
 	   но прекрасно понимает «вот эти уже мои, а эти ещё нет».
 	2. Это ЦЕЛЬ. Башню видно с любой точки площади, и она достраивается сама
 	   по мере обучения — ради этого возвращаются.
-	3. Это ПОВТОРЕНИЕ. Тап по букве произносит её. Бесплатно, без испытания
+	3. Это ПОВТОРЕНИЕ. Тап по букве называет её: «Буква М». Бесплатно, без испытания
 	   и без награды — просто подошёл и послушал. Ровно то повторение, ради которого
-	   существует планировщик (docs/02-LEARNING.md § 6).
+	   существует планировщик (docs/02-LEARNING.md § 5).
 
 	Башня строится на клиенте: она у каждого своя, один общий объект в мире так не умеет.
+
+	Стоит она НЕ в центре карты, а во дворе ребёнка: сервер выдаёт участок и присылает
+	место под Башню (docs/15-HOME-BASE.md § 4). Витрина обучения — часть «моего двора»,
+	а не памятник на площади, и соседям её тоже видно.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,7 +31,8 @@ local Glyph = require(script.Parent.Parent.UI.Glyph)
 
 local TowerController = {}
 
-local BASE_POSITION = Vector3.new(0, 4, 0)
+-- Пока участок не выдан, Башне стоять негде: место приходит с сервера.
+local basePosition: Vector3? = nil
 local SEGMENT_HEIGHT = 2.4
 local SEGMENT_SIZE = Vector3.new(5, 2.2, 5)
 local FOLDER_NAME = "AlphabetTower"
@@ -37,6 +42,7 @@ local COLOR_LOCKED = Color3.fromRGB(105, 108, 122)
 local segments: { [string]: BasePart } = {}
 local folder: Folder? = nil
 local counter: TextLabel? = nil
+local lastSnapshot: any = nil
 
 local function buildSegment(letterId: string, index: number): BasePart
 	local letter = Letters.expect(letterId)
@@ -49,7 +55,7 @@ local function buildSegment(letterId: string, index: number): BasePart
 	part.Material = Enum.Material.SmoothPlastic
 	part.Color = COLOR_LOCKED
 	part.Transparency = 0.4
-	part.CFrame = CFrame.new(BASE_POSITION + Vector3.new(0, index * SEGMENT_HEIGHT, 0))
+	part.CFrame = CFrame.new((basePosition or Vector3.zero) + Vector3.new(0, index * SEGMENT_HEIGHT, 0))
 		* CFrame.Angles(0, index * 0.22, 0)
 
 	Glyph.attach(part, letter.glyph, 0.9)
@@ -59,7 +65,7 @@ local function buildSegment(letterId: string, index: number): BasePart
 	click.Parent = part
 
 	click.MouseClick:Connect(function()
-		AudioController.speak(letter.vo.sound)
+		AudioController.speak(letter.vo.name)
 		-- Отклик обязателен: без него тап по букве ощущается как «ничего не произошло»,
 		-- особенно пока озвучки нет.
 		local original = part.Size
@@ -78,7 +84,7 @@ local function buildSign(parent: Instance)
 	local sign = Instance.new("Part")
 	sign.Name = "TowerSign"
 	sign.Size = Vector3.new(10, 3, 0.6)
-	sign.CFrame = CFrame.new(BASE_POSITION + Vector3.new(0, -0.5, 6))
+	sign.CFrame = CFrame.new((basePosition or Vector3.zero) + Vector3.new(0, -0.5, 6))
 	sign.Color = Color3.fromRGB(255, 240, 200)
 	sign.Anchored = true
 	sign.CanCollide = false
@@ -118,7 +124,7 @@ local function buildSign(parent: Instance)
 end
 
 function TowerController.build()
-	if folder then
+	if folder or not basePosition then
 		return
 	end
 
@@ -144,6 +150,10 @@ function TowerController.update(snapshot)
 	if not snapshot or typeof(snapshot.mastery) ~= "table" then
 		return
 	end
+
+	-- Срез запоминаем всегда: Башня может появиться позже среза, когда сервер
+	-- выдаст участок, и тогда её нужно сразу покрасить по текущему прогрессу.
+	lastSnapshot = snapshot
 
 	local known = 0
 
@@ -179,8 +189,39 @@ function TowerController.update(snapshot)
 	end
 end
 
-function TowerController.init()
+--[[
+	Сервер выдал участок: ставим Башню во дворе.
+
+	Место может прийти второй раз (например, участок переназначили) — тогда Башня
+	собирается заново на новом месте. Пересборка дешевле, чем перенос: сегментов
+	тридцать три, и они анкерные.
+]]
+function TowerController.placeAt(position: Vector3)
+	if typeof(position) ~= "Vector3" then
+		return
+	end
+	if basePosition and (basePosition - position).Magnitude < 0.5 then
+		return
+	end
+
+	basePosition = position
+
+	if folder then
+		folder:Destroy()
+		folder = nil
+		table.clear(segments)
+		counter = nil
+	end
+
 	TowerController.build()
+
+	if lastSnapshot then
+		TowerController.update(lastSnapshot)
+	end
+end
+
+function TowerController.init()
+	-- Строить пока нечего: ждём участок от сервера (см. placeAt).
 end
 
 return TowerController

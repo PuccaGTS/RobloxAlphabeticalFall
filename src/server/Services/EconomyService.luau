@@ -32,9 +32,11 @@ local SOURCES: { [string]: boolean } = {
 	challenge_result = true,
 	letter_learned = true,
 	letter_mastered = true,
-	syllable_first_read = true,
-	word_first_built = true,
-	island_boss = true,
+	-- Ступень счёта осваивается по тем же правилам, что буква, и стоит столько же:
+	-- математика ребёнку не легче алфавита (docs/16-MATH.md § 6).
+	math_learned = true,
+	math_mastered = true,
+	stage_cleared = true,
 	letter_of_the_day = true,
 	daily_streak = true,
 	secret_chest = true,

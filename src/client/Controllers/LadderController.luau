@@ -1,10 +1,14 @@
 --!nonstrict
 --[[
-	Клиентская часть «Моста слогов».
+	Клиентская часть «Алфавитной лестницы».
 
-	Показываем ровно одну секцию за раз: слева согласная, справа гласные на выбор.
-	Никакой пропасти-угрозы и падения вниз — ребёнок ничем не рискует, он просто
-	достраивает мост. Каждый верный выбор кладёт доску и звучит слитным слогом.
+	Показываем ровно одну ступень за раз: слева буква, на которой мы стоим,
+	справа плиты на выбор. Никакой пропасти-угрозы и падения вниз — ребёнок ничем
+	не рискует, он просто поднимается. Каждый верный выбор кладёт ступень
+	и называет взятую букву.
+
+	Раньше на этом месте был «Мост слогов» с тем же устройством. Изменилось
+	не оформление, а вопрос: не «какой звук получится», а «какая буква следующая».
 ]]
 
 local Players = game:GetService("Players")
@@ -18,10 +22,11 @@ local RemoteDefs = require(Shared.Net.RemoteDefs)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
 local HUD = require(script.Parent.Parent.UI.HUD)
 
-local BridgeController = {}
+local LadderController = {}
 
-local FOLDER_NAME = "AlphabetFall_Bridge"
-local PLANK_STEP = 7
+local FOLDER_NAME = "AlphabetFall_Ladder"
+local RUNG_STEP = 7
+local RUNG_RISE = 2.2 -- каждая ступень выше предыдущей: лестница должна расти вверх
 local BLOCK_SIZE = Vector3.new(5, 5, 1)
 
 local player = Players.LocalPlayer
@@ -76,23 +81,26 @@ local function showSection(index: number)
 		return
 	end
 
-	-- Задание сказано вслух голосом, но озвучки пока нет — дублируем его на экране,
-	-- иначе ребёнок видит только цветные кубы и не знает, что от него хотят.
-	local targetGlyph = Letters.expect(section.targetVowel).glyph
-	HUD.showTarget(targetGlyph, index - 1, #spec.params.sections)
-	HUD.toast(`Приставь букву {targetGlyph}`, 3)
+	--[[
+		Задание сказано вслух голосом, но озвучки пока нет — дублируем его на экране,
+		иначе ребёнок видит только цветные кубы и не знает, что от него хотят.
 
-	local base = origin * CFrame.new(0, 0, -(index - 1) * PLANK_STEP)
+		Показываем букву, НА КОТОРОЙ стоим, а не ту, которую ищем: подсказать ответ
+		значит отменить задание.
+	]]
+	HUD.showTarget(section.fromGlyph, index - 1, #spec.params.sections)
+	HUD.toast(`Какая буква после {section.fromGlyph}?`, 3)
 
-	-- Левая половинка (согласная, а на первом острове — гласная): она никуда
-	-- не девается, ребёнок «приставляет» к ней вторую букву
-	local left = makeBlock(
-		"Left",
-		section.leftGlyph,
-		Letters.expect(section.leftId).color,
+	local base = origin * CFrame.new(0, (index - 1) * RUNG_RISE, -(index - 1) * RUNG_STEP)
+
+	-- Буква, с которой поднимаемся: она никуда не девается, ребёнок видит, откуда шагает
+	local from = makeBlock(
+		"From",
+		section.fromGlyph,
+		Letters.expect(section.fromId).color,
 		base * CFrame.new(-4.5, 0, 0)
 	)
-	table.insert(sectionParts, left)
+	table.insert(sectionParts, from)
 
 	for order, choice in section.choices do
 		local offset = 2 + (order - 1) * 5
@@ -120,32 +128,32 @@ local function showSection(index: number)
 	end
 end
 
--- Доска моста: видимый след того, что ребёнок уже прочитал.
-local function layPlank(index: number, text: string)
+-- Ступень лестницы: видимый след того, сколько букв ребёнок уже прошёл по порядку.
+local function layStep(index: number, text: string)
 	if not folder then
 		return
 	end
 
-	local base = origin * CFrame.new(0, -2.5, -(index - 1) * PLANK_STEP)
-	local plank = Instance.new("Part")
-	plank.Name = `Plank_{index}`
-	plank.Size = Vector3.new(10, 0.6, 6)
-	plank.CFrame = base
-	plank.Color = Color3.fromRGB(200, 170, 120)
-	plank.Anchored = true
-	plank.Material = Enum.Material.WoodPlanks
-	plank.Transparency = 1
-	plank.Parent = folder
+	local base = origin * CFrame.new(0, (index - 1) * RUNG_RISE - 2.5, -(index - 1) * RUNG_STEP)
+	local step = Instance.new("Part")
+	step.Name = `Step_{index}`
+	step.Size = Vector3.new(10, 0.6, 6)
+	step.CFrame = base
+	step.Color = Color3.fromRGB(200, 170, 120)
+	step.Anchored = true
+	step.Material = Enum.Material.WoodPlanks
+	step.Transparency = 1
+	step.Parent = folder
 
-	-- Прочитанный слог остаётся написанным на доске: ребёнок видит,
-	-- сколько он уже прочитал, и это самая честная награда в игре.
-	Glyph.attach(plank, text, 0.55, Color3.fromRGB(255, 245, 220))
+	-- Взятая буква остаётся написанной на ступени: ребёнок видит кусок алфавита,
+	-- который он выложил сам, и это самая честная награда в игре.
+	Glyph.attach(step, text, 0.55, Color3.fromRGB(255, 245, 220))
 
-	TweenService:Create(plank, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Transparency = 0 }):Play()
+	TweenService:Create(step, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Transparency = 0 }):Play()
 end
 
-function BridgeController.start(newSpec: any)
-	BridgeController.stop()
+function LadderController.start(newSpec: any)
+	LadderController.stop()
 
 	spec = newSpec
 	currentSection = 1
@@ -160,13 +168,13 @@ function BridgeController.start(newSpec: any)
 	showSection(1)
 end
 
-function BridgeController.feedback(fb: any)
+function LadderController.feedback(fb: any)
 	if not spec then
 		return
 	end
 
 	if fb.correct then
-		layPlank(fb.sectionIndex or currentSection, fb.syllableText or "")
+		layStep(fb.sectionIndex or currentSection, fb.stepGlyph or "")
 		currentSection = (fb.sectionIndex or currentSection) + 1
 		task.delay(0.9, function()
 			if spec then
@@ -190,7 +198,7 @@ function BridgeController.feedback(fb: any)
 	end
 end
 
-function BridgeController.stop()
+function LadderController.stop()
 	clearSection()
 	if folder then
 		folder:Destroy()
@@ -201,4 +209,4 @@ function BridgeController.stop()
 	currentSection = 1
 end
 
-return BridgeController
+return LadderController

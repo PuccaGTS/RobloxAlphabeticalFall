@@ -4,6 +4,7 @@ local Shared = ReplicatedStorage.Shared
 
 local Migrations = require(Shared.Logic.Migrations)
 local ProfileTemplate = require(Shared.Config.ProfileTemplate)
+local Base = require(Shared.Config.Base)
 
 local NOW = 1_700_000_000
 
@@ -85,7 +86,7 @@ return function()
 				local profile = Migrations.fillDefaults({ settings = { music = 0.1 } }, NOW)
 
 				expect(profile.settings.music).to.equal(0.1)
-				expect(profile.settings.echoMode).to.equal("A")
+				expect(profile.settings.voice).to.equal(1)
 				expect(profile.settings.subtitles).to.equal(false)
 			end
 		)
@@ -103,11 +104,22 @@ return function()
 			expect(profile.stars).to.equal(0)
 		end)
 
-		it("режим эха по умолчанию — без микрофона", function()
-			local profile = Migrations.fillDefaults({}, NOW)
-			expect(profile.settings.echoMode).to.equal("A")
-			expect(profile.parent.echoConsent).to.equal(false)
-		end)
+		it(
+			"первая ступень алфавита открыта в любом профиле",
+			function()
+				local profile = Migrations.fillDefaults({}, NOW)
+				expect(profile.stages[1].unlocked).to.equal(true)
+			end
+		)
+
+		it(
+			"у профиля без забегов появляется пустая таблица забегов",
+			function()
+				local profile = Migrations.fillDefaults({}, NOW)
+				expect(typeof(profile.runs)).to.equal("table")
+				expect(next(profile.runs)).to.equal(nil)
+			end
+		)
 	end)
 
 	describe("ProfileTemplate.toSnapshot", function()
@@ -144,7 +156,7 @@ return function()
 			local snapshot = ProfileTemplate.toSnapshot(profile)
 
 			expect(snapshot.parent).to.equal(nil)
-			expect(snapshot.echoConsent).to.equal(false)
+			expect(snapshot.settings.hideRobux).to.equal(false)
 		end)
 
 		it(
@@ -159,5 +171,320 @@ return function()
 				expect(#profile.inventory).to.equal(1)
 			end
 		)
+	end)
+
+	--[[
+		Шаг 1 — переход игры со звуков на алфавит. Проверяем главное: выученные буквы
+		переживают миграцию. Всё остальное можно потерять, буквы — нет.
+	]]
+	describe("Миграция 1 → 2: буквы вместо звуков", function()
+		local function legacyProfile()
+			return {
+				version = 1,
+				letters = {
+					m = { mastery = 3, correct = 9, wrong = 1, streak = 4, types = { "letter_rain" } },
+				},
+				syllables = { ma = true, mu = true },
+				words = { mama = true },
+				islands = {
+					[1] = { unlocked = true, bossDone = true, chests = { "chest_1" } },
+					[2] = { unlocked = true, bossDone = false, chests = {} },
+				},
+				settings = { music = 0.4, echoMode = "B" },
+				parent = { echoConsent = true },
+			}
+		end
+
+		it("прогресс по буквам сохраняется целиком", function()
+			local profile = Migrations.normalize(legacyProfile(), NOW)
+
+			expect(profile.letters.m.mastery).to.equal(3)
+			expect(profile.letters.m.correct).to.equal(9)
+		end)
+
+		it("слоги и слова уходят из профиля", function()
+			local profile = Migrations.normalize(legacyProfile(), NOW)
+
+			expect(profile.syllables).to.equal(nil)
+			expect(profile.words).to.equal(nil)
+		end)
+
+		it(
+			"острова становятся ступенями и не теряют открытость",
+			function()
+				local profile = Migrations.normalize(legacyProfile(), NOW)
+
+				expect(profile.islands).to.equal(nil)
+				expect(profile.stages[1].unlocked).to.equal(true)
+				expect(profile.stages[2].unlocked).to.equal(true)
+			end
+		)
+
+		it("режим эха уезжает вместе с испытанием", function()
+			local profile = Migrations.normalize(legacyProfile(), NOW)
+
+			expect(profile.settings.echoMode).to.equal(nil)
+			expect(profile.parent.echoConsent).to.equal(nil)
+			expect(profile.settings.music).to.equal(0.4)
+		end)
+
+		it(
+			"профиль без островов не падает и получает первую ступень",
+			function()
+				local profile = Migrations.normalize({ version = 1 }, NOW)
+
+				expect(profile.version).to.equal(ProfileTemplate.VERSION)
+				expect(profile.stages[1].unlocked).to.equal(true)
+			end
+		)
+	end)
+
+	--[[
+		Шаг 2 — сохранка забега переехала в профиль. Проверяем, что старый профиль
+		её получает пустой, а мёртвое поле ступени уходит.
+	]]
+	describe("Миграция 2 → 3: сохранка в профиле", function()
+		local function version2Profile()
+			return {
+				version = 2,
+				letters = { m = { mastery = 2, correct = 4, wrong = 1, streak = 2, types = {} } },
+				stages = {
+					[1] = { unlocked = true, checkpoint = 0, chests = {} },
+					[2] = { unlocked = true, checkpoint = 3, chests = {} },
+				},
+			}
+		end
+
+		it("мёртвая сохранка ступени убирается", function()
+			local profile = Migrations.normalize(version2Profile(), NOW)
+
+			expect(profile.stages[1].checkpoint).to.equal(nil)
+			expect(profile.stages[2].checkpoint).to.equal(nil)
+		end)
+
+		it("открытость ступеней при этом не теряется", function()
+			local profile = Migrations.normalize(version2Profile(), NOW)
+
+			expect(profile.stages[1].unlocked).to.equal(true)
+			expect(profile.stages[2].unlocked).to.equal(true)
+			expect(profile.letters.m.mastery).to.equal(2)
+		end)
+
+		it("появляется таблица незаконченных забегов", function()
+			local profile = Migrations.normalize(version2Profile(), NOW)
+
+			expect(profile.version).to.equal(ProfileTemplate.VERSION)
+			expect(typeof(profile.runs)).to.equal("table")
+			expect(next(profile.runs)).to.equal(nil)
+		end)
+
+		it("уже записанный забег миграция не трогает", function()
+			local profile = version2Profile()
+			profile.runs = {
+				tunnel_run = { challengeId = "tunnel_run", seed = 7, checkpoint = 2 },
+			}
+
+			local migrated = Migrations.normalize(profile, NOW)
+
+			expect(migrated.runs.tunnel_run.seed).to.equal(7)
+			expect(migrated.runs.tunnel_run.checkpoint).to.equal(2)
+		end)
+
+		it(
+			"испорченная таблица забегов заменяется пустой",
+			function()
+				local profile = version2Profile()
+				profile.runs = "не таблица"
+
+				local migrated = Migrations.normalize(profile, NOW)
+
+				expect(typeof(migrated.runs)).to.equal("table")
+				expect(next(migrated.runs)).to.equal(nil)
+			end
+		)
+	end)
+
+	--[[
+		Шаг 3 — у игрока появился участок на спавне. Проверяем, что старый профиль
+		получает пустой участок, а не отсутствие поля: ноль — это «дома ещё нет»,
+		а nil — это упавший сервис при первой же попытке построить.
+	]]
+	describe("Миграция 3 → 4: участок игрока", function()
+		local function version3Profile()
+			return {
+				version = 3,
+				stars = 500,
+				letters = { m = { mastery = 3, correct = 9, wrong = 1, streak = 4, types = {} } },
+				stages = { [1] = { unlocked = true, chests = {} } },
+				runs = {},
+			}
+		end
+
+		it("появляется пустой участок", function()
+			local profile = Migrations.normalize(version3Profile(), NOW)
+
+			expect(profile.version).to.equal(ProfileTemplate.VERSION)
+			expect(typeof(profile.base)).to.equal("table")
+			for _, id in Base.ids() do
+				expect(profile.base[id]).to.equal(0)
+			end
+		end)
+
+		it("звёздочки и буквы при этом не трогаются", function()
+			local profile = Migrations.normalize(version3Profile(), NOW)
+
+			expect(profile.stars).to.equal(500)
+			expect(profile.letters.m.mastery).to.equal(3)
+		end)
+
+		it("уже построенный дом миграция не сносит", function()
+			local profile = version3Profile()
+			profile.base = { house = 2, roof = 1 }
+
+			local migrated = Migrations.normalize(profile, NOW)
+
+			expect(migrated.base.house).to.equal(2)
+			expect(migrated.base.roof).to.equal(1)
+			expect(migrated.base.yard).to.equal(0)
+		end)
+
+		it("испорченный участок не роняет вход в игру", function()
+			local profile = version3Profile()
+			profile.base = "сарай"
+
+			local migrated = Migrations.normalize(profile, NOW)
+
+			expect(typeof(migrated.base)).to.equal("table")
+			expect(migrated.base.house).to.equal(0)
+		end)
+
+		it("срез для клиента отдаёт участок", function()
+			local profile = ProfileTemplate.new(NOW)
+			profile.base.house = 3
+
+			local snapshot = ProfileTemplate.toSnapshot(profile)
+
+			expect(snapshot.base.house).to.equal(3)
+			snapshot.base.house = 99
+			expect(profile.base.house).to.equal(3)
+		end)
+	end)
+
+	--[[
+		Шаг 4 — открылся мир математики. Проверяем главное: прогресс по буквам
+		миграция не трогает вовсе. Две ветки обучения независимы, и появление счёта
+		не имеет права стоить ребёнку ни одной выученной буквы.
+	]]
+	describe("Миграция 4 → 5: прогресс по счёту", function()
+		local function version4Profile()
+			return {
+				version = 4,
+				stars = 120,
+				letters = { m = { mastery = 2, correct = 5, wrong = 1, streak = 2, types = {} } },
+				stages = { [1] = { unlocked = true, chests = {} } },
+				runs = {},
+				base = { house = 1, roof = 0, yard = 0, fence = 0 },
+			}
+		end
+
+		it("появляется пустой прогресс по математике", function()
+			local profile = Migrations.normalize(version4Profile(), NOW)
+
+			expect(profile.version).to.equal(ProfileTemplate.VERSION)
+			expect(typeof(profile.math)).to.equal("table")
+			expect(next(profile.math)).to.equal(nil)
+		end)
+
+		it("буквы, звёздочки и дом при этом не трогаются", function()
+			local profile = Migrations.normalize(version4Profile(), NOW)
+
+			expect(profile.stars).to.equal(120)
+			expect(profile.letters.m.mastery).to.equal(2)
+			expect(profile.base.house).to.equal(1)
+		end)
+
+		it("уже начатый счёт миграция не стирает", function()
+			local profile = version4Profile()
+			profile.math = { count_group = { mastery = 3, correct = 7, wrong = 0, streak = 5, types = {} } }
+
+			local migrated = Migrations.normalize(profile, NOW)
+
+			expect(migrated.math.count_group.mastery).to.equal(3)
+		end)
+
+		it(
+			"испорченный прогресс по счёту не роняет вход в игру",
+			function()
+				local profile = version4Profile()
+				profile.math = "семь"
+
+				local migrated = Migrations.normalize(profile, NOW)
+
+				expect(typeof(migrated.math)).to.equal("table")
+				expect(next(migrated.math)).to.equal(nil)
+			end
+		)
+
+		it(
+			"срез для клиента отдаёт статусы ступеней счёта",
+			function()
+				local profile = ProfileTemplate.new(NOW)
+				profile.math = { digit_small = { mastery = 2, nextReview = NOW } }
+
+				local snapshot = ProfileTemplate.toSnapshot(profile)
+
+				expect(snapshot.math.digit_small).to.equal(2)
+			end
+		)
+	end)
+
+	describe("Миграция 5 → 6: история занятий", function()
+		local function version5Profile()
+			return {
+				version = 5,
+				stars = 40,
+				letters = { a = { mastery = 3, correct = 9, wrong = 0, streak = 4, types = {} } },
+				math = {},
+				dailyStreak = 0,
+				stats = { totalPlayMin = 0, sessionsCount = 3, firstJoin = NOW },
+			}
+		end
+
+		it("история начинается пустой, остальное на месте", function()
+			local profile = Migrations.normalize(version5Profile(), NOW)
+
+			expect(profile.version).to.equal(ProfileTemplate.VERSION)
+			expect(typeof(profile.playLog)).to.equal("table")
+			expect(#profile.playLog).to.equal(0)
+			expect(profile.letters.a.mastery).to.equal(3)
+			expect(profile.stats.sessionsCount).to.equal(3)
+		end)
+
+		it("испорченная история не роняет вход в игру", function()
+			local profile = version5Profile()
+			profile.playLog = { { day = "вчера", sec = 60 }, { day = 20000, sec = 120 } }
+
+			local migrated = Migrations.normalize(profile, NOW)
+
+			expect(#migrated.playLog).to.equal(1)
+			expect(migrated.playLog[1].sec).to.equal(120)
+		end)
+
+		it("битую историю чинит и у профиля текущей версии", function()
+			local profile = ProfileTemplate.new(NOW)
+			profile.playLog = { "мусор", 7, { day = 20000, sec = 300 } }
+
+			local migrated = Migrations.normalize(profile, NOW)
+
+			expect(#migrated.playLog).to.equal(1)
+			expect(migrated.playLog[1].sec).to.equal(300)
+		end)
+
+		it("история не уходит клиенту в срезе профиля", function()
+			local profile = ProfileTemplate.new(NOW)
+			profile.playLog = { { day = 20000, sec = 600 } }
+
+			expect(ProfileTemplate.toSnapshot(profile).playLog).to.never.be.ok()
+		end)
 	end)
 end
