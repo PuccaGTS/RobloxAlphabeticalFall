@@ -642,6 +642,181 @@ return function()
 	end)
 
 	--[[
+		Ряды букв на дорожке (docs/14-TUNNEL-MODE.md § 4.2). Главное: ряд стоит
+		на целом полу между препятствиями и не лезет в зону ворот, буква своего
+		отрезка в нём ровно одна, а подобрать её можно один раз.
+	]]
+	describe("TunnelRun — буквы на дорожке", function()
+		local function allSpecs()
+			local specs = {}
+			for difficulty = 1, 5 do
+				for _, level in { 1, 4, 11 } do
+					table.insert(specs, build(Letters.ordered(), difficulty, level))
+				end
+				table.insert(specs, ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty))
+			end
+			return specs
+		end
+
+		it("ряды есть, и в каждом одна буква своего отрезка", function()
+			for _, spec in allSpecs() do
+				expect(#spec.params.rows > 0).to.equal(true)
+				for _, row in spec.params.rows do
+					local gate = spec.params.gates[row.segment]
+					local targets = 0
+					for _, item in row.items do
+						if item.isTarget then
+							targets += 1
+							expect(item.letterId).to.equal(gate.targetLetter)
+						else
+							expect(item.letterId).never.to.equal(gate.targetLetter)
+						end
+					end
+					expect(targets).to.equal(1)
+					expect(#row.items >= 2).to.equal(true)
+				end
+			end
+		end)
+
+		it(
+			"ряд стоит перед своими воротами и не в зоне решения",
+			function()
+				for _, spec in allSpecs() do
+					for _, row in spec.params.rows do
+						local gate = spec.params.gates[row.segment]
+						local previous = spec.params.gates[row.segment - 1]
+						expect(row.z < gate.z - Tunnel.CLEARANCE_BEFORE_GATE + 0.001).to.equal(true)
+						expect(row.z > (if previous then previous.z else 0)).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it("ряд не стоит на препятствии", function()
+			for _, spec in allSpecs() do
+				for _, row in spec.params.rows do
+					for _, obstacle in spec.params.obstacles do
+						expect(math.abs(obstacle.z - row.z) >= Tunnel.OBSTACLE_PITCH / 2 - 0.001).to.equal(
+							true
+						)
+					end
+				end
+			end
+		end)
+
+		it("плитки ряда на разных дорожках", function()
+			for _, spec in allSpecs() do
+				for _, row in spec.params.rows do
+					local seen = {}
+					for _, item in row.items do
+						expect(seen[item.lane]).to.equal(nil)
+						seen[item.lane] = true
+					end
+				end
+			end
+		end)
+
+		it("по тому же рецепту — те же ряды", function()
+			local spec = build(nil, 5, 3)
+			local again = TunnelRun.Rebuild({
+				challengeId = spec.challengeId,
+				seed = spec.seed,
+				letters = spec.letters,
+				difficulty = spec.difficulty,
+				level = spec.level,
+				checkpoint = 1,
+				savedAt = 0,
+			})
+			expect(#again.params.rows).to.equal(#spec.params.rows)
+			for index, row in spec.params.rows do
+				expect(again.params.rows[index].z).to.equal(row.z)
+				for slot, item in row.items do
+					expect(again.params.rows[index].items[slot].lane).to.equal(item.lane)
+					expect(again.params.rows[index].items[slot].letterId).to.equal(item.letterId)
+				end
+			end
+		end)
+
+		it(
+			"своя буква подбирается один раз, чужая — никогда",
+			function()
+				local spec = build(nil, 5, 3)
+				local state = stateFor(spec)
+				local row = spec.params.rows[1]
+				local targetSlot, otherSlot
+				for slot, item in row.items do
+					if item.isTarget then
+						targetSlot = slot
+					else
+						otherSlot = slot
+					end
+				end
+
+				expect(
+					TunnelRun.Validate(state, { kind = "collect", row = row.index, slot = otherSlot }).handled
+				).to.equal(false)
+				local first =
+					TunnelRun.Validate(state, { kind = "collect", row = row.index, slot = targetSlot })
+				expect(first.handled).to.equal(true)
+				expect(first.collect).to.equal(true)
+				expect(first.letterId).to.equal(row.items[targetSlot].letterId)
+				expect(
+					TunnelRun.Validate(state, { kind = "collect", row = row.index, slot = targetSlot }).handled
+				).to.equal(false)
+			end
+		)
+
+		-- Подбор — «монетка», а не ответ: ворота и звёзды итога от него не меняются.
+		it("подбор не засчитывается как ворота", function()
+			local spec = build(nil, 5, 3)
+			local state = stateFor(spec)
+			local row = spec.params.rows[1]
+			for slot, item in row.items do
+				if item.isTarget then
+					TunnelRun.Validate(state, { kind = "collect", row = row.index, slot = slot })
+				end
+			end
+			expect(state.caught).to.equal(0)
+			expect(state.missed).to.equal(0)
+		end)
+
+		it(
+			"ряды пройденных до выхода отрезков не собираются",
+			function()
+				local spec = build(nil, 5, 3)
+				local resumed = TunnelRun.Rebuild({
+					challengeId = spec.challengeId,
+					seed = spec.seed,
+					letters = spec.letters,
+					difficulty = spec.difficulty,
+					level = spec.level,
+					checkpoint = spec.targetCount,
+					savedAt = 0,
+				})
+				local state = stateFor(resumed)
+				for _, row in resumed.params.rows do
+					for slot in row.items do
+						expect(
+							TunnelRun.Validate(state, { kind = "collect", row = row.index, slot = slot }).handled
+						).to.equal(false)
+					end
+				end
+			end
+		)
+
+		it("мусор вместо ряда не роняет забег", function()
+			local state = stateFor(build())
+			expect(TunnelRun.Validate(state, { kind = "collect" }).handled).to.equal(false)
+			expect(TunnelRun.Validate(state, { kind = "collect", row = 999, slot = 1 }).handled).to.equal(
+				false
+			)
+			expect(TunnelRun.Validate(state, { kind = "collect", row = 1, slot = "а" }).handled).to.equal(
+				false
+			)
+		end)
+	end)
+
+	--[[
 		Полоса препятствий — тот же забег с перевёрнутыми пропорциями.
 		Проверяем ровно это: что она осталась забегом с буквами, а не превратилась
 		в паркур ради паркура.

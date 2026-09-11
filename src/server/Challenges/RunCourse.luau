@@ -33,6 +33,33 @@ local CourseLayout = require(script.Parent.CourseLayout)
 
 local RunCourse = {}
 
+-- Соль генератора рядов букв: у них свой Random, чтобы не сдвигать ворота и препятствия.
+local ROW_SEED_SALT = 7919
+
+--[[
+	Ряд букв на дорожке перед воротами: буква этого отрезка и одна отвлекающая —
+	из тех же ворот, чтобы на дорожке не появлялось букв, которых ребёнок
+	на этом отрезке и не видит. Двух плиток хватает: ряд — не задача, а «монетка»,
+	и ребёнок должен успеть свернуть к нужной на бегу.
+]]
+local function makeRow(gate, _random: Random)
+	local target = Letters.expect(gate.targetLetter)
+	local items = {
+		{ letterId = target.id, glyph = target.glyph, color = target.color, isTarget = true },
+	}
+	for _, opening in gate.openings do
+		if not opening.isTarget and opening.letterId ~= target.id then
+			local other = Letters.expect(opening.letterId)
+			table.insert(
+				items,
+				{ letterId = other.id, glyph = other.glyph, color = other.color, isTarget = false }
+			)
+			break
+		end
+	end
+	return items
+end
+
 --[[
 	Отвлекающие буквы уровня: по группам из Config/Levels, каждая перемешана
 	сидом забега. Повторов в одних воротах нет — две одинаковые буквы в соседних
@@ -164,10 +191,13 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 
 		local random = Random.new(seed)
 
-		local gates, obstacles, checkpoints, length = CourseLayout.layout(random, {
+		local gates, obstacles, checkpoints, length, rows = CourseLayout.layout(random, {
 			gateCount = gateCount,
 			obstacleCount = obstacleCount,
 			obstacleTier = obstacleTier,
+			rowsPerSegment = if params.collect then DifficultyCurve.pick(params.collect, difficulty) else 0,
+			rowRandom = Random.new(seed + ROW_SEED_SALT),
+			makeRow = makeRow,
 			makeGate = function(index: number, gateRandom: Random)
 				local targetId = targets[index]
 				local target = Letters.expect(targetId)
@@ -219,6 +249,7 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 				gates = gates,
 				obstacles = obstacles,
 				checkpoints = checkpoints,
+				rows = rows,
 				length = length,
 				slowSeconds = slowSeconds,
 				slowFactor = slowFactor,
@@ -286,6 +317,35 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 
 		if action.kind == "finish" then
 			return { handled = true, correct = false, silent = true, finished = true }
+		end
+
+		--[[
+			Буква на дорожке. Засчитывается только буква своего отрезка и только
+			один раз; отвлекающая плитка триггера не имеет вовсе, и пробежать сквозь
+			неё ничего не стоит. Ряды пройденных до выхода отрезков не собираются:
+			их «монетки» уже взяты или упущены тогда.
+
+			Это не ответ: в статистику освоения подбор не идёт. Пробежать по букве
+			можно и случайно, а отчёт родителю должен знать только решения в воротах.
+		]]
+		if action.kind == "collect" then
+			local row = (state.spec.params.rows or {})[action.row]
+			local item = row and row.items[action.slot]
+			if not item or not item.isTarget or row.segment <= (state.spec.params.resumeFrom or 0) then
+				return { handled = false }
+			end
+			state.collected = state.collected or {}
+			if state.collected[row.index] then
+				return { handled = false }
+			end
+			state.collected[row.index] = true
+			return {
+				handled = true,
+				collect = true,
+				letterId = item.letterId,
+				row = row.index,
+				slot = action.slot,
+			}
 		end
 
 		if action.kind ~= "gate" or typeof(action.gateIndex) ~= "number" then

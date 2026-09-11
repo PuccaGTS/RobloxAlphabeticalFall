@@ -366,6 +366,18 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		return
 	end
 
+	--[[
+		Буква, подобранная на дорожке: звёздочка и звон, но не ответ. Ни похвалы
+		голосом, ни следующего задания — иначе голос тараторил бы на каждом
+		шаге забега и перебивал задание ворот.
+	]]
+	if result.collect then
+		ProgressService.awardCollect(player, result.letterId)
+		fire(answerHooks, player, state.spec, result)
+		RemoteDefs.event("PlaySfx"):FireClient(player, "correct")
+		return
+	end
+
 	-- «Тихое» действие (пересечение финиша) прогресс не двигает и наград не приносит.
 	if result.silent then
 		if result.finished then

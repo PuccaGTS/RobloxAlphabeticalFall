@@ -343,6 +343,14 @@ function ProgressService.applyMathAnswer(player: Player, answer): AnswerOutcome?
 	return outcome
 end
 
+--[[
+	Буква своего отрезка, подобранная на дорожке забега. Звёздочка — да,
+	ответ — нет: статусы букв двигают только решения в воротах.
+]]
+function ProgressService.awardCollect(player: Player, letterId: string): number
+	return EconomyService.award(player, "letter_collected", Economy.REWARDS.letterCollected, letterId)
+end
+
 -- Итог испытания: 1..3 звезды, но не меньше гарантированного минимума.
 function ProgressService.finishChallenge(player: Player, challengeId: string, stars: number): number
 	local reward = Economy.rewardForChallenge(stars)

@@ -29,6 +29,7 @@ local buckets: { [Player]: Bucket } = {}
 -- Разрешённые источники начисления. Строка, которой здесь нет, не может принести звёздочки.
 local SOURCES: { [string]: boolean } = {
 	correct_answer = true,
+	letter_collected = true, -- буква своего отрезка, подобранная на дорожке забега
 	challenge_result = true,
 	letter_learned = true,
 	letter_mastered = true,

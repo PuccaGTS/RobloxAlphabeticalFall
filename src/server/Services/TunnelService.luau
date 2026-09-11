@@ -371,6 +371,64 @@ local function buildGate(model: Model, origin: CFrame, gate: any, player: Player
 end
 
 --[[
+	Ряды букв на дорожке (docs/14-TUNNEL-MODE.md § 4.2): плитки с буквами
+	по пояс ребёнку. Касание засчитывается только у буквы своего отрезка —
+	у отвлекающей триггера нет, пробежать сквозь неё ничего не стоит.
+
+	Буква на плитке своего размера и не поверх всего, в отличие от букв ворот:
+	рядов на забеге много, и висящие сквозь стены буквы превратили бы туннель
+	в кашу из значков.
+]]
+local function buildRows(model: Model, origin: CFrame, rows: { any }, player: Player, resumeFrom: number)
+	for _, row in rows do
+		-- Ряды пройденных до выхода отрезков не строим: их «монетки» уже взяты или упущены.
+		if row.segment > resumeFrom then
+			for slot, item in row.items do
+				local tile = build(
+					`Collect_{row.index}_{slot}`,
+					Vector3.new(Tunnel.COLLECT_SIZE, Tunnel.COLLECT_SIZE, 0.5),
+					origin * CFrame.new(Tunnel.laneOffset(item.lane), Tunnel.COLLECT_HEIGHT, -row.z),
+					item.color,
+					model
+				)
+				tile.CanCollide = false
+
+				local billboard = Instance.new("BillboardGui")
+				billboard.Name = "Glyph"
+				billboard.Size = UDim2.fromScale(1, 1)
+				billboard.LightInfluence = 0
+				billboard.MaxDistance = 120
+				billboard.Parent = tile
+
+				local label = Instance.new("TextLabel")
+				label.Size = UDim2.fromScale(1, 1)
+				label.BackgroundTransparency = 1
+				label.Text = item.glyph
+				label.TextColor3 = Color3.fromRGB(255, 255, 255)
+				label.TextStrokeColor3 = Color3.fromRGB(30, 26, 45)
+				label.TextStrokeTransparency = 0
+				label.TextScaled = true
+				label.Font = Enum.Font.FredokaOne
+				label.Parent = billboard
+
+				if item.isTarget then
+					tile.Touched:Connect(function(hit: BasePart)
+						local character = hit.Parent
+						if not character or Players:GetPlayerFromCharacter(character) ~= player then
+							return
+						end
+						ChallengeService.submitAction(
+							player,
+							{ kind = "collect", row = row.index, slot = slot }
+						)
+					end)
+				end
+			end
+		end
+	end
+end
+
+--[[
 	Приваривает деталь к анкерной: связка ездит вместе с ней, но толкает мягко.
 	Нужно маятнику — верёвка и шар должны ходить за подвесом.
 ]]
@@ -826,6 +884,7 @@ function TunnelService.spawn(player: Player, spec: any)
 		buildGate(model, origin, gate, player)
 	end
 	buildObstacles(model, origin, spec.params.obstacles)
+	buildRows(model, origin, spec.params.rows or {}, player, spec.params.resumeFrom or 0)
 	buildFinish(model, origin, length, player)
 
 	local character = player.Character
@@ -950,7 +1009,21 @@ function TunnelService.start()
 	end)
 
 	ChallengeService.onAnswer(function(player: Player, spec: any, result: any)
-		if TunnelService.isRun(spec.challengeId) and not result.correct and (result.cooldown or 0) > 0 then
+		if not TunnelService.isRun(spec.challengeId) then
+			return
+		end
+
+		-- Подобранная буква исчезает: второй раз её не взять, и ребёнок видит, что взял.
+		if result.collect then
+			local run = runs[player]
+			local tile = run and run.model:FindFirstChild(`Collect_{result.row}_{result.slot}`)
+			if tile then
+				tile:Destroy()
+			end
+			return
+		end
+
+		if not result.correct and (result.cooldown or 0) > 0 then
 			TunnelService.slow(player, result.cooldown, result.slowFactor or 0.5)
 		end
 	end)
