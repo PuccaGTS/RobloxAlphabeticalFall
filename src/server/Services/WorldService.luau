@@ -37,6 +37,7 @@ local ProfileService = require(script.Parent.ProfileService)
 local ProgressService = require(script.Parent.ProgressService)
 local ChallengeService = require(script.Parent.ChallengeService)
 local DecorService = require(script.Parent.DecorService)
+local DailyLetterService = require(script.Parent.DailyLetterService)
 
 local WorldService = {}
 
@@ -354,6 +355,49 @@ local function buildChallengePad(hub: Folder, pad: any, slot: number)
 end
 
 --[[
+	Камень буквы дня (docs/03-CHALLENGES.md § 7): постамент со светящимся
+	кристаллом над ним. Саму букву сервер не пишет — она у каждого ребёнка своя,
+	её ставит клиент над деталью `DailyLetterStone` (DailyLetterController).
+
+	Срабатывает касание кристалла на постаменте, как и у падов: ребёнок
+	подходит и встаёт. Камень стоит не на пути к порталам (Base), так что
+	случайно на него не наступают.
+]]
+local function buildDailyStone(hub: Folder)
+	local base = Base.DAILY_LETTER_POSITION
+	local gold = Color3.fromRGB(255, 205, 90)
+
+	local plinth = part(
+		"DailyLetterPlinth",
+		Vector3.new(8, 1, 8),
+		CFrame.new(base + Vector3.new(0, 2.1, 0)),
+		Color3.fromRGB(200, 190, 215),
+		hub
+	)
+	plinth.Material = Enum.Material.Slate
+
+	local stone =
+		part("DailyLetterStone", Vector3.new(6, 1, 6), CFrame.new(base + Vector3.new(0, 3.1, 0)), gold, hub)
+	stone.Material = Enum.Material.Neon
+	stone.Transparency = 0.2
+
+	local glow = Instance.new("PointLight")
+	glow.Color = gold
+	glow.Range = 16
+	glow.Brightness = 1.5
+	glow.Parent = stone
+
+	-- Выход — перед камнем, со стороны порталов, лицом к нему.
+	local exitAt = base + Vector3.new(0, 3, 9)
+	makeActivator(stone, "Играть", "Буква дня", function(player: Player)
+		if not ProfileService.get(player) then
+			return
+		end
+		DailyLetterService.begin(player)
+	end, CFrame.lookAt(exitAt, Vector3.new(base.X, exitAt.Y, base.Z)))
+end
+
+--[[
 	Декор: деревья, фонари, клумбы. Мир должен выглядеть местом, а не полигоном.
 
 	Предметы на земле расставляет DecorService по каталогу Config/Decor: там же лежит
@@ -575,6 +619,7 @@ function WorldService.build()
 		RemoteDefs.event("OpenUI"):FireClient(player, "shop")
 	end)
 
+	buildDailyStone(hub)
 	buildDecor(hub)
 
 	--[[

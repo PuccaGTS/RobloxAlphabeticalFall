@@ -12,6 +12,7 @@ local Types = require(script.Parent.Parent.Types)
 local Base = require(script.Parent.Base)
 local Levels = require(script.Parent.Levels)
 local Tutorial = require(script.Parent.Parent.Logic.Tutorial)
+local DailyLetter = require(script.Parent.Parent.Logic.DailyLetter)
 
 local ProfileTemplate = {}
 
@@ -48,8 +49,10 @@ local ProfileTemplate = {}
 
 	Версия 9: у родителя появилось напоминание об отдыхе — `parent.restReminder`,
 	по умолчанию включено (docs/13-PARENT-MODE.md § 3).
+
+	Версия 10: буква дня и её серия — поле `daily` (Logic/DailyLetter).
 ]]
-ProfileTemplate.VERSION = 9
+ProfileTemplate.VERSION = 10
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
@@ -83,6 +86,7 @@ function ProfileTemplate.new(now: number): Types.Profile
 		dailyStreak = 0,
 		lastLoginDay = 0,
 		playLog = {},
+		daily = DailyLetter.new(),
 		settings = ProfileTemplate.defaultSettings(),
 		parent = { pinHash = nil, dailyLimitMin = nil, restReminder = true },
 		stats = { totalPlayMin = 0, sessionsCount = 0, firstJoin = now },
@@ -111,6 +115,8 @@ export type Snapshot = {
 	inventory: { string },
 	equipped: Types.Equipped,
 	dailyStreak: number,
+	-- Буква дня: какая и сколько заданий из трёх сделано. Сегодняшняя ли она, решает сервер.
+	daily: { letterId: string?, done: number, total: number, streak: number },
 	settings: Types.Settings,
 }
 
@@ -118,6 +124,16 @@ export type Snapshot = {
 local function tutorialStep(profile: Types.Profile): string?
 	local step = Tutorial.current(Tutorial.sanitize(profile.tutorial))
 	return if step then step.id else nil
+end
+
+local function dailySnapshot(profile: Types.Profile)
+	local state = DailyLetter.sanitize(profile.daily)
+	return {
+		letterId = state.letterId,
+		done = state.done,
+		total = #DailyLetter.TASKS,
+		streak = state.streak,
+	}
 end
 
 function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
@@ -158,6 +174,7 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 			pets = table.clone(profile.equipped.pets),
 		},
 		dailyStreak = profile.dailyStreak,
+		daily = dailySnapshot(profile),
 		settings = table.clone(profile.settings),
 	}
 end

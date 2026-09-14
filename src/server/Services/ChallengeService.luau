@@ -50,13 +50,14 @@ local active: { [Player]: any } = {}
 	про туннели, туннели знают про ChallengeService.
 ]]
 local startedHooks: { (player: Player, spec: any) -> () } = {}
-local finishedHooks: { (player: Player, spec: any, reason: string) -> () } = {}
+local finishedHooks: { (player: Player, spec: any, reason: string, answers: number) -> () } = {}
 
 function ChallengeService.onStarted(hook: (player: Player, spec: any) -> ())
 	table.insert(startedHooks, hook)
 end
 
-function ChallengeService.onFinished(hook: (player: Player, spec: any, reason: string) -> ())
+-- answers — сколько ответов ребёнок дал в испытании: ноль значит «пришёл и ушёл».
+function ChallengeService.onFinished(hook: (player: Player, spec: any, reason: string, answers: number) -> ())
 	table.insert(finishedHooks, hook)
 end
 
@@ -120,7 +121,7 @@ local function finish(player: Player, reason: string)
 	end
 	active[player] = nil
 
-	fire(finishedHooks, player, state.spec, reason)
+	fire(finishedHooks, player, state.spec, reason, #state.answers)
 
 	--[[
 		Дошёл до финиша — сохранка больше не нужна: следующий раз это будет
@@ -184,14 +185,30 @@ end
 	Хвост из всех доступных букв нужен «Алфавитной лестнице»: она поднимается
 	по соседним буквам, и ей нужен весь отрезок азбуки, а не выборка из него.
 ]]
-local function lettersFor(player: Player, module): { string }?
+local function lettersFor(player: Player, module, focus: string?): { string }?
 	local profile = ProfileService.get(player)
 	if not profile then
 		return nil
 	end
 
+	--[[
+		Буква, заданная снаружи (буква дня), встаёт первой — то есть целью.
+		Испытанию, которое крутит раунды по списку букв (Зеркало), остальные
+		не отдаются вовсе: иначе «задание по букве дня» спрашивало бы и другие.
+	]]
+	if focus and module.focusAlone then
+		return { focus }
+	end
+
 	local queue = ProgressService.buildQueue(player)
 	local letters: { string } = if queue then table.clone(queue.flat) else {}
+	if focus then
+		local at = table.find(letters, focus)
+		if at then
+			table.remove(letters, at)
+		end
+		table.insert(letters, 1, focus)
+	end
 
 	local seen: { [string]: boolean } = {}
 	for _, id in letters do
@@ -211,8 +228,23 @@ local function lettersFor(player: Player, module): { string }?
 	return letters
 end
 
-local function onStart(player: Player, challengeId: any)
+export type StartOptions = {
+	focus: string?, -- буква-цель вместо первой из очереди повторений
+	daily: boolean?, -- задание буквы дня: отметка в плане для клиента и сервиса
+}
+
+--[[
+	options приходят только от сервера. От клиента в StartChallenge доходит один id:
+	дай ему выбирать букву-цель — и букву дня можно было бы пройти на любой букве.
+]]
+local function onStart(player: Player, challengeId: any, options: StartOptions?)
 	if typeof(challengeId) ~= "string" then
+		return
+	end
+
+	local focus = options and options.focus
+	if focus and not Letters.get(focus) then
+		warn(`[ChallengeService] неизвестная буква-цель: {focus}`)
 		return
 	end
 
@@ -244,7 +276,7 @@ local function onStart(player: Player, challengeId: any)
 		end
 	end
 
-	local letters = lettersFor(player, module)
+	local letters = lettersFor(player, module, focus)
 	if not letters then
 		warn(`[ChallengeService] {player.Name}: не хватает букв для {challengeId}`)
 		return
@@ -288,6 +320,9 @@ local function onStart(player: Player, challengeId: any)
 		end
 	end
 	spec = spec or module.Build(player, letters, difficulty, track)
+	if options and options.daily then
+		spec.params.daily = true
+	end
 
 	--[[
 		Найденный секрет уровня больше не появляется: план забега об этом не знает
@@ -502,8 +537,8 @@ end
 	Запуск испытания со стороны сервера — например, с портала в хабе.
 	Проходит ту же валидацию, что и запрос от клиента.
 ]]
-function ChallengeService.startFor(player: Player, challengeId: string)
-	onStart(player, challengeId)
+function ChallengeService.startFor(player: Player, challengeId: string, options: StartOptions?)
+	onStart(player, challengeId, options)
 end
 
 --[[
@@ -517,7 +552,10 @@ end
 function ChallengeService.start()
 	RateLimiter.start()
 
-	RemoteDefs.event("StartChallenge").OnServerEvent:Connect(onStart)
+	-- Клиенту — только id: лишние аргументы от него до onStart не доходят.
+	RemoteDefs.event("StartChallenge").OnServerEvent:Connect(function(player: Player, challengeId: any)
+		onStart(player, challengeId, nil)
+	end)
 	RemoteDefs.event("ChallengeAction").OnServerEvent:Connect(function(player: Player, action: any)
 		handleAction(player, action, false)
 	end)

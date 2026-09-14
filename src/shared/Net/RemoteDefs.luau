@@ -46,6 +46,12 @@ local EVENTS: { string } = {
 		Прогресс до последней сохранки не теряется (docs/14-TUNNEL-MODE.md § 7).
 	]]
 	"GoHome",
+	--[[
+		S→C  буква дня: { state = "step", done, total } — задание засчитано;
+		{ state = "finished", letterId, bonus, streak, streakReward } — все три;
+		{ state = "already", letterId } — на сегодня уже пройдена.
+	]]
+	"DailyLetter",
 }
 
 local FUNCTIONS: { string } = {

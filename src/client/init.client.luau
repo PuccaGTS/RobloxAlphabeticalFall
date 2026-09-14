@@ -18,6 +18,7 @@ local TowerController = require(Controllers.TowerController)
 local PortalSignController = require(Controllers.PortalSignController)
 local TutorialController = require(Controllers.TutorialController)
 local PetController = require(Controllers.PetController)
+local DailyLetterController = require(Controllers.DailyLetterController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -115,6 +116,30 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 	TowerController.update(snapshot)
 	PortalSignController.update(snapshot)
 	TutorialController.update(snapshot)
+	DailyLetterController.update(snapshot)
+end)
+
+--[[
+	Буква дня: засчитанное задание и пройденный день. Букву на камне обновит
+	срез профиля; здесь — то, что ребёнок должен заметить сразу.
+]]
+RemoteDefs.event("DailyLetter").OnClientEvent:Connect(function(payload: any)
+	if typeof(payload) ~= "table" then
+		return
+	end
+	local letter = typeof(payload.letterId) == "string" and Letters.get(payload.letterId)
+	if payload.state == "step" then
+		HUD.toast(`☀ Буква дня: {payload.done} из {payload.total}`, 3)
+	elseif payload.state == "finished" then
+		if letter then
+			HUD.showIntro(letter.glyph)
+		end
+		local stars = (tonumber(payload.bonus) or 0) + (tonumber(payload.streakReward) or 0)
+		HUD.toast(`☀ Буква дня пройдена! +{stars} ⭐  🔥 {payload.streak}`, 5)
+		SfxController.play("reward")
+	elseif payload.state == "already" then
+		HUD.toast("☀ Буква дня уже пройдена. Приходи завтра!", 3)
+	end
 end)
 
 --[[

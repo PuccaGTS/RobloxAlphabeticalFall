@@ -30,6 +30,7 @@ local ParentService = require(Services.ParentService)
 local TutorialService = require(Services.TutorialService)
 local PlayLimitService = require(Services.PlayLimitService)
 local PetService = require(Services.PetService)
+local DailyLetterService = require(Services.DailyLetterService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -78,6 +79,7 @@ ParentService.start()
 TutorialService.start() -- подписывается на хуки испытаний и магазина
 PlayLimitService.start() -- сторож старта испытаний: время на сегодня
 PetService.start() -- подписывается на смену статусов букв
+DailyLetterService.start() -- подписывается на хуки испытаний
 ProfileService.start() -- последним: он сразу начинает принимать игроков
 
 print("[AlphabetFall] сервер запущен")

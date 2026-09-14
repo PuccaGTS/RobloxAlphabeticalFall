@@ -170,6 +170,11 @@ local ZONES: { Zone } = {
 		radius = 12,
 		why = "середина площади: проход к порталам",
 	},
+	{
+		center = Vector2.new(Base.DAILY_LETTER_POSITION.X, Base.DAILY_LETTER_POSITION.Z),
+		radius = 6,
+		why = "камень буквы дня",
+	},
 }
 
 --[[

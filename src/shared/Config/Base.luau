@@ -54,6 +54,13 @@ function Base.padPosition(slot: number): Vector3
 	local angle = math.pi * (PAD_ARC_FROM + PAD_ARC_SPAN * (slot - 1) / math.max(1, Base.PAD_SLOTS - 1))
 	return Vector3.new(math.cos(angle) * Base.PAD_DISTANCE, 0, math.sin(angle) * Base.PAD_DISTANCE)
 end
+--[[
+	Камень буквы дня — за порталами, между ними и фонтаном. С точки появления
+	его видно в просвете между арками, но на пути к порталам он не лежит:
+	наступить на него по дороге и случайно начать задание нельзя.
+]]
+Base.DAILY_LETTER_POSITION = Vector3.new(0, 0, -18)
+
 Base.GROUND_SIZE = (Base.RING_RADIUS + Base.PLOT_SIZE) * 2
 
 --[[

@@ -19,6 +19,7 @@ local ProfileTemplate = require(script.Parent.Parent.Config.ProfileTemplate)
 local PlayLog = require(script.Parent.PlayLog)
 local Tutorial = require(script.Parent.Tutorial)
 local PlayLimit = require(script.Parent.PlayLimit)
+local DailyLetter = require(script.Parent.DailyLetter)
 
 export type Step = (profile: any) -> ()
 
@@ -70,6 +71,10 @@ local Migrations = {}
 	    включено. Заодно лимит времени приводится к разрешённым значениям:
 	    до этой версии его никто не писал, но в испорченном профиле там
 	    могло оказаться что угодно.
+
+	[9] Появилась буква дня: поле `daily`. Серию начинаем с нуля — dailyStreak
+	    считает просто дни игры, а не пройденные буквы дня, и переносить его
+	    сюда значило бы выдать награды за то, чего не было.
 ]]
 local STEPS: { [number]: Step } = {
 	[1] = function(profile)
@@ -153,6 +158,10 @@ local STEPS: { [number]: Step } = {
 
 	[8] = function(profile)
 		profile.parent = PlayLimit.sanitizeParent(profile.parent)
+	end,
+
+	[9] = function(profile)
+		profile.daily = DailyLetter.sanitize(profile.daily)
 	end,
 }
 

@@ -243,6 +243,20 @@ export type PlayDay = {
 	sec: number,
 }
 
+--[[
+	Буква дня и серия дней, см. Logic/DailyLetter. Серия здесь своя, а не dailyStreak:
+	та считает дни, когда ребёнок просто играл, для отчёта родителя, а эта —
+	дни, когда он прошёл букву дня, и она не сгорает при пропуске.
+]]
+export type DailyLetter = {
+	day: number, -- на какие сутки выбрана буква (PlayLog.dayOf)
+	letterId: string?,
+	done: number, -- сколько заданий из трёх сделано сегодня
+	streak: number,
+	best: number, -- рекорд серии: награда за серию только за новый рекорд
+	lastDay: number, -- последний день, когда буква дня пройдена целиком
+}
+
 export type Profile = {
 	version: number,
 	stars: number,
@@ -280,6 +294,7 @@ export type Profile = {
 	-- имя осталось с тех пор, когда поле никто не писал.
 	lastLoginDay: number,
 	playLog: { PlayDay }, -- посуточная история занятий, см. Logic/PlayLog
+	daily: DailyLetter,
 	settings: Settings,
 	parent: ParentData,
 	stats: {

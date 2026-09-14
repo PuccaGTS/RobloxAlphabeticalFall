@@ -612,4 +612,43 @@ return function()
 			end
 		end)
 	end)
+
+	describe("Миграция 9 → 10: буква дня", function()
+		it(
+			"серия начинается с нуля, игровая серия не переносится",
+			function()
+				local profile = Migrations.normalize({ version = 9, stars = 40, dailyStreak = 6 }, NOW)
+
+				expect(profile.version).to.equal(ProfileTemplate.VERSION)
+				expect(profile.daily.streak).to.equal(0)
+				expect(profile.daily.done).to.equal(0)
+				expect(profile.dailyStreak).to.equal(6)
+				expect(profile.stars).to.equal(40)
+			end
+		)
+
+		it("испорченная буква дня не роняет вход", function()
+			local profile = Migrations.normalize(
+				{ version = 9, daily = { day = "вчера", done = 99, streak = -3, letterId = 5 } },
+				NOW
+			)
+
+			expect(profile.daily.day).to.equal(0)
+			expect(profile.daily.done).to.equal(3)
+			expect(profile.daily.streak).to.equal(0)
+			expect(profile.daily.letterId).to.equal(nil)
+		end)
+
+		it("срез отдаёт букву дня и число заданий", function()
+			local profile = ProfileTemplate.new(NOW)
+			profile.daily = { day = 5, letterId = "m", done = 2, streak = 4, best = 4, lastDay = 4 }
+
+			local daily = ProfileTemplate.toSnapshot(profile).daily
+
+			expect(daily.letterId).to.equal("m")
+			expect(daily.done).to.equal(2)
+			expect(daily.total).to.equal(3)
+			expect(daily.streak).to.equal(4)
+		end)
+	end)
 end

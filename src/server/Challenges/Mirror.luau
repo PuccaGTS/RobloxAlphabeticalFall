@@ -33,6 +33,11 @@ local Mirror = {}
 Mirror.id = "mirror"
 Mirror.trains = { "shape", "recognize" }
 Mirror.minLetters = 1
+--[[
+	Раунды идут по кругу списка букв. Задание по одной букве (буква дня) получает
+	от ChallengeService только её, и все раунды — про неё.
+]]
+Mirror.focusAlone = true
 
 -- Буквы, которые после поворота на 180° выглядят так же, как были.
 Mirror.ROTATE_SAME = { zh = true, n = true, o = true, h = true, i = true, f = true }
