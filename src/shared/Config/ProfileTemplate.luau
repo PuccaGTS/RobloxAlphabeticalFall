@@ -56,8 +56,9 @@ ProfileTemplate.VERSION = 10
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
-		music = 0.6,
-		sfx = 0.7,
+		-- Ступени Logic/SoundSettings: родитель выбирает громкость кнопками по 25 %.
+		music = 0.5,
+		sfx = 0.75,
 		voice = 1, -- голос всегда громче остального, см. docs/13-PARENT-MODE.md
 		subtitles = false,
 		slowSpeech = false,

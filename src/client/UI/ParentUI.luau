@@ -21,6 +21,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ParentGate = require(Shared.Logic.ParentGate)
 local PlayLimit = require(Shared.Logic.PlayLimit)
 local ParentReportText = require(Shared.Logic.ParentReportText)
+local SoundSettings = require(Shared.Logic.SoundSettings)
+local Letters = require(Shared.Config.Letters)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ParentUI = {}
@@ -182,6 +184,8 @@ end
 
 local showPin -- объявлены заранее: экраны ссылаются друг на друга
 local showReport
+local showSound
+local showLetterReset
 
 -- Ряд кнопок-вариантов: выбранный подсвечен. Для лимита и для напоминания.
 local function choices(
@@ -204,8 +208,137 @@ local function choices(
 end
 
 --[[
-	Вкладка «Настройки» — docs/13-PARENT-MODE.md § 3: лимит времени в день
-	и напоминание об отдыхе. Меняет их сервер, и только после входа по PIN.
+	Громкость и субтитры (docs/13-PARENT-MODE.md § 3). Правило «голос громче
+	остального» решает сервер; здесь та же функция из Logic/SoundSettings
+	повторяет его на копии, чтобы кнопки сразу показали, что музыка опустилась.
+]]
+local VOLUME_ROWS = {
+	{ key = "voice", title = "Голос" },
+	{ key = "music", title = "Музыка" },
+	{ key = "sfx", title = "Эффекты" },
+}
+
+function showSound(root: Instance, data: any, settings: any)
+	label(root, "Звук", 24, TEXT, true)
+	label(
+		root,
+		"Музыка и эффекты не бывают громче голоса: задания ребёнок получает голосом. "
+			.. "Выключить голос нельзя.",
+		18,
+		MUTED
+	)
+
+	for _, volumeRow in VOLUME_ROWS do
+		label(root, volumeRow.title, 20, TEXT)
+		local options = {}
+		for _, step in SoundSettings.STEPS do
+			if volumeRow.key ~= "voice" or step >= SoundSettings.MIN_VOICE then
+				table.insert(
+					options,
+					{ text = if step == 0 then "Выкл" else `{step * 100}%`, value = step }
+				)
+			end
+		end
+		choices(root, options, settings[volumeRow.key], function(value)
+			if auth({ action = "set_volume", key = volumeRow.key, value = value }).ok then
+				SoundSettings.setVolume(settings, volumeRow.key, value)
+				data.settings = settings
+				showReport("Настройки", data)
+			end
+		end)
+	end
+
+	label(root, "Субтитры", 20, TEXT)
+	label(
+		root,
+		"Текст всего, что говорит голос, внизу экрана. Пока озвучка не записана, "
+			.. "субтитры видны всегда.",
+		18,
+		MUTED
+	)
+	choices(
+		root,
+		{ { text = "Вкл", value = true }, { text = "Выкл", value = false } },
+		settings.subtitles == true,
+		function(value)
+			if auth({ action = "set_subtitles", on = value }).ok then
+				settings.subtitles = value
+				data.settings = settings
+				showReport("Настройки", data)
+			end
+		end
+	)
+end
+
+--[[
+	Сброс прогресса одной буквы: ребёнок «зазубрил» её без понимания
+	(docs/13-PARENT-MODE.md § 3). Буква снова станет незнакомой и вернётся
+	в занятия со знакомством. Кнопки только у букв, по которым есть прогресс.
+]]
+function showLetterReset(root: Instance, data: any, settings: any)
+	label(root, "Сбросить прогресс буквы", 24, TEXT, true)
+	local touched = settings.touched or {}
+	if #touched == 0 then
+		label(root, "Ребёнок ещё не занимался ни одной буквой.", 18, MUTED)
+		return
+	end
+	label(
+		root,
+		"Если ребёнок угадывает букву, но не узнаёт её, — начните её заново. "
+			.. "Звёздочки, буквёнок и открытые буквы останутся.",
+		18,
+		MUTED
+	)
+
+	local grid = Instance.new("Frame")
+	grid.BackgroundTransparency = 1
+	grid.Size = UDim2.new(1, -16, 0, 0)
+	grid.AutomaticSize = Enum.AutomaticSize.Y
+	grid.LayoutOrder = nextOrder()
+	grid.Parent = root
+	local layout = Instance.new("UIGridLayout")
+	layout.CellSize = UDim2.fromOffset(52, 44)
+	layout.CellPadding = UDim2.fromOffset(8, 8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = grid
+
+	for _, letterId in touched do
+		local letter = Letters.get(letterId)
+		if letter then
+			local b = button(grid, letter.glyph, KEY, 52)
+			b.TextColor3 = TEXT
+			b.Activated:Connect(function()
+				local confirm = clearBody()
+				label(confirm, `Сбросить прогресс буквы {letter.glyph}?`, 26, TEXT, true)
+				label(
+					confirm,
+					"Буква станет незнакомой: игра снова познакомит с ней и будет спрашивать чаще. "
+						.. "Отменить сброс нельзя.",
+					20,
+					MUTED
+				)
+				local actions = row(confirm, 44)
+				button(actions, "Сбросить", WARN).Activated:Connect(function()
+					if auth({ action = "reset_letter", letterId = letterId }).ok then
+						local at = table.find(touched, letterId)
+						if at then
+							table.remove(touched, at)
+						end
+						-- Отчёт после сброса устарел: берём новый с сервера.
+						showReport("Настройки", nil)
+					end
+				end)
+				button(actions, "Отмена", KEY).Activated:Connect(function()
+					showReport("Настройки", data)
+				end)
+			end)
+		end
+	end
+end
+
+--[[
+	Вкладка «Настройки» — docs/13-PARENT-MODE.md § 3: лимит времени в день,
+	напоминание об отдыхе, звук и сброс буквы. Меняет их сервер, и только после входа по PIN.
 ]]
 local function showSettings(root: Instance, data: any)
 	local settings = data.settings or {}
@@ -261,6 +394,9 @@ local function showSettings(root: Instance, data: any)
 			end
 		end
 	)
+
+	showSound(root, data, settings)
+	showLetterReset(root, data, settings)
 end
 
 -- ===== Отчёт =====================================================================

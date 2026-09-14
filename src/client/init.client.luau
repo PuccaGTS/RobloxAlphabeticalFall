@@ -105,8 +105,8 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 	-- родительского режима (docs/13-PARENT-MODE.md § 3), и оно живёт в настройках.
 	local settings = snapshot.settings
 	if typeof(settings) == "table" then
-		AudioController.setVolume("Music", settings.music or 0.6)
-		AudioController.setVolume("SFX", settings.sfx or 0.7)
+		AudioController.setVolume("Music", settings.music or 0.5)
+		AudioController.setVolume("SFX", settings.sfx or 0.75)
 		AudioController.setVolume("VO", settings.voice or 1)
 		AudioController.setSubtitles(settings.subtitles == true)
 	end

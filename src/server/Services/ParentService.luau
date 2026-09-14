@@ -20,6 +20,9 @@ local ParentGate = require(Shared.Logic.ParentGate)
 local PlayLimit = require(Shared.Logic.PlayLimit)
 local Tutorial = require(Shared.Logic.Tutorial)
 local ParentReport = require(Shared.Logic.ParentReport)
+local SoundSettings = require(Shared.Logic.SoundSettings)
+local Letters = require(Shared.Config.Letters)
+local ProfileTemplate = require(Shared.Config.ProfileTemplate)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
@@ -94,7 +97,11 @@ end
 	  skip_tutorial — пропустить обучение первых минут (docs/13 § 3: для второго
 	           ребёнка в семье). Только после входа по PIN;
 	  set_limit — лимит времени в день: 0 (выключен), 15, 20, 30 или 45 минут;
-	  set_rest  — напоминание об отдыхе раз в 20 минут: вкл/выкл.
+	  set_rest  — напоминание об отдыхе раз в 20 минут: вкл/выкл;
+	  set_volume — громкость музыки, эффектов или голоса ступенью из SoundSettings;
+	  set_subtitles — показывать субтитры и при записанной озвучке;
+	  reset_letter — забыть прогресс одной буквы: ребёнок «зазубрил» её без понимания.
+	           Звёздочки, питомец и открытые ступени остаются: заработанное не отнимаем.
 	Настройки меняются только после входа по PIN.
 ]]
 local function onAuth(player: Player, request: any)
@@ -192,6 +199,52 @@ local function onAuth(player: Player, request: any)
 		return { ok = true }
 	end
 
+	if action == "set_volume" then
+		if not isSignedIn(player) then
+			return refuse("not_signed_in")
+		end
+		if typeof(request.key) ~= "string" then
+			return refuse("bad_request")
+		end
+		local applied = ProfileService.update(player, function(p)
+			SoundSettings.sanitize(p.settings, ProfileTemplate.defaultSettings())
+			return SoundSettings.setVolume(p.settings, request.key, request.value)
+		end)
+		if not applied then
+			return refuse("bad_volume")
+		end
+		logChange(player, `volume {request.key} {request.value}`)
+		return { ok = true }
+	end
+
+	if action == "set_subtitles" then
+		if not isSignedIn(player) then
+			return refuse("not_signed_in")
+		end
+		if typeof(request.on) ~= "boolean" then
+			return refuse("bad_request")
+		end
+		ProfileService.update(player, function(p)
+			p.settings.subtitles = request.on
+		end)
+		logChange(player, `subtitles {if request.on then "on" else "off"}`)
+		return { ok = true }
+	end
+
+	if action == "reset_letter" then
+		if not isSignedIn(player) then
+			return refuse("not_signed_in")
+		end
+		if typeof(request.letterId) ~= "string" or not Letters.get(request.letterId) then
+			return refuse("bad_request")
+		end
+		ProfileService.update(player, function(p)
+			p.letters[request.letterId] = nil
+		end)
+		logChange(player, `letter_reset {request.letterId}`)
+		return { ok = true }
+	end
+
 	if action == "skip_tutorial" then
 		if not isSignedIn(player) then
 			return refuse("not_signed_in")
@@ -219,6 +272,16 @@ end
 	Отчёт — только вошедшему. Каждый запрос продлевает вход: родитель, который
 	листает вкладки, не должен вылетать на экран PIN посреди чтения.
 ]]
+local function touchedLetters(profile): { string }
+	local ids: { string } = {}
+	for _, id in Letters.ordered() do
+		if profile.letters[id] then
+			table.insert(ids, id)
+		end
+	end
+	return ids
+end
+
 local function onReport(player: Player)
 	if not RateLimiter.allow(player, "GetParentReport", RemoteDefs.RATE_LIMITS.GetParentReport) then
 		return nil
@@ -233,6 +296,9 @@ local function onReport(player: Player)
 	end
 
 	signIn(player)
+	-- Копия, приведённая к ступеням: старые 0.6/0.7 подсвечиваются ближайшей кнопкой.
+	local sound = table.clone(profile.settings)
+	SoundSettings.sanitize(sound, ProfileTemplate.defaultSettings())
 	return {
 		report = ParentReport.build(profile, os.time()),
 		tutorialDone = Tutorial.isDone(Tutorial.sanitize(profile.tutorial)),
@@ -240,6 +306,12 @@ local function onReport(player: Player)
 			limitMin = PlayLimit.sanitizeParent(profile.parent).dailyLimitMin,
 			restReminder = PlayLimit.sanitizeParent(profile.parent).restReminder,
 			playedTodayMin = math.floor(ProfileService.playedToday(player) / 60),
+			music = sound.music,
+			sfx = sound.sfx,
+			voice = sound.voice,
+			subtitles = sound.subtitles,
+			-- Буквы, по которым есть прогресс: только их и есть смысл сбрасывать.
+			touched = touchedLetters(profile),
 		},
 		-- Время сервера: по нему клиент считает «повтор через 3 дня»,
 		-- часы планшета могут врать на сутки.
