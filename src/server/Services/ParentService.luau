@@ -21,6 +21,8 @@ local PlayLimit = require(Shared.Logic.PlayLimit)
 local Tutorial = require(Shared.Logic.Tutorial)
 local ParentReport = require(Shared.Logic.ParentReport)
 local SoundSettings = require(Shared.Logic.SoundSettings)
+local ProfileRestart = require(Shared.Logic.ProfileRestart)
+local PlayLog = require(Shared.Logic.PlayLog)
 local Letters = require(Shared.Config.Letters)
 local ProfileTemplate = require(Shared.Config.ProfileTemplate)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
@@ -29,6 +31,10 @@ local ProfileService = require(script.Parent.ProfileService)
 local RateLimiter = require(script.Parent.RateLimiter)
 local TutorialService = require(script.Parent.TutorialService)
 local PlayLimitService = require(script.Parent.PlayLimitService)
+local ChallengeService = require(script.Parent.ChallengeService)
+local BaseService = require(script.Parent.BaseService)
+local PetService = require(script.Parent.PetService)
+local DailyLetterService = require(script.Parent.DailyLetterService)
 
 local ParentService = {}
 
@@ -102,6 +108,10 @@ end
 	  set_subtitles — показывать субтитры и при записанной озвучке;
 	  reset_letter — забыть прогресс одной буквы: ребёнок «зазубрил» её без понимания.
 	           Звёздочки, питомец и открытые ступени остаются: заработанное не отнимаем.
+	  restart — «начать заново»: обучение с нуля (Logic/ProfileRestart). Второе
+	           подтверждение — PIN ещё раз: сессия живёт 15 минут, и ребёнок, дорвавшийся
+	           до открытого экрана, стёр бы всё двумя нажатиями. Ошибка PIN здесь
+	           считается попыткой, как при входе.
 	Настройки меняются только после входа по PIN.
 ]]
 local function onAuth(player: Player, request: any)
@@ -242,6 +252,37 @@ local function onAuth(player: Player, request: any)
 			p.letters[request.letterId] = nil
 		end)
 		logChange(player, `letter_reset {request.letterId}`)
+		return { ok = true }
+	end
+
+	if action == "restart" then
+		if not isSignedIn(player) or stored == nil then
+			return refuse("not_signed_in")
+		end
+		local locked = ParentGate.lockedFor(guard, now)
+		if locked > 0 then
+			return refuse("locked", { lockedFor = locked })
+		end
+		if not ParentGate.matches(request.pin, saltOf(player), stored) then
+			local left = ParentGate.registerFailure(guard, now)
+			return refuse("wrong_pin", { attemptsLeft = left, lockedFor = ParentGate.lockedFor(guard, now) })
+		end
+		ParentGate.registerSuccess(guard)
+
+		-- Идущий забег закрываем до сброса: иначе его финиш записал бы уровень
+		-- и ответы в уже чистый профиль. Ребёнок оказывается у своего дома.
+		local wasBusy = ChallengeService.isBusy(player)
+		ChallengeService.abort(player)
+		ProfileService.update(player, function(p)
+			ProfileRestart.apply(p, PlayLog.dayOf(os.time()))
+		end)
+		PetService.refresh(player)
+		BaseService.refresh(player)
+		DailyLetterService.refresh(player)
+		if wasBusy then
+			BaseService.sendHome(player)
+		end
+		logChange(player, "profile_restart")
 		return { ok = true }
 	end
 

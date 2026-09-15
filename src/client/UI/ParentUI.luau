@@ -186,6 +186,7 @@ local showPin -- объявлены заранее: экраны ссылают�
 local showReport
 local showSound
 local showLetterReset
+local showRestart
 
 -- Ряд кнопок-вариантов: выбранный подсвечен. Для лимита и для напоминания.
 local function choices(
@@ -337,6 +338,102 @@ function showLetterReset(root: Instance, data: any, settings: any)
 end
 
 --[[
+	«Начать заново» с двойным подтверждением (docs/13-PARENT-MODE.md § 3):
+	экран «что сотрётся и что останется», затем PIN ещё раз. Второй шаг —
+	именно PIN, а не вторая кнопка: две кнопки подряд ребёнок нажмёт, PIN — нет.
+	Что стирать, решает сервер (Logic/ProfileRestart); текст здесь только пересказ.
+]]
+local function showRestartPin(data: any, message: string?)
+	local root = clearBody()
+	label(root, "Введите PIN, чтобы начать заново", 26, TEXT, true)
+	label(
+		root,
+		message
+			or "Это последний шаг. После него отменить сброс нельзя.",
+		20,
+		if message then WARN else MUTED
+	)
+
+	keypad(root, ParentGate.PIN_LENGTH, true, function(pin: string)
+		if not ParentGate.isValidPin(pin) then
+			showRestartPin(data, "Нужно ровно четыре цифры.")
+			return
+		end
+		local answer = auth({ action = "restart", pin = pin })
+		if answer.ok then
+			local done = clearBody()
+			label(done, "Обучение начато заново", 26, TEXT, true)
+			label(
+				done,
+				"Игра снова начнёт с букв А, Б и В и заново познакомит ребёнка с каждой. "
+					.. "Звёздочки, вещи и дом на месте.",
+				20,
+				MUTED
+			)
+			button(done, "К отчёту", ACCENT).Activated:Connect(function()
+				showReport("Главное", nil)
+			end)
+		elseif answer.reason == "wrong_pin" and (answer.lockedFor or 0) == 0 then
+			showRestartPin(
+				data,
+				`Неверный PIN. Осталось попыток: {answer.attemptsLeft}.`
+			)
+		elseif answer.reason == "wrong_pin" or answer.reason == "locked" then
+			showPin()
+		elseif answer.reason == "not_signed_in" then
+			showPin("Вход истёк — введите PIN ещё раз.")
+		else
+			showRestartPin(data, "Не получилось. Попробуйте ещё раз.")
+		end
+	end)
+
+	button(root, "Отмена", KEY).Activated:Connect(function()
+		showReport("Настройки", data)
+	end)
+end
+
+function showRestart(root: Instance, data: any)
+	label(root, "Начать заново", 24, TEXT, true)
+	label(
+		root,
+		"Для второго ребёнка на том же устройстве или если начали слишком рано. "
+			.. "Стирает всё, что игра знает об успехах, — звёздочки и вещи остаются.",
+		18,
+		MUTED
+	)
+	local start = button(root, "Начать заново…", WARN, 220)
+	start.Activated:Connect(function()
+		local confirm = clearBody()
+		label(confirm, "Начать обучение заново?", 26, TEXT, true)
+		label(confirm, "Сотрётся:", 20, WARN, true)
+		label(
+			confirm,
+			"• прогресс всех букв и математики\n"
+				.. "• пройденные уровни и открытые ступени\n"
+				.. "• незаконченный забег\n"
+				.. "• буквята, флаги, арка и шпиль во дворе — ребёнок заработает их снова",
+			20
+		)
+		label(confirm, "Останется:", 20, TEXT, true)
+		label(
+			confirm,
+			"• звёздочки, купленные вещи и дом\n"
+				.. "• серия буквы дня и история занятий\n"
+				.. "• PIN, лимит времени и звук",
+			20
+		)
+		label(confirm, "Отменить сброс будет нельзя.", 20, MUTED)
+		local actions = row(confirm, 44)
+		button(actions, "Дальше", WARN).Activated:Connect(function()
+			showRestartPin(data)
+		end)
+		button(actions, "Отмена", KEY).Activated:Connect(function()
+			showReport("Настройки", data)
+		end)
+	end)
+end
+
+--[[
 	Вкладка «Настройки» — docs/13-PARENT-MODE.md § 3: лимит времени в день,
 	напоминание об отдыхе, звук и сброс буквы. Меняет их сервер, и только после входа по PIN.
 ]]
@@ -397,6 +494,7 @@ local function showSettings(root: Instance, data: any)
 
 	showSound(root, data, settings)
 	showLetterReset(root, data, settings)
+	showRestart(root, data)
 end
 
 -- ===== Отчёт =====================================================================
