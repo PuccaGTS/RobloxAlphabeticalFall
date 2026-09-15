@@ -6,6 +6,7 @@ local Awards = require(Shared.Logic.Awards)
 local MasteryRules = require(Shared.Logic.MasteryRules)
 local Letters = require(Shared.Config.Letters)
 local Levels = require(Shared.Config.Levels)
+local MathConfig = require(Shared.Config.Math)
 local ProfileTemplate = require(Shared.Config.ProfileTemplate)
 
 local NOW = 1_700_000_000
@@ -63,9 +64,44 @@ return function()
 			expect(Awards.of(withLetters(33, MasteryRules.LEARNED)).spire).to.equal(false)
 		end)
 
+		it(
+			"флаги математики — по пройденным уровням своего пути",
+			function()
+				local profile = ProfileTemplate.new(NOW)
+				expect(Awards.of(profile).mathFlags).to.equal(0)
+				profile.levels.letters = 2
+				profile.levels.math = 5
+				local earned = Awards.of(profile)
+				expect(earned.flags).to.equal(2)
+				expect(earned.mathFlags).to.equal(5)
+			end
+		)
+
+		it(
+			"Шпиль Счёта — за девять освоенных базовых ступеней, умножение не нужно",
+			function()
+				local profile = ProfileTemplate.new(NOW)
+				local function master(stage)
+					local progress = MasteryRules.newProgress(NOW)
+					progress.mastery = MasteryRules.MASTERED
+					profile.math[MathConfig.expect(stage).id] = progress
+				end
+				for stage = 1, Awards.COUNT_SPIRE_STAGES - 1 do
+					master(stage)
+				end
+				expect(Awards.of(profile).countSpire).to.equal(false)
+				master(Awards.COUNT_SPIRE_STAGES)
+				expect(Awards.of(profile).countSpire).to.equal(true)
+				expect(profile.math[MathConfig.expect(MathConfig.count()).id]).to.equal(nil)
+			end
+		)
+
 		it("испорченный профиль не роняет двор", function()
-			local earned = Awards.of({ letters = "мусор", levels = { letters = "три" } })
+			local earned =
+				Awards.of({ letters = "мусор", math = "мусор", levels = { letters = "три" } })
 			expect(earned.flags).to.equal(0)
+			expect(earned.mathFlags).to.equal(0)
+			expect(earned.countSpire).to.equal(false)
 			expect(earned.arch).to.equal(false)
 			expect(Awards.of(nil).flags).to.equal(0)
 		end)

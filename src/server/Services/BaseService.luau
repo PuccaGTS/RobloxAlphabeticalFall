@@ -24,6 +24,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Base = require(Shared.Config.Base)
 local Letters = require(Shared.Config.Letters)
 local Stages = require(Shared.Config.Stages)
+local MathLevels = require(Shared.Config.MathLevels)
 local Awards = require(Shared.Logic.Awards)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
@@ -404,13 +405,67 @@ local function buildSpire(plot: Model, at: CFrame)
 	caption(star, "33 из 33", 3, 280)
 end
 
+--[[
+	Путь мира математики — вдоль левого забора, зеркально буквенным флагам.
+	На флаге цифра уровня: цвет у чисел смысла не несёт, поэтому флаги
+	чередуют тёплые оттенки, чтобы ряд не сливался в одну полосу.
+]]
+local MATH_FLAG_COLORS = {
+	Color3.fromRGB(240, 150, 120),
+	Color3.fromRGB(235, 195, 110),
+	Color3.fromRGB(160, 210, 140),
+	Color3.fromRGB(130, 195, 235),
+}
+
+local function buildMathFlags(plot: Model, at: CFrame, count: number)
+	for index = 1, math.min(count, MathLevels.count()) do
+		local z = (index - (MathLevels.count() + 1) / 2) * FLAG_STEP
+		local pole = part(
+			`MathFlagPole_{index}`,
+			Vector3.new(0.3, POLE_HEIGHT, 0.3),
+			at * CFrame.new(-FLAG_X, FLOOR + POLE_HEIGHT / 2, z),
+			Color3.fromRGB(235, 235, 240),
+			plot
+		)
+		pole.CanCollide = false
+		local cloth = part(
+			`MathFlag_{index}`,
+			Vector3.new(0.15, 1.2, 1.7),
+			at * CFrame.new(-FLAG_X, FLOOR + POLE_HEIGHT - 0.7, z + 0.9),
+			MATH_FLAG_COLORS[(index - 1) % #MATH_FLAG_COLORS + 1],
+			plot
+		)
+		cloth.CanCollide = false
+		caption(cloth, tostring(index), 1.4, 60)
+	end
+end
+
+--[[
+	Шпиль Счёта — у задней стены, между Башней и Шпилем Азбуки: две вершины
+	обучения стоят рядом, и с улицы видно обе. Голубой, чтобы не спутать с золотым.
+]]
+local function buildCountSpire(plot: Model, at: CFrame)
+	local blue = Color3.fromRGB(120, 200, 255)
+	local spot = at * CFrame.new(6, 0, Base.PLOT_SIZE / 2 - 4)
+	local spire = part("CountSpire", Vector3.new(2, 13, 2), spot * CFrame.new(0, FLOOR + 6.5, 0), blue, plot)
+	spire.Material = Enum.Material.Neon
+	local top =
+		part("CountSpireTop", Vector3.new(2.6, 2.6, 2.6), spot * CFrame.new(0, FLOOR + 14.3, 0), blue, plot)
+	top.Material = Enum.Material.Neon
+	caption(top, "1 2 3 … 9", 3, 280)
+end
+
 local function renderAwards(plot: Plot, earned: Awards.Earned)
 	buildFlags(plot.model, plot.cframe, earned.flags)
+	buildMathFlags(plot.model, plot.cframe, earned.mathFlags)
 	if earned.arch then
 		buildArch(plot.model, plot.cframe)
 	end
 	if earned.spire then
 		buildSpire(plot.model, plot.cframe)
+	end
+	if earned.countSpire then
+		buildCountSpire(plot.model, plot.cframe)
 	end
 end
 
@@ -756,7 +811,11 @@ function BaseService.start()
 		хук финиша срабатывает раньше, чем уровень записан в профиль.
 	]]
 	ChallengeService.onFinished(function(player: Player, spec: any, reason: string)
-		if reason == "completed" and spec.level then
+		-- Любое математическое занятие могло освоить ступень — а с ней встать Шпилю Счёта.
+		if
+			(reason == "completed" or reason == "timeout")
+			and (spec.level or spec.params.mathLevel or spec.params.mathStageId)
+		then
 			task.defer(BaseService.refresh, player)
 		end
 	end)

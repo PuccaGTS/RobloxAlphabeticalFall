@@ -5,7 +5,12 @@
 
 	  · флаг за каждый пройденный уровень мира букв;
 	  · Азбучная арка над калиткой — за 10 букв подряд от А;
-	  · Шпиль Азбуки — за все 33 буквы в статусе «освоенная».
+	  · Шпиль Азбуки — за все 33 буквы в статусе «освоенная»;
+	  · флаг с цифрой за каждый пройденный уровень мира математики;
+	  · Шпиль Счёта — за девять базовых ступеней счёта в статусе «освоенная».
+	    Равные группы и умножение сюда не входят: они необязательные и ничего
+	    не блокируют (docs/16-MATH.md § 2), и шпиль за них был бы наградой
+	    не за счёт, а за раннее умножение.
 
 	Они стоят на участке рядом с купленным домом, и по двору сразу видно:
 	ребёнок в игру играл или ребёнок в ней учился. Звёздочками их не получить
@@ -20,18 +25,24 @@
 
 local Letters = require(script.Parent.Parent.Config.Letters)
 local Levels = require(script.Parent.Parent.Config.Levels)
+local MathConfig = require(script.Parent.Parent.Config.Math)
 local MasteryRules = require(script.Parent.MasteryRules)
 
 local Awards = {}
 
 Awards.ARCH_IN_ORDER = 10
+-- Сколько первых ступеней счёта нужно освоить для Шпиля Счёта (docs/17-CONTENT-PLAN.md § 5).
+Awards.COUNT_SPIRE_STAGES = 9
 
 export type Earned = {
 	flags: number, -- сколько уровней пройдено: флаги с первого по этот
 	arch: boolean,
 	spire: boolean,
+	mathFlags: number, -- то же для пути мира математики
+	countSpire: boolean,
 }
 
+-- Статус буквы или ступени счёта: у обоих прогресс устроен одинаково.
 local function masteryOf(letters: any, letterId: string): number
 	if typeof(letters) ~= "table" then
 		return 0
@@ -72,10 +83,23 @@ function Awards.of(profile: any): Earned
 		end
 	end
 
+	local math_ = if typeof(profile) == "table" then profile.math else nil
+	local countMastered = true
+	for stage = 1, Awards.COUNT_SPIRE_STAGES do
+		local spec = MathConfig.get(stage)
+		if not spec or masteryOf(math_, spec.id) < MasteryRules.MASTERED then
+			countMastered = false
+			break
+		end
+	end
+
+	local cleared = Levels.sanitize(levels)
 	return {
-		flags = Levels.sanitize(levels)[Levels.WORLD],
+		flags = cleared[Levels.WORLD],
 		arch = Awards.lettersInOrder(letters) >= Awards.ARCH_IN_ORDER,
 		spire = allMastered,
+		mathFlags = cleared[Levels.MATH_WORLD],
+		countSpire = countMastered,
 	}
 end
 

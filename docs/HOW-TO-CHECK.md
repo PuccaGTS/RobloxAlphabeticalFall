@@ -123,8 +123,11 @@ require(game.ServerScriptService.Server.Services.BaseService).preview(3, {house=
 Заработанное учёбой — флаги, арка и шпиль — показывается так же:
 
 ```lua
-require(game.ServerScriptService.Server.Services.BaseService).preview(3, {house=4, roof=4, yard=4, fence=4}, {flags=11, arch=true, spire=true})
+require(game.ServerScriptService.Server.Services.BaseService).preview(3, {house=4, roof=4, yard=4, fence=4}, {flags=11, arch=true, spire=true, mathFlags=11, countSpire=true})
 ```
+
+- [ ] Вдоль **левого** забора 11 флагов с цифрами 1–11. У задней стены, правее
+      фонтана, голубой шпиль с подписью «1 2 3 … 9». Ни во что не врезается.
 
 - [ ] Вдоль правого забора 11 флагов разного цвета, на каждом буква ступени.
 - [ ] Перед калиткой золотая арка «А Б В … И»; в правом заднем углу — золотой шпиль
