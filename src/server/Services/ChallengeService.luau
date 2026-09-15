@@ -27,6 +27,7 @@ local ObstacleCourse = require(script.Parent.Parent.Challenges.ObstacleCourse)
 local MathGates = require(script.Parent.Parent.Challenges.MathGates)
 local Bubbles = require(script.Parent.Parent.Challenges.Bubbles)
 local Mirror = require(script.Parent.Parent.Challenges.Mirror)
+local Scales = require(script.Parent.Parent.Challenges.Scales)
 
 local ChallengeService = {}
 
@@ -38,6 +39,7 @@ local MODULES = {
 	[MathGates.id] = MathGates,
 	[Bubbles.id] = Bubbles,
 	[Mirror.id] = Mirror,
+	[Scales.id] = Scales,
 }
 
 local active: { [Player]: any } = {}

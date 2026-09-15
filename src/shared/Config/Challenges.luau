@@ -158,6 +158,28 @@ local Challenges: { [string]: ChallengeMeta } = {
 			missCooldown = { 1.4, 1.2, 1.1, 1, 1 },
 		},
 	},
+
+	--[[
+		«Весы» — равенство количеств: на левой чаше камни, выбрать кучку, которая
+		уравновесит (docs/16-MATH.md § 3.3). Второе испытание мира математики
+		и единственное, где счёт идёт сравнением, а не выбором числа.
+		Камней не больше, чем позволяет ступень счёта ребёнка (Challenges/Scales).
+	]]
+	scales = {
+		id = "scales",
+		title = "Весы",
+		voInstruction = "instr_scales",
+		trains = { "count" },
+		minLetters = 0,
+		maxSeconds = 120,
+		params = {
+			rounds = { 3, 4, 4, 5, 5 },
+			choices = { 2, 3, 3, 3, 4 }, -- сколько кучек на выбор
+			maxStones = { 3, 4, 5, 7, 10 },
+			hintAfterSec = { 10, 10, 12, 12, 14 },
+			missCooldown = { 1.6, 1.4, 1.2, 1.1, 1 },
+		},
+	},
 }
 
 local Module = {}

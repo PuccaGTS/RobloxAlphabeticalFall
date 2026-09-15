@@ -23,6 +23,7 @@ local SfxController = require(script.Parent.SfxController)
 local LadderController = require(script.Parent.LadderController)
 local BubblesController = require(script.Parent.BubblesController)
 local MirrorController = require(script.Parent.MirrorController)
+local ScalesController = require(script.Parent.ScalesController)
 local HUD = require(script.Parent.Parent.UI.HUD)
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
@@ -230,6 +231,7 @@ local function stopControllers()
 	LadderController.stop()
 	BubblesController.stop()
 	MirrorController.stop()
+	ScalesController.stop()
 end
 
 local function onSpec(newSpec: any)
@@ -251,6 +253,11 @@ local function onSpec(newSpec: any)
 	if newSpec.challengeId == "mirror" then
 		activeChallengeId = newSpec.challengeId
 		MirrorController.start(newSpec)
+		return
+	end
+	if newSpec.challengeId == "scales" then
+		activeChallengeId = newSpec.challengeId
+		ScalesController.start(newSpec)
 		return
 	end
 
@@ -337,6 +344,10 @@ local function onFeedback(feedback: any)
 	end
 	if activeChallengeId == "mirror" then
 		MirrorController.feedback(feedback)
+		return
+	end
+	if activeChallengeId == "scales" then
+		ScalesController.feedback(feedback)
 		return
 	end
 

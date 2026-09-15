@@ -45,6 +45,7 @@ local ids: { [string]: string } = {
 	instr_bubbles = "",
 	instr_mirror = "",
 	instr_math_gates = "",
+	instr_scales = "",
 
 	-- === Сюжет и навигация ===
 	story_intro = "",

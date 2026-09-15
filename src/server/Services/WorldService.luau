@@ -123,6 +123,13 @@ local PADS = {
 		action = "Смотреть",
 		color = Color3.fromRGB(215, 195, 240),
 	},
+	-- Счёт без ворот: уравнять весы кучкой камней (docs/16-MATH.md § 3.3).
+	{
+		challengeId = "scales",
+		caption = "⚖️ Весы",
+		action = "Взвешивать",
+		color = Color3.fromRGB(235, 185, 120),
+	},
 }
 
 local lastTouch: { [Player]: number } = {}

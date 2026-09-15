@@ -42,13 +42,14 @@ Base.PLAZA_RADIUS = 54
 	держит пады свободными (Config/Decor), и два числа об одном полукруге
 	однажды уже разошлись бы.
 
-	Мест шесть: пять занятий и магазин последним, чтобы потратить перед выходом
-	в мир. Радиус и дуга подобраны так, чтобы между падами оставался проход.
+	Мест семь: шесть занятий и магазин последним, чтобы потратить перед выходом
+	в мир. Радиус и дуга подобраны так, чтобы между падами оставался проход:
+	с «Весами» дуга стала шире, и между падами 12 × 12 остаётся около 6,5 стада прохода.
 ]]
 Base.PAD_DISTANCE = 42
-Base.PAD_SLOTS = 6
-local PAD_ARC_FROM = 0.12
-local PAD_ARC_SPAN = 0.76
+Base.PAD_SLOTS = 7
+local PAD_ARC_FROM = 0.08
+local PAD_ARC_SPAN = 0.84
 
 function Base.padPosition(slot: number): Vector3
 	local angle = math.pi * (PAD_ARC_FROM + PAD_ARC_SPAN * (slot - 1) / math.max(1, Base.PAD_SLOTS - 1))
