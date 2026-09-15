@@ -51,8 +51,10 @@ local ProfileTemplate = {}
 	по умолчанию включено (docs/13-PARENT-MODE.md § 3).
 
 	Версия 10: буква дня и её серия — поле `daily` (Logic/DailyLetter).
+
+	Версия 11: мир математики стал путём из уровней — `levels.math` (Config/MathLevels).
 ]]
-ProfileTemplate.VERSION = 10
+ProfileTemplate.VERSION = 11
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {

@@ -1,7 +1,7 @@
 --!nonstrict
 --[[
 	Табличка прогресса над каждым порталом: «Уровень 3 из 11 · Ёжики»,
-	«Ступень 2 из 11 · Цифры до пяти». См. docs/14-TUNNEL-MODE.md § 3.2.
+	«Уровень 2 из 11 · Тропа цифр». См. docs/14-TUNNEL-MODE.md § 3.2.
 
 	Это единственное место в мире, где показаны цифры прогресса, и адресованы они
 	скорее родителю: ребёнок цифр не читает, а взрослый рядом с одного взгляда видит,
@@ -16,7 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Levels = require(Shared.Config.Levels)
-local MathConfig = require(Shared.Config.Math)
+local MathLevels = require(Shared.Config.MathLevels)
 
 local PortalSignController = {}
 
@@ -71,14 +71,11 @@ function PortalSignController.texts(snapshot: any): { [string]: string }
 	local level = Levels.current(cleared)
 	local stage = Levels.stage(level)
 
-	local mastery = if typeof(snapshot.math) == "table" then snapshot.math else {}
-	local mathIndex = MathConfig.current(function(stageId: string): number
-		return mastery[stageId] or 0
-	end)
+	local mathIndex = MathLevels.current(Levels.sanitize(snapshot.levels)[MathLevels.WORLD])
 
 	return {
 		letters = `Уровень {level} из {Levels.count()} · {stage.title}`,
-		math = `Ступень {mathIndex} из {MathConfig.count()} · {MathConfig.expect(mathIndex).title}`,
+		math = `Уровень {mathIndex} из {MathLevels.count()} · {MathLevels.expect(mathIndex).title}`,
 	}
 end
 

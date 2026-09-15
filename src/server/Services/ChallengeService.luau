@@ -143,6 +143,11 @@ local function finish(player: Player, reason: string)
 	if levelCleared then
 		ProgressService.clearLevel(player, levelCleared)
 	end
+	-- То же для пути мира математики: финиш уровня счёта открывает следующий.
+	local mathLevelCleared = if reason == "completed" then state.spec.params.mathLevel else nil
+	if mathLevelCleared then
+		ProgressService.clearMathLevel(player, mathLevelCleared)
+	end
 
 	local result = state.module.Finish(state)
 
@@ -164,6 +169,7 @@ local function finish(player: Player, reason: string)
 		stars_awarded = awarded,
 		reason = reason,
 		levelCleared = levelCleared,
+		mathLevelCleared = mathLevelCleared,
 	})
 
 	print(
@@ -292,8 +298,9 @@ local function onStart(player: Player, challengeId: any, options: StartOptions?)
 		и уровней ему не нужно. Испытаниям с площади этот аргумент не нужен,
 		и они его не берут.
 	]]
-	local track = if module.usesMathStage
-		then ProgressService.mathStage(player)
+	local track = if module.usesMathLevel
+		then ProgressService.mathLevel(player)
+		elseif module.usesMathStage then ProgressService.mathStage(player)
 		elseif module.usesLevel then ProgressService.lettersLevel(player)
 		else nil
 

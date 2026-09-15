@@ -20,6 +20,7 @@ local PlayLog = require(script.Parent.PlayLog)
 local Tutorial = require(script.Parent.Tutorial)
 local PlayLimit = require(script.Parent.PlayLimit)
 local DailyLetter = require(script.Parent.DailyLetter)
+local MathLevels = require(script.Parent.Parent.Config.MathLevels)
 
 export type Step = (profile: any) -> ()
 
@@ -162,6 +163,25 @@ local STEPS: { [number]: Step } = {
 
 	[9] = function(profile)
 		profile.daily = DailyLetter.sanitize(profile.daily)
+	end,
+
+	--[[
+		[10] Мир математики стал путём из уровней (Config/MathLevels): рядом с
+		     `levels.letters` появился `levels.math`. Кто уже играл, получает
+		     пройденными столько уровней, сколько ступеней у него было открыто
+		     сверх первой, — портал продолжит с той же ступени, а не с полянки.
+		     Сохранка забега с числами остаётся: её ступень и есть уровень.
+	]]
+	[10] = function(profile)
+		local levels = Levels.sanitize(profile.levels)
+		local math_ = if typeof(profile.math) == "table" then profile.math else {}
+		levels[MathLevels.WORLD] = MathLevels.clearedFromMastery(function(stageId: string): number
+			local progress = math_[stageId]
+			return if typeof(progress) == "table" and typeof(progress.mastery) == "number"
+				then progress.mastery
+				else 0
+		end)
+		profile.levels = levels
 	end,
 }
 

@@ -22,6 +22,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MathConfig = require(Shared.Config.Math)
+local MathLevels = require(Shared.Config.MathLevels)
 local Tunnel = require(Shared.Config.Tunnel)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 
@@ -34,8 +35,11 @@ MathGates.trains = { "count" }
 -- Буквы этому испытанию не нужны: оно про числа, и очередь повторений по алфавиту
 -- к нему отношения не имеет.
 MathGates.minLetters = 0
--- Просит у ChallengeService открытую ступень счёта: её ребёнок не выбирает.
-MathGates.usesMathStage = true
+--[[
+	Просит у ChallengeService уровень пути мира математики (Config/MathLevels):
+	его ребёнок не выбирает, портал продолжает путь. Номер уровня — номер ступени счёта.
+]]
+MathGates.usesMathLevel = true
 
 --[[
 	Цвет числа. Он не несёт смысла — числа не различаются цветом, как буквы, —
@@ -91,16 +95,19 @@ end
 ]]
 local function assemble(stage: number, difficulty: number, seed: number, resumeFrom: number)
 	local spec = MathConfig.expect(stage)
+	local level = MathLevels.expect(stage)
 
-	local gateCount = DifficultyCurve.pick(Tunnel.MATH_PARAMS.gates, difficulty)
+	-- Ворот столько, сколько сохранок у уровня в плане пути (docs/17-CONTENT-PLAN.md § 2).
+	local gateCount = level.gates
 	--[[
-		Проёмов столько, сколько разрешают И сложность, И ступень, И дорожки.
+		Проёмов столько, сколько разрешают И сложность, И ступень, И уровень, И дорожки.
 		Ступень здесь главнее сложности: на «узнавании количества» вариантов два,
 		и подниматься до трёх ей нельзя, каким бы сильным ни был ребёнок.
 	]]
 	local choiceCount = math.min(
 		DifficultyCurve.pick(Tunnel.MATH_PARAMS.choices, difficulty),
 		spec.choices,
+		level.maxChoices,
 		Tunnel.LANE_COUNT
 	)
 	local obstacleCount = DifficultyCurve.pick(Tunnel.MATH_PARAMS.obstacles, difficulty)
@@ -147,6 +154,9 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 			resumeFrom = from,
 			mathStage = stage,
 			mathStageId = spec.id,
+			-- Уровень пути: по финишу ChallengeService засчитает его пройденным.
+			mathLevel = level.index,
+			mathLevelTitle = level.title,
 			-- Задача первых невзятых ворот: её произносит сервер сразу после инструкции.
 			taskVO = if firstGate then firstGate.vo else nil,
 			taskPrompt = if firstGate then firstGate.prompt else "",

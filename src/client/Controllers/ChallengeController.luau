@@ -16,6 +16,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 local Stages = require(Shared.Config.Stages)
+local MathLevels = require(Shared.Config.MathLevels)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local AudioController = require(script.Parent.AudioController)
@@ -442,7 +443,11 @@ local function onEnd(result: any)
 		ему важно видеть, что путь продвинулся.
 	]]
 	local stage = if result.levelCleared then Stages.get(result.levelCleared) else nil
-	local cleared = if stage then `Уровень «{stage.title}» пройден!` else nil
+	local mathLevel = if result.mathLevelCleared then MathLevels.get(result.mathLevelCleared) else nil
+	local cleared = if stage
+		then `Уровень «{stage.title}» пройден!`
+		elseif mathLevel then `Уровень «{mathLevel.title}» пройден!`
+		else nil
 
 	-- Нажал 🏠 посреди испытания — он уже ушёл, и итог ему показывать незачем.
 	if result.reason ~= "aborted" then

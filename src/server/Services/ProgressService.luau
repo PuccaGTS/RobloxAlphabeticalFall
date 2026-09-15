@@ -19,6 +19,7 @@ local Letters = require(Shared.Config.Letters)
 local Stages = require(Shared.Config.Stages)
 local Levels = require(Shared.Config.Levels)
 local MathConfig = require(Shared.Config.Math)
+local MathLevels = require(Shared.Config.MathLevels)
 local Economy = require(Shared.Config.Economy)
 local MasteryRules = require(Shared.Logic.MasteryRules)
 local ReviewScheduler = require(Shared.Logic.ReviewScheduler)
@@ -547,6 +548,27 @@ function ProgressService.clearLevel(player: Player, index: number)
 	ProfileService.update(player, function(profile)
 		local levels = Levels.sanitize(profile.levels)
 		levels[Levels.WORLD] = math.max(levels[Levels.WORLD], index)
+		profile.levels = levels
+	end)
+end
+
+-- ===== Уровни мира математики ====================================================
+
+-- Уровень, который играет оранжевый портал: следующий за пройденными (Config/MathLevels).
+function ProgressService.mathLevel(player: Player): number
+	local profile = ProfileService.get(player)
+	local cleared = if profile then Levels.sanitize(profile.levels)[MathLevels.WORLD] else 0
+	return MathLevels.current(cleared)
+end
+
+-- Уровень счёта пройден до финиша. Как и в мире букв, путь назад не двигается.
+function ProgressService.clearMathLevel(player: Player, index: number)
+	if not MathLevels.get(index) then
+		return
+	end
+	ProfileService.update(player, function(profile)
+		local levels = Levels.sanitize(profile.levels)
+		levels[MathLevels.WORLD] = math.max(levels[MathLevels.WORLD], index)
 		profile.levels = levels
 	end)
 end

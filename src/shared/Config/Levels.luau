@@ -27,6 +27,7 @@ local Types = require(script.Parent.Parent.Types)
 local DifficultyCurve = require(script.Parent.Parent.Logic.DifficultyCurve)
 local Letters = require(script.Parent.Letters)
 local Stages = require(script.Parent.Stages)
+local MathConfig = require(script.Parent.Math)
 
 export type Level = {
 	index: number, -- он же номер ступени алфавита
@@ -79,6 +80,8 @@ Levels.CONFUSABLES_APART_UNTIL = 4
 
 -- Мир, чей путь описывают эти уровни. Ключ в Profile.levels.
 Levels.WORLD = "letters"
+-- Ключ пути мира математики (Config/MathLevels): его уровни — ступени счёта.
+Levels.MATH_WORLD = "math"
 
 function Levels.count(): number
 	return #Levels.all
@@ -210,14 +213,21 @@ end
 	и слишком большие числа. Всё это приводится к целому от нуля до числа уровней.
 ]]
 function Levels.sanitize(raw: any): { [string]: number }
-	local clean: { [string]: number } = { [Levels.WORLD] = 0 }
+	-- Путь мира математики лежит рядом, под своим ключом (Config/MathLevels).
+	local caps = { [Levels.WORLD] = Levels.count(), [Levels.MATH_WORLD] = MathConfig.count() }
+	local clean: { [string]: number } = {}
+	for world in caps do
+		clean[world] = 0
+	end
 	if typeof(raw) ~= "table" then
 		return clean
 	end
 
-	local value = raw[Levels.WORLD]
-	if typeof(value) == "number" and value == value then
-		clean[Levels.WORLD] = math.clamp(math.floor(value), 0, Levels.count())
+	for world, cap in caps do
+		local value = raw[world]
+		if typeof(value) == "number" and value == value then
+			clean[world] = math.clamp(math.floor(value), 0, cap)
+		end
 	end
 	return clean
 end
