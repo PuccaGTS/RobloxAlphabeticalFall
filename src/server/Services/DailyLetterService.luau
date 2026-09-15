@@ -24,6 +24,7 @@ local ProgressService = require(script.Parent.ProgressService)
 local EconomyService = require(script.Parent.EconomyService)
 local ChallengeService = require(script.Parent.ChallengeService)
 local CosmeticsService = require(script.Parent.CosmeticsService)
+local PetService = require(script.Parent.PetService)
 local Mirror = require(script.Parent.Parent.Challenges.Mirror)
 
 local DailyLetterService = {}
@@ -98,6 +99,8 @@ function DailyLetterService.grantStreakItems(player: Player): { string }
 
 	if #granted > 0 then
 		CosmeticsService.apply(player)
+		-- За 30 дней — скин буквят: его надевает PetService, а не косметика персонажа.
+		PetService.refresh(player)
 		print(`[Daily] {player.Name}: за серию выдано {table.concat(granted, ", ")}`)
 	end
 	return granted

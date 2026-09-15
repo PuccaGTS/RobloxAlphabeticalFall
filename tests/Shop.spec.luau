@@ -70,7 +70,7 @@ return function()
 			for _, id in Shop.ids() do
 				local item = Shop.expect(id)
 				expect(#item.icon > 0).to.equal(true)
-				expect(item.visual ~= nil or item.trail ~= nil).to.equal(true)
+				expect(item.visual ~= nil or item.trail ~= nil or item.skin ~= nil).to.equal(true)
 			end
 		end)
 
@@ -128,6 +128,37 @@ return function()
 		)
 	end)
 
+	describe("Config: скины буквят", function()
+		it(
+			"скин — это наряд, а не буквёнок: у каждого есть цвет и материал",
+			function()
+				local skins = 0
+				for _, item in Shop.all do
+					if item.category == "petskin" then
+						skins += 1
+						expect(item.skin).to.be.ok()
+						expect(typeof(item.skin.color)).to.equal("Color3")
+						expect(typeof(item.skin.material)).to.equal("EnumItem")
+						expect(item.visual).to.equal(nil)
+						expect(item.trail).to.equal(nil)
+					else
+						expect(item.skin).to.equal(nil)
+					end
+				end
+				expect(skins >= 3).to.equal(true)
+			end
+		)
+
+		-- docs/04-ECONOMY.md § 3: скины буквят — редкий тир T3.
+		it("продаваемые скины стоят в тире T3", function()
+			for _, item in Shop.all do
+				if item.category == "petskin" and item.price then
+					expect(item.tier).to.equal(3)
+				end
+			end
+		end)
+	end)
+
 	describe("Config: вещи за серию буквы дня", function()
 		it("за 7 и 14 дней серии есть по вещи — шапка и след", function()
 			expect(Shop.expect("hat_sun").category).to.equal("hat")
@@ -161,6 +192,12 @@ return function()
 				expect(month[2]).to.equal("trail_sun")
 			end
 		)
+
+		it("за 30 дней серии — радужный скин буквят", function()
+			local month = Shop.streakItems(30)
+			expect(table.find(month, "skin_rainbow")).to.be.ok()
+			expect(Shop.expect("skin_rainbow").category).to.equal("petskin")
+		end)
 
 		it("чужой grantedBy не принимается за серию", function()
 			expect(Shop.streakDays({ grantedBy = "letter_mastered:m" })).to.equal(nil)

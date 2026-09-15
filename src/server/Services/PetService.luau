@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
+local Shop = require(Shared.Config.Shop)
 local MasteryRules = require(Shared.Logic.MasteryRules)
 local Pets = require(Shared.Logic.Pets)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
@@ -29,6 +30,8 @@ local PetService = {}
 PetService.ATTRIBUTES = { "PetLetter", "PetLetter2" }
 -- Все 33 буквы освоены: над головой титул «Хранитель Азбуки», его видят все вокруг.
 PetService.KEEPER_ATTRIBUTE = "AlphabetKeeper"
+-- Скин всех буквят игрока: id предмета Config/Shop категории "petskin".
+PetService.SKIN_ATTRIBUTE = "PetSkin"
 
 --[[
 	Приводит питомцев в профиле в порядок и выставляет атрибуты. Зовётся при входе
@@ -51,6 +54,12 @@ function PetService.refresh(player: Player)
 	for slot, attribute in PetService.ATTRIBUTES do
 		player:SetAttribute(attribute, equipped[slot])
 	end
+
+	-- Скин — только купленный или заработанный: в атрибут не попадёт чужой id из профиля.
+	local skinId = profile.equipped.petskin
+	local skin = if typeof(skinId) == "string" then Shop.get(skinId) else nil
+	local owned = skin ~= nil and skin.category == "petskin" and table.find(profile.inventory, skinId) ~= nil
+	player:SetAttribute(PetService.SKIN_ATTRIBUTE, if owned then skinId else nil)
 	player:SetAttribute(PetService.KEEPER_ATTRIBUTE, Pets.isKeeper(profile.letters) or nil)
 end
 

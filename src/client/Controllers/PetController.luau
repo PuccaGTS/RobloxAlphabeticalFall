@@ -24,6 +24,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
+local Shop = require(Shared.Config.Shop)
 
 local AudioController = require(script.Parent.AudioController)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
@@ -33,6 +34,9 @@ local PetController = {}
 -- Слоты: первый буквёнок за правым плечом, второй (за 10 освоенных букв) — за левым.
 local ATTRIBUTES = { "PetLetter", "PetLetter2" }
 local KEEPER_ATTRIBUTE = "AlphabetKeeper"
+-- Скин всех буквят игрока (Config/Shop, категория "petskin"); ставит сервер.
+local SKIN_ATTRIBUTE = "PetSkin"
+local RAINBOW_SPEED = 0.15 -- оборотов радуги в секунду: плавно, без мигания (docs/11 § 7)
 local FOLDER_NAME = "AlphabetFallPets"
 local BODY_SIZE = 2.2
 -- Сбоку, чуть сзади и выше: голова не мешает камере.
@@ -45,6 +49,8 @@ type Pet = {
 	model: Model,
 	body: BasePart,
 	letterId: string,
+	skinId: string?,
+	rainbow: boolean,
 }
 
 local pets: { [Player]: { [number]: Pet } } = {}
@@ -77,13 +83,21 @@ local function piece(model: Model, name: string, shape: Enum.PartType, size: Vec
 	return part
 end
 
-local function build(letterId: string): Pet
+local function build(letterId: string, skinId: string?): Pet
 	local letter = Letters.expect(letterId)
+	local item = if skinId then Shop.get(skinId) else nil
+	local skin = if item and item.category == "petskin" then item.skin else nil
 
 	local model = Instance.new("Model")
 	model.Name = `Pet_{letterId}`
 
+	-- Без скина тело цвета буквы; со скином — наряд скина, а цвет буквы остаётся у надписи.
 	local body = piece(model, "Body", Enum.PartType.Ball, Vector3.one * BODY_SIZE, letter.color)
+	if skin then
+		body.Color = skin.color
+		body.Material = skin.material
+		body.Transparency = skin.transparency or 0
+	end
 	body.CanQuery = true -- только тело ловит касание
 	model.PrimaryPart = body
 
@@ -121,7 +135,13 @@ local function build(letterId: string): Pet
 	end)
 
 	model.Parent = container()
-	return { model = model, body = body, letterId = letterId }
+	return {
+		model = model,
+		body = body,
+		letterId = letterId,
+		skinId = if skin then skinId else nil,
+		rainbow = skin ~= nil and skin.rainbow == true,
+	}
 end
 
 local function place(pet: Pet, at: CFrame)
@@ -138,19 +158,27 @@ end
 
 local function sync(player: Player, slot: number)
 	local letterId = player:GetAttribute(ATTRIBUTES[slot])
+	local rawSkin = player:GetAttribute(SKIN_ATTRIBUTE)
+	local skinId = if typeof(rawSkin) == "string" then rawSkin else nil
 	local slots = pets[player] or {}
 	pets[player] = slots
 	local current = slots[slot]
 
-	if current and current.letterId == letterId then
+	if current and current.letterId == letterId and current.skinId == skinId then
 		return
 	end
+	local at = if current then current.body.CFrame else nil
 	if current then
 		current.model:Destroy()
 		slots[slot] = nil
 	end
 	if typeof(letterId) == "string" and Letters.get(letterId) then
-		slots[slot] = build(letterId)
+		local pet = build(letterId, skinId)
+		-- Сменили наряд — буквёнок остаётся на месте, а не прилетает издалека.
+		if at then
+			place(pet, at)
+		end
+		slots[slot] = pet
 	end
 end
 
@@ -204,6 +232,11 @@ local function watch(player: Player)
 			sync(player, slot)
 		end)
 	end
+	player:GetAttributeChangedSignal(SKIN_ATTRIBUTE):Connect(function()
+		for slot in ATTRIBUTES do
+			sync(player, slot)
+		end
+	end)
 
 	syncTitle(player)
 	player:GetAttributeChangedSignal(KEEPER_ATTRIBUTE):Connect(function()
@@ -232,6 +265,9 @@ local function step(dt: number)
 					then goal
 					else from:Lerp(goal, alpha)
 				place(pet, at)
+				if pet.rainbow then
+					pet.body.Color = Color3.fromHSV((now * RAINBOW_SPEED + slot * 0.25) % 1, 0.6, 1)
+				end
 				if pet.model.Parent == nil then
 					pet.model.Parent = container()
 				end

@@ -180,6 +180,7 @@ export type Equipped = {
 	back: string?,
 	face: string?,
 	trail: string?,
+	petskin: string?, -- скин всех буквят сразу: предмет Config/Shop категории "petskin"
 	pets: { string },
 }
 

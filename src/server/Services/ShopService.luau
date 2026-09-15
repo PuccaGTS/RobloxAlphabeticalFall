@@ -17,6 +17,7 @@ local ProfileService = require(script.Parent.ProfileService)
 local EconomyService = require(script.Parent.EconomyService)
 local ProgressService = require(script.Parent.ProgressService)
 local CosmeticsService = require(script.Parent.CosmeticsService)
+local PetService = require(script.Parent.PetService)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 local ShopService = {}
@@ -79,6 +80,8 @@ local function onBuy(player: Player, itemId: any)
 	end)
 
 	CosmeticsService.apply(player)
+	-- Скин буквят надевается не на персонажа, а на буквят: их ведёт PetService.
+	PetService.refresh(player)
 	print(`[Shop] {player.Name} купил {itemId} за {item.price} ⭐`)
 
 	for _, hook in purchaseHooks do
@@ -116,6 +119,7 @@ local function onEquip(player: Player, itemId: any)
 	end)
 
 	CosmeticsService.apply(player)
+	PetService.refresh(player)
 end
 
 function ShopService.start()

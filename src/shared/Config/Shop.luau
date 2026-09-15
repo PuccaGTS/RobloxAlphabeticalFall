@@ -36,9 +36,21 @@ export type TrailVisual = {
 	width: number,
 }
 
+--[[
+	Скин буквёнка: во что одето его тело. Буква над головой остаётся цвета буквы —
+	скин не должен мешать узнавать, чей это буквёнок (docs/04-ECONOMY.md § 4).
+	rainbow — цвет тела плавно идёт по радуге: его крутит клиент, PetController.
+]]
+export type PetSkin = {
+	color: Color3,
+	material: Enum.Material,
+	transparency: number?,
+	rainbow: boolean?,
+}
+
 export type ShopItem = {
 	id: string,
-	category: string, -- "hat" | "back" | "face" | "trail"
+	category: string, -- "hat" | "back" | "face" | "trail" | "petskin"
 	title: string,
 	price: number?,
 	robuxProduct: number?,
@@ -47,6 +59,7 @@ export type ShopItem = {
 	unlockStage: number,
 	visual: Visual?,
 	trail: TrailVisual?,
+	skin: PetSkin?,
 	icon: string, -- пока эмодзи, потом rbxassetid
 }
 
@@ -645,6 +658,53 @@ local Items: { [string]: ShopItem } = {
 			width = 2.4,
 		},
 	},
+	--[[
+		Скины буквят — тир T3, «редкие» (docs/04-ECONOMY.md § 3, § 4). Сами буквята
+		не продаются никогда: скин меняет только наряд тех, кого ребёнок уже заработал
+		учёбой. Один скин на всех буквят сразу — выбирать скин для каждой из 33 букв
+		пятилетке не нужно.
+	]]
+	skin_ice = {
+		id = "skin_ice",
+		category = "petskin",
+		title = "Ледяные буквята",
+		price = 500,
+		tier = 3,
+		unlockStage = 1,
+		icon = "🧊",
+		skin = { color = Color3.fromRGB(170, 225, 255), material = Enum.Material.Glass, transparency = 0.15 },
+	},
+	skin_gold = {
+		id = "skin_gold",
+		category = "petskin",
+		title = "Золотые буквята",
+		price = 650,
+		tier = 3,
+		unlockStage = 1,
+		icon = "🥇",
+		skin = { color = Color3.fromRGB(255, 200, 70), material = Enum.Material.Foil },
+	},
+	skin_fire = {
+		id = "skin_fire",
+		category = "petskin",
+		title = "Огненные буквята",
+		price = 850,
+		tier = 3,
+		unlockStage = 1,
+		icon = "🔥",
+		skin = { color = Color3.fromRGB(255, 130, 50), material = Enum.Material.Neon },
+	},
+	-- Награда за 30 дней серии буквы дня (docs/03-CHALLENGES.md § 7): не продаётся.
+	skin_rainbow = {
+		id = "skin_rainbow",
+		category = "petskin",
+		title = "Радужные буквята",
+		grantedBy = "daily_streak:30",
+		tier = 3,
+		unlockStage = 1,
+		icon = "🌈",
+		skin = { color = Color3.fromRGB(255, 120, 120), material = Enum.Material.Neon, rainbow = true },
+	},
 	-- Из сундука на лугу, см. hat_mushroom.
 	trail_leaves = {
 		id = "trail_leaves",
@@ -682,7 +742,7 @@ local Module = {}
 local STREAK_PREFIX = "daily_streak:"
 
 Module.all = Items
-Module.CATEGORIES = { "hat", "back", "face", "trail" }
+Module.CATEGORIES = { "hat", "back", "face", "trail", "petskin" }
 
 function Module.get(id: string): ShopItem?
 	return Items[id]

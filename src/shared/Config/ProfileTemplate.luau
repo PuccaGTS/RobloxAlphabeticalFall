@@ -174,6 +174,7 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 			back = profile.equipped.back,
 			face = profile.equipped.face,
 			trail = profile.equipped.trail,
+			petskin = profile.equipped.petskin,
 			pets = table.clone(profile.equipped.pets),
 		},
 		dailyStreak = profile.dailyStreak,
