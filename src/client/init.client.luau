@@ -26,6 +26,21 @@ local ShopUI = require(UI.ShopUI)
 local ParentUI = require(UI.ParentUI)
 local DayOverScreen = require(UI.DayOverScreen)
 
+--[[
+	Окна чата Roblox у нас нет (docs/11-COMPLIANCE.md § 2). Сервер удаляет сами каналы
+	(Services/SafetyService), а здесь прячем пустое окно, чтобы ребёнок не искал,
+	куда писать. SetCore готов не сразу после старта — пробуем несколько раз.
+]]
+task.spawn(function()
+	local StarterGui = game:GetService("StarterGui")
+	for _ = 1, 20 do
+		if pcall(StarterGui.SetCoreGuiEnabled, StarterGui, Enum.CoreGuiType.Chat, false) then
+			return
+		end
+		task.wait(0.5)
+	end
+end)
+
 AudioController.init()
 SfxController.init()
 ChallengeController.init()

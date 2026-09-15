@@ -23,6 +23,15 @@
       "ServerWorld": {
         "$path": "src/server/World"
       },
+      "SourceServices": {
+        "$path": "src/server/Services"
+      },
+      "SourceClientUI": {
+        "$path": "src/client/UI"
+      },
+      "SourceClientControllers": {
+        "$path": "src/client/Controllers"
+      },
       "Assets": {
         "$path": { "optional": "assets/models" }
       }

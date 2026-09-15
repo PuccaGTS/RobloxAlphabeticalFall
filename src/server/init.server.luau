@@ -31,6 +31,7 @@ local TutorialService = require(Services.TutorialService)
 local PlayLimitService = require(Services.PlayLimitService)
 local PetService = require(Services.PetService)
 local DailyLetterService = require(Services.DailyLetterService)
+local SafetyService = require(Services.SafetyService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -67,6 +68,7 @@ end
 
 reportContentState()
 
+SafetyService.start() -- первым: чат выключается раньше, чем кто-то успеет зайти
 EconomyService.start()
 ProgressService.start()
 ChallengeService.start()

@@ -40,6 +40,14 @@
       }
     },
 
+    "TextChatService": {
+      "$className": "TextChatService",
+      "$properties": {
+        "CreateDefaultTextChannels": false,
+        "CreateDefaultCommands": false
+      }
+    },
+
     "SoundService": {
       "$className": "SoundService",
       "$properties": {
