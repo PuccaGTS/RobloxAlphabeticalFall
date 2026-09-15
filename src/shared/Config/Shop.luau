@@ -267,7 +267,82 @@ local Items: { [string]: ShopItem } = {
 		},
 	},
 
+	--[[
+		Вещи из сундуков в парке (Config/Chests). Не продаются: в витрине видно,
+		что они есть и где искать, — «🗝 в парке». Внутри сундука всегда одна
+		и та же вещь, случайности нет.
+	]]
+	-- Шляпка-мухомор = красная шляпка с белыми крапинками + ножка-обод
+	hat_mushroom = {
+		id = "hat_mushroom",
+		category = "hat",
+		title = "Шляпка-мухомор",
+		grantedBy = "chest:chest_pines",
+		tier = 1,
+		unlockStage = 1,
+		icon = "🍄",
+		visual = {
+			piece(
+				"Cylinder",
+				Color3.fromRGB(245, 235, 215),
+				Vector3.new(0.5, 2, 2),
+				CFrame.new(0, 0.8, 0) * CFrame.Angles(0, 0, math.rad(90))
+			),
+			piece("Ball", Color3.fromRGB(215, 55, 50), Vector3.new(3, 1.6, 3), CFrame.new(0, 1.35, 0)),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 255, 255),
+				Vector3.new(0.4, 0.4, 0.4),
+				CFrame.new(0.6, 2.05, -0.4)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 255, 255),
+				Vector3.new(0.35, 0.35, 0.35),
+				CFrame.new(-0.7, 1.9, 0.3)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 255, 255),
+				Vector3.new(0.3, 0.3, 0.3),
+				CFrame.new(0.1, 2.1, 0.7)
+			),
+		},
+	},
+
 	-- === Спина ===
+	-- Рюкзак-ёжик = коричневое тельце + иголки веером + носик
+	back_hedgehog = {
+		id = "back_hedgehog",
+		category = "back",
+		title = "Рюкзак-ёжик",
+		grantedBy = "chest:chest_pond",
+		tier = 1,
+		unlockStage = 1,
+		icon = "🦔",
+		visual = {
+			piece("Ball", Color3.fromRGB(160, 120, 85), Vector3.new(1.9, 1.9, 1.3), CFrame.new(0, 0, 0.9)),
+			piece(
+				"Block",
+				Color3.fromRGB(95, 70, 50),
+				Vector3.new(0.3, 0.9, 0.3),
+				CFrame.new(-0.55, 0.75, 1.2) * CFrame.Angles(math.rad(-30), 0, math.rad(25))
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(95, 70, 50),
+				Vector3.new(0.3, 1, 0.3),
+				CFrame.new(0, 0.85, 1.25) * CFrame.Angles(math.rad(-30), 0, 0)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(95, 70, 50),
+				Vector3.new(0.3, 0.9, 0.3),
+				CFrame.new(0.55, 0.75, 1.2) * CFrame.Angles(math.rad(-30), 0, math.rad(-25))
+			),
+			piece("Ball", Color3.fromRGB(40, 30, 30), Vector3.new(0.3, 0.3, 0.3), CFrame.new(0, -0.3, 1.6)),
+		},
+	},
 	-- Плащ = полотно за спиной, чуть отведённое назад, + застёжка
 	back_cape = {
 		id = "back_cape",
@@ -568,6 +643,21 @@ local Items: { [string]: ShopItem } = {
 			}),
 			lifetime = 1.5,
 			width = 2.4,
+		},
+	},
+	-- Из сундука на лугу, см. hat_mushroom.
+	trail_leaves = {
+		id = "trail_leaves",
+		category = "trail",
+		title = "Листопад",
+		grantedBy = "chest:chest_meadow",
+		tier = 1,
+		unlockStage = 1,
+		icon = "🍂",
+		trail = {
+			color = ColorSequence.new(Color3.fromRGB(240, 180, 60), Color3.fromRGB(200, 90, 40)),
+			lifetime = 1.4,
+			width = 2.2,
 		},
 	},
 	-- Награда за 14 дней серии буквы дня, см. hat_sun.

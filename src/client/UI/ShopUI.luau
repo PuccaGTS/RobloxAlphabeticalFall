@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 
 local Shop = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Shop)
+local Chests = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Chests)
 
 local ShopUI = {}
 
@@ -73,6 +74,7 @@ local function makeCard(item): Frame
 	price.Text = if item.price
 		then priceText(item.price)
 		elseif streakDays then `☀ {streakDays} дней`
+		elseif Chests.chestIdOf(item.grantedBy) then "🗝 в сундуке"
 		else ""
 	price.TextColor3 = Color3.fromRGB(255, 214, 102)
 	price.TextScaled = true
@@ -233,6 +235,10 @@ function ShopUI.update(snapshot)
 				then tonumber(snapshot.daily.streak) or 0
 				else 0
 			action.Text = `🔥 {math.min(streak, days)} из {days}`
+			action.BackgroundColor3 = COLOR_LOCKED
+		elseif Chests.chestIdOf(item.grantedBy) then
+			-- Не купить, а найти: сундук стоит в парке между площадью и домами.
+			action.Text = "Найди в парке"
 			action.BackgroundColor3 = COLOR_LOCKED
 		else
 			-- Не «замок», а сколько осталось накопить: замок демотивирует, цель — нет.

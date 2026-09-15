@@ -52,6 +52,8 @@ local EVENTS: { string } = {
 		{ state = "already", letterId } — на сегодня уже пройдена.
 	]]
 	"DailyLetter",
+	-- S→C  сундук в парке: { state = "opened" | "already", itemId }
+	"ChestOpened",
 }
 
 local FUNCTIONS: { string } = {

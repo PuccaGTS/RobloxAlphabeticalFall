@@ -20,6 +20,7 @@ local PortalSignController = require(Controllers.PortalSignController)
 local TutorialController = require(Controllers.TutorialController)
 local PetController = require(Controllers.PetController)
 local DailyLetterController = require(Controllers.DailyLetterController)
+local ChestController = require(Controllers.ChestController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -133,6 +134,23 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 	PortalSignController.update(snapshot)
 	TutorialController.update(snapshot)
 	DailyLetterController.update(snapshot)
+	ChestController.update(snapshot)
+end)
+
+-- Сундук в парке: вещь уже надета сервером, здесь — чтобы ребёнок понял, что нашёл.
+RemoteDefs.event("ChestOpened").OnClientEvent:Connect(function(payload: any)
+	if typeof(payload) ~= "table" then
+		return
+	end
+	local item = typeof(payload.itemId) == "string" and Shop.get(payload.itemId)
+	if not item then
+		return
+	end
+	if payload.state == "opened" then
+		HUD.toast(`🗝 Сундук! {item.icon} {item.title} — теперь твоя!`, 5)
+	elseif payload.state == "already" then
+		HUD.toast(`Этот сундук ты уже нашёл: там был {item.icon}`, 3)
+	end
 end)
 
 --[[

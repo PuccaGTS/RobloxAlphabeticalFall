@@ -32,6 +32,7 @@ local PlayLimitService = require(Services.PlayLimitService)
 local PetService = require(Services.PetService)
 local DailyLetterService = require(Services.DailyLetterService)
 local SafetyService = require(Services.SafetyService)
+local ChestService = require(Services.ChestService)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -77,6 +78,7 @@ CosmeticsService.start()
 ShopService.start()
 WorldService.start()
 BaseService.start() -- после мира: участки встают вокруг уже построенной площади
+ChestService.start() -- сундуки в парке между площадью и участками
 ParentService.start()
 TutorialService.start() -- подписывается на хуки испытаний и магазина
 PlayLimitService.start() -- сторож старта испытаний: время на сегодня
