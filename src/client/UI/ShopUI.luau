@@ -69,7 +69,11 @@ local function makeCard(item): Frame
 	price.Size = UDim2.fromScale(1, 0.14)
 	price.Position = UDim2.fromScale(0, 0.58)
 	price.BackgroundTransparency = 1
-	price.Text = if item.price then priceText(item.price) else ""
+	local streakDays = Shop.streakDays(item)
+	price.Text = if item.price
+		then priceText(item.price)
+		elseif streakDays then `☀ {streakDays} дней`
+		else ""
 	price.TextColor3 = Color3.fromRGB(255, 214, 102)
 	price.TextScaled = true
 	price.Font = Enum.Font.FredokaOne
@@ -219,6 +223,17 @@ function ShopUI.update(snapshot)
 		elseif item.price and (snapshot.stars or 0) >= item.price then
 			action.Text = "Купить"
 			action.BackgroundColor3 = COLOR_BUY
+		elseif Shop.streakDays(item) then
+			--[[
+				За серию не покупается. Цель — огоньки, как на камне буквы дня:
+				сколько дней ещё осталось, ребёнок видит там же, где считает серию.
+			]]
+			local days = Shop.streakDays(item) :: number
+			local streak = if typeof(snapshot.daily) == "table"
+				then tonumber(snapshot.daily.streak) or 0
+				else 0
+			action.Text = `🔥 {math.min(streak, days)} из {days}`
+			action.BackgroundColor3 = COLOR_LOCKED
 		else
 			-- Не «замок», а сколько осталось накопить: замок демотивирует, цель — нет.
 			local left = (item.price or 0) - (snapshot.stars or 0)

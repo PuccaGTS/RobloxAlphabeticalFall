@@ -228,6 +228,45 @@ local Items: { [string]: ShopItem } = {
 		),
 	}),
 
+	--[[
+		Награды серии буквы дня (docs/03-CHALLENGES.md § 7). Не продаются: витрина
+		показывает их целью «🔥 7 дней», а выдаёт DailyLetterService, когда рекорд
+		серии дорос. Золото и лучи — тот же солнечный знак, что на камне буквы дня.
+	]]
+	-- Солнечная шляпа = широкие поля + тулья + солнце на макушке с лучами
+	hat_sun = {
+		id = "hat_sun",
+		category = "hat",
+		title = "Солнечная шляпа",
+		grantedBy = "daily_streak:7",
+		tier = 2,
+		unlockStage = 1,
+		icon = "🌞",
+		visual = {
+			piece(
+				"Cylinder",
+				Color3.fromRGB(245, 215, 130),
+				Vector3.new(0.25, 3.4, 3.4),
+				CFrame.new(0, 0.7, 0) * CFrame.Angles(0, 0, math.rad(90))
+			),
+			piece(
+				"Cylinder",
+				Color3.fromRGB(235, 195, 100),
+				Vector3.new(1, 2.1, 2.1),
+				CFrame.new(0, 1.2, 0) * CFrame.Angles(0, 0, math.rad(90))
+			),
+			piece("Ball", GOLD, Vector3.new(0.9, 0.9, 0.9), CFrame.new(0, 2.05, 0), Enum.Material.Neon),
+			piece("Block", GOLD, Vector3.new(1.7, 0.15, 0.15), CFrame.new(0, 2.05, 0), Enum.Material.Neon),
+			piece(
+				"Block",
+				GOLD,
+				Vector3.new(1.7, 0.15, 0.15),
+				CFrame.new(0, 2.05, 0) * CFrame.Angles(0, math.rad(90), 0),
+				Enum.Material.Neon
+			),
+		},
+	},
+
 	-- === Спина ===
 	-- Плащ = полотно за спиной, чуть отведённое назад, + застёжка
 	back_cape = {
@@ -531,9 +570,26 @@ local Items: { [string]: ShopItem } = {
 			width = 2.4,
 		},
 	},
+	-- Награда за 14 дней серии буквы дня, см. hat_sun.
+	trail_sun = {
+		id = "trail_sun",
+		category = "trail",
+		title = "Солнечные зайчики",
+		grantedBy = "daily_streak:14",
+		tier = 2,
+		unlockStage = 1,
+		icon = "🔆",
+		trail = {
+			color = ColorSequence.new(Color3.fromRGB(255, 250, 200), Color3.fromRGB(255, 190, 40)),
+			lifetime = 1.6,
+			width = 2.6,
+		},
+	},
 }
 
 local Module = {}
+
+local STREAK_PREFIX = "daily_streak:"
 
 Module.all = Items
 Module.CATEGORIES = { "hat", "back", "face", "trail" }
@@ -561,6 +617,39 @@ function Module.ids(): { string }
 		local pb = ib.price or math.huge
 		if pa ~= pb then
 			return pa < pb
+		end
+		return a < b
+	end)
+	return ids
+end
+
+-- За сколько дней серии буквы дня выдаётся предмет, или nil, если не за серию.
+function Module.streakDays(item: ShopItem): number?
+	local grantedBy = item.grantedBy
+	if not grantedBy or string.sub(grantedBy, 1, #STREAK_PREFIX) ~= STREAK_PREFIX then
+		return nil
+	end
+	return tonumber(string.sub(grantedBy, #STREAK_PREFIX + 1))
+end
+
+--[[
+	Предметы, которые положены за рекорд серии best, от ближних к дальним.
+	По рекорду, а не по текущей серии: серия откатывается на шаг при пропуске,
+	а выданное назад не забирается и второй раз не выдаётся.
+]]
+function Module.streakItems(best: number): { string }
+	local ids: { string } = {}
+	for id, item in Items do
+		local days = Module.streakDays(item)
+		if days and days <= best then
+			table.insert(ids, id)
+		end
+	end
+	table.sort(ids, function(a: string, b: string): boolean
+		local da = Module.streakDays(Items[a]) :: number
+		local db = Module.streakDays(Items[b]) :: number
+		if da ~= db then
+			return da < db
 		end
 		return a < b
 	end)

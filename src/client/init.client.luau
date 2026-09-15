@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 local Letters = require(Shared.Config.Letters)
+local Shop = require(Shared.Config.Shop)
 
 local Controllers = script:WaitForChild("Controllers")
 local AudioController = require(Controllers.AudioController)
@@ -137,6 +138,15 @@ RemoteDefs.event("DailyLetter").OnClientEvent:Connect(function(payload: any)
 		local stars = (tonumber(payload.bonus) or 0) + (tonumber(payload.streakReward) or 0)
 		HUD.toast(`☀ Буква дня пройдена! +{stars} ⭐  🔥 {payload.streak}`, 5)
 		SfxController.play("reward")
+		-- Вещь за серию уже надета: сервер надел её вместе с выдачей.
+		if typeof(payload.items) == "table" then
+			for _, itemId in payload.items do
+				local item = typeof(itemId) == "string" and Shop.get(itemId)
+				if item then
+					task.delay(5, HUD.toast, `{item.icon} Подарок за серию: {item.title}!`, 5)
+				end
+			end
+		end
 	elseif payload.state == "already" then
 		HUD.toast("☀ Буква дня уже пройдена. Приходи завтра!", 3)
 	end

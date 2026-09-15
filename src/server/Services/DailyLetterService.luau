@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
+local Shop = require(Shared.Config.Shop)
 local DailyLetter = require(Shared.Logic.DailyLetter)
 local PlayLog = require(Shared.Logic.PlayLog)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
@@ -22,6 +23,7 @@ local ProfileService = require(script.Parent.ProfileService)
 local ProgressService = require(script.Parent.ProgressService)
 local EconomyService = require(script.Parent.EconomyService)
 local ChallengeService = require(script.Parent.ChallengeService)
+local CosmeticsService = require(script.Parent.CosmeticsService)
 local Mirror = require(script.Parent.Parent.Challenges.Mirror)
 
 local DailyLetterService = {}
@@ -72,6 +74,33 @@ function DailyLetterService.refresh(player: Player)
 		DailyLetter.refresh(fresh, day, letterId)
 		p.daily = fresh
 	end)
+end
+
+--[[
+	Выдаёт вещи за рекорд серии (Config/Shop, grantedBy "daily_streak:N"), которых
+	у ребёнка ещё нет. Новое сразу надевается, как купленное: награду надо увидеть
+	на себе. Зовётся по завершении буквы дня и при входе — так вещь дойдёт и до того,
+	чей рекорд вырос раньше, чем она появилась в игре. Возвращает выданные id.
+]]
+function DailyLetterService.grantStreakItems(player: Player): { string }
+	local granted = ProfileService.update(player, function(profile)
+		local fresh: { string } = {}
+		local best = DailyLetter.sanitize(profile.daily).best
+		for _, itemId in Shop.streakItems(best) do
+			if not table.find(profile.inventory, itemId) then
+				table.insert(profile.inventory, itemId)
+				profile.equipped[Shop.expect(itemId).category] = itemId
+				table.insert(fresh, itemId)
+			end
+		end
+		return fresh
+	end) or {}
+
+	if #granted > 0 then
+		CosmeticsService.apply(player)
+		print(`[Daily] {player.Name}: за серию выдано {table.concat(granted, ", ")}`)
+	end
+	return granted
 end
 
 -- Ребёнок коснулся камня: следующее задание по букве дня или «на сегодня всё».
@@ -146,6 +175,7 @@ local function onFinished(player: Player, spec: any, reason: string, answers: nu
 		streakReward =
 			EconomyService.award(player, "daily_streak", outcome.streakReward, tostring(outcome.streak))
 	end
+	local items = DailyLetterService.grantStreakItems(player)
 	print(`[Daily] {player.Name}: буква дня пройдена, серия {outcome.streak}`)
 
 	task.delay(NOTICE_DELAY, notify, player, {
@@ -154,6 +184,7 @@ local function onFinished(player: Player, spec: any, reason: string, answers: nu
 		bonus = bonus,
 		streak = outcome.streak,
 		streakReward = streakReward,
+		items = items,
 	})
 end
 
@@ -164,6 +195,7 @@ function DailyLetterService.start()
 		task.spawn(function()
 			if ProfileService.waitFor(player, 20) then
 				DailyLetterService.refresh(player)
+				DailyLetterService.grantStreakItems(player)
 			end
 		end)
 	end)

@@ -127,4 +127,45 @@ return function()
 			end
 		)
 	end)
+
+	describe("Config: вещи за серию буквы дня", function()
+		it("за 7 и 14 дней серии есть по вещи — шапка и след", function()
+			expect(Shop.expect("hat_sun").category).to.equal("hat")
+			expect(Shop.streakDays(Shop.expect("hat_sun"))).to.equal(7)
+			expect(Shop.expect("trail_sun").category).to.equal("trail")
+			expect(Shop.streakDays(Shop.expect("trail_sun"))).to.equal(14)
+		end)
+
+		it(
+			"каждая выдача за серию приходится на день из таблицы наград",
+			function()
+				for _, id in Shop.ids() do
+					local days = Shop.streakDays(Shop.expect(id))
+					if days then
+						expect(Economy.DAILY_STREAK_REWARDS[days]).to.be.ok()
+					end
+				end
+			end
+		)
+
+		it(
+			"выдаётся по рекорду: до порога ничего, после — всё положенное по порядку",
+			function()
+				expect(#Shop.streakItems(0)).to.equal(0)
+				expect(#Shop.streakItems(6)).to.equal(0)
+				local seven = Shop.streakItems(7)
+				expect(#seven).to.equal(1)
+				expect(seven[1]).to.equal("hat_sun")
+				local month = Shop.streakItems(30)
+				expect(month[1]).to.equal("hat_sun")
+				expect(month[2]).to.equal("trail_sun")
+			end
+		)
+
+		it("чужой grantedBy не принимается за серию", function()
+			expect(Shop.streakDays({ grantedBy = "letter_mastered:m" })).to.equal(nil)
+			expect(Shop.streakDays({ grantedBy = "daily_streak:abc" })).to.equal(nil)
+			expect(Shop.streakDays({ price = 10 })).to.equal(nil)
+		end)
+	end)
 end
