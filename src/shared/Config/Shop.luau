@@ -1,8 +1,9 @@
 --!strict
 --[[
-	Витрина магазина: 20 предметов — столько, сколько план первой играбельной
-	версии (docs/17-CONTENT-PLAN.md § 6). Цены разбросаны по трём тирам: после
-	первого же испытания по карману кепка, венок или усы, а ракета — это неделя.
+	Витрина магазина: начиналась с 20 предметов первой играбельной версии
+	(docs/17-CONTENT-PLAN.md § 6) и растёт к каталогу § 4. Цены разбросаны по тирам:
+	после первого же испытания по карману кепка, венок или усы, ракета — это неделя,
+	скины буквят — месяц.
 
 	Правила (docs/04-ECONOMY.md):
 	  · косметика НИЧЕГО не даёт в геймплее — только вид;
@@ -237,6 +238,90 @@ local Items: { [string]: ShopItem } = {
 			Color3.fromRGB(255, 90, 80),
 			Vector3.new(0.35, 0.35, 0.35),
 			CFrame.new(0, 1.55, 0),
+			Enum.Material.Neon
+		),
+	}),
+
+	-- Цилиндр = поля + высокая тулья + красная лента
+	hat_tophat = hat("hat_tophat", "Цилиндр", 40, 0, "🪄", {
+		piece(
+			"Cylinder",
+			Color3.fromRGB(40, 40, 50),
+			Vector3.new(0.2, 2.9, 2.9),
+			CFrame.new(0, 0.65, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
+		piece(
+			"Cylinder",
+			Color3.fromRGB(45, 45, 58),
+			Vector3.new(1.8, 1.9, 1.9),
+			CFrame.new(0, 1.6, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
+		piece(
+			"Cylinder",
+			Color3.fromRGB(210, 60, 70),
+			Vector3.new(0.3, 1.95, 1.95),
+			CFrame.new(0, 0.95, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
+	}),
+	-- Шапка с помпоном = купол + белый отворот + помпон
+	hat_beanie = hat("hat_beanie", "Шапка с помпоном", 30, 0, "🧶", {
+		piece("Ball", Color3.fromRGB(90, 140, 220), Vector3.new(2.3, 1.5, 2.3), CFrame.new(0, 0.8, 0)),
+		piece(
+			"Cylinder",
+			Color3.fromRGB(245, 245, 250),
+			Vector3.new(0.5, 2.35, 2.35),
+			CFrame.new(0, 0.45, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
+		piece("Ball", Color3.fromRGB(250, 250, 255), Vector3.new(0.8, 0.8, 0.8), CFrame.new(0, 1.65, 0)),
+	}),
+	-- Звёздная корона = фиолетовый обруч + пять золотых звёздочек-ромбиков + камень спереди
+	hat_starcrown = hat("hat_starcrown", "Звёздная корона", 450, 2, "🌟", {
+		piece(
+			"Cylinder",
+			Color3.fromRGB(130, 90, 200),
+			Vector3.new(0.6, 2.3, 2.3),
+			CFrame.new(0, 0.95, 0) * CFrame.Angles(0, 0, math.rad(90))
+		),
+		piece(
+			"Block",
+			GOLD,
+			Vector3.new(0.55, 0.55, 0.15),
+			CFrame.new(0, 1.65, -1.05) * CFrame.Angles(0, 0, math.rad(45)),
+			Enum.Material.Neon
+		),
+		piece(
+			"Block",
+			GOLD,
+			Vector3.new(0.5, 0.5, 0.15),
+			CFrame.new(-1, 1.6, -0.35) * CFrame.Angles(0, math.rad(70), math.rad(45)),
+			Enum.Material.Neon
+		),
+		piece(
+			"Block",
+			GOLD,
+			Vector3.new(0.5, 0.5, 0.15),
+			CFrame.new(1, 1.6, -0.35) * CFrame.Angles(0, math.rad(-70), math.rad(45)),
+			Enum.Material.Neon
+		),
+		piece(
+			"Block",
+			GOLD,
+			Vector3.new(0.45, 0.45, 0.15),
+			CFrame.new(-0.65, 1.55, 0.85) * CFrame.Angles(0, math.rad(140), math.rad(45)),
+			Enum.Material.Neon
+		),
+		piece(
+			"Block",
+			GOLD,
+			Vector3.new(0.45, 0.45, 0.15),
+			CFrame.new(0.65, 1.55, 0.85) * CFrame.Angles(0, math.rad(-140), math.rad(45)),
+			Enum.Material.Neon
+		),
+		piece(
+			"Ball",
+			Color3.fromRGB(120, 220, 255),
+			Vector3.new(0.4, 0.4, 0.4),
+			CFrame.new(0, 0.95, -1.18),
 			Enum.Material.Neon
 		),
 	}),
@@ -508,7 +593,114 @@ local Items: { [string]: ShopItem } = {
 		},
 	},
 
+	-- Воздушный шарик = ниточка от плеча + красный шар + узелок
+	back_balloon = {
+		id = "back_balloon",
+		category = "back",
+		title = "Воздушный шарик",
+		price = 140,
+		tier = 1,
+		unlockStage = 1,
+		icon = "🎈",
+		visual = {
+			piece(
+				"Block",
+				Color3.fromRGB(245, 245, 245),
+				Vector3.new(0.08, 4, 0.08),
+				CFrame.new(0.9, 2.4, 0.9)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(235, 70, 80),
+				Vector3.new(0.3, 0.3, 0.3),
+				CFrame.new(0.9, 4.45, 0.9)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(240, 80, 90),
+				Vector3.new(1.8, 2.1, 1.8),
+				CFrame.new(0.9, 5.55, 0.9)
+			),
+		},
+	},
+	-- Ранец = короб + клапан + золотая застёжка
+	back_satchel = {
+		id = "back_satchel",
+		category = "back",
+		title = "Ранец",
+		price = 55,
+		tier = 1,
+		unlockStage = 1,
+		icon = "🎒",
+		visual = {
+			piece("Block", Color3.fromRGB(80, 160, 110), Vector3.new(1.8, 2, 0.8), CFrame.new(0, -0.1, 0.85)),
+			piece(
+				"Block",
+				Color3.fromRGB(60, 130, 90),
+				Vector3.new(1.85, 0.8, 0.85),
+				CFrame.new(0, 0.65, 0.9)
+			),
+			piece("Block", GOLD, Vector3.new(0.4, 0.3, 0.1), CFrame.new(0, 0.4, 1.33), Enum.Material.Neon),
+		},
+	},
+
 	-- === Лицо ===
+	-- Звёздные очки = две жёлтые звёздочки-ромба + перемычка
+	face_stars = {
+		id = "face_stars",
+		category = "face",
+		title = "Звёздные очки",
+		price = 75,
+		tier = 1,
+		unlockStage = 1,
+		icon = "🤩",
+		visual = {
+			piece(
+				"Block",
+				Color3.fromRGB(255, 215, 80),
+				Vector3.new(0.65, 0.65, 0.12),
+				CFrame.new(-0.45, 0.15, -0.62) * CFrame.Angles(0, 0, math.rad(45)),
+				Enum.Material.Neon
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(255, 215, 80),
+				Vector3.new(0.65, 0.65, 0.12),
+				CFrame.new(0.45, 0.15, -0.62) * CFrame.Angles(0, 0, math.rad(45)),
+				Enum.Material.Neon
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(230, 90, 150),
+				Vector3.new(0.3, 0.1, 0.1),
+				CFrame.new(0, 0.15, -0.63)
+			),
+		},
+	},
+	-- Бандана = платок на шее спереди + узелок сзади
+	face_bandana = {
+		id = "face_bandana",
+		category = "face",
+		title = "Бандана",
+		price = 45,
+		tier = 0,
+		unlockStage = 1,
+		icon = "🧣",
+		visual = {
+			piece(
+				"Block",
+				Color3.fromRGB(215, 60, 60),
+				Vector3.new(1.4, 0.7, 0.15),
+				CFrame.new(0, -0.55, -0.62) * CFrame.Angles(math.rad(-10), 0, 0)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(190, 45, 45),
+				Vector3.new(0.35, 0.35, 0.35),
+				CFrame.new(0, -0.45, 0.62)
+			),
+		},
+	},
 	face_glasses = {
 		id = "face_glasses",
 		category = "face",
@@ -704,6 +896,51 @@ local Items: { [string]: ShopItem } = {
 		unlockStage = 1,
 		icon = "🌈",
 		skin = { color = Color3.fromRGB(255, 120, 120), material = Enum.Material.Neon, rainbow = true },
+	},
+	trail_petals = {
+		id = "trail_petals",
+		category = "trail",
+		title = "Лепестки",
+		price = 160,
+		tier = 1,
+		unlockStage = 1,
+		icon = "🌸",
+		trail = {
+			color = ColorSequence.new(Color3.fromRGB(255, 200, 225), Color3.fromRGB(240, 120, 170)),
+			lifetime = 1.3,
+			width = 2,
+		},
+	},
+	trail_bubbles = {
+		id = "trail_bubbles",
+		category = "trail",
+		title = "Пузырьки",
+		price = 120,
+		tier = 1,
+		unlockStage = 1,
+		icon = "🫧",
+		trail = {
+			color = ColorSequence.new(Color3.fromRGB(200, 240, 255), Color3.fromRGB(120, 200, 240)),
+			lifetime = 1.1,
+			width = 1.8,
+		},
+	},
+	trail_notes = {
+		id = "trail_notes",
+		category = "trail",
+		title = "Ноты",
+		price = 220,
+		tier = 2,
+		unlockStage = 1,
+		icon = "🎵",
+		trail = {
+			color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 120, 255)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 200, 220)),
+			}),
+			lifetime = 1.4,
+			width = 2.2,
+		},
 	},
 	-- Из сундука на лугу, см. hat_mushroom.
 	trail_leaves = {

@@ -30,6 +30,15 @@ return function()
 			end
 		end)
 
+		-- Названия читает родитель в витрине: два «Цилиндра» он бы не различил.
+		it("названия вещей не повторяются", function()
+			local seen = {}
+			for _, item in Shop.all do
+				expect(seen[item.title]).to.equal(nil)
+				seen[item.title] = true
+			end
+		end)
+
 		it("категория предмета известна", function()
 			for _, id in Shop.ids() do
 				expect(table.find(Shop.CATEGORIES, Shop.expect(id).category)).to.be.ok()
