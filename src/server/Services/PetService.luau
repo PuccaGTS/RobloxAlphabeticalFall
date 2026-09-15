@@ -3,7 +3,7 @@
 	Питомцы-буквята на сервере: кто за кем летает. Правила — Logic/Pets.
 
 	Сервер решает и проверяет, клиент рисует. Буквёнок, который летает за
-	игроком, записывается атрибутом игрока PetLetter (id буквы), а каждый
+	игроком, записывается атрибутами игрока PetLetter и PetLetter2 (id букв), а каждый
 	клиент сам строит и водит буквят всех игроков вокруг — PetController.
 	Так в мире нет ни одной физической детали питомца (docs/07-TECH-ARCH.md § 8):
 	ничего не толкается, не падает и не тормозит сервер, а соседям буквёнка
@@ -25,10 +25,13 @@ local RateLimiter = require(script.Parent.RateLimiter)
 
 local PetService = {}
 
-PetService.ATTRIBUTE = "PetLetter"
+-- Атрибут слота: PetLetter за правым плечом, PetLetter2 — за левым.
+PetService.ATTRIBUTES = { "PetLetter", "PetLetter2" }
+-- Все 33 буквы освоены: над головой титул «Хранитель Азбуки», его видят все вокруг.
+PetService.KEEPER_ATTRIBUTE = "AlphabetKeeper"
 
 --[[
-	Приводит питомца в профиле в порядок и выставляет атрибут. Зовётся при входе
+	Приводит питомцев в профиле в порядок и выставляет атрибуты. Зовётся при входе
 	и после любой смены: так в атрибуте никогда не окажется буквёнок, которого
 	у ребёнка нет, даже если профиль испорчен.
 ]]
@@ -45,7 +48,10 @@ function PetService.refresh(player: Player)
 		end)
 	end
 
-	player:SetAttribute(PetService.ATTRIBUTE, equipped[1])
+	for slot, attribute in PetService.ATTRIBUTES do
+		player:SetAttribute(attribute, equipped[slot])
+	end
+	player:SetAttribute(PetService.KEEPER_ATTRIBUTE, Pets.isKeeper(profile.letters) or nil)
 end
 
 --[[
@@ -59,6 +65,8 @@ function PetService.grant(player: Player, letterId: string)
 		return
 	end
 
+	local wasKeeper = player:GetAttribute(PetService.KEEPER_ATTRIBUTE) == true
+	local hadSecond = player:GetAttribute(PetService.ATTRIBUTES[2]) ~= nil
 	ProfileService.update(player, function(p)
 		p.equipped.pets = Pets.afterMastered(p.equipped.pets, p.letters, letterId)
 	end)
@@ -67,9 +75,13 @@ function PetService.grant(player: Player, letterId: string)
 	--[[
 		Прилетел новый буквёнок — это главная награда за обучение, и её обязаны
 		заметить. Клиент покажет букву крупно, а голос назовёт её: буквёнок
-		с первой секунды учит своей букве.
+		с первой секунды учит своей букве. Заодно клиент узнаёт, не открылся ли
+		второй слот и не стал ли ребёнок Хранителем — это тоже надо увидеть сейчас.
 	]]
-	RemoteDefs.event("PetGranted"):FireClient(player, letterId)
+	RemoteDefs.event("PetGranted"):FireClient(player, letterId, {
+		secondSlot = not hadSecond and player:GetAttribute(PetService.ATTRIBUTES[2]) ~= nil,
+		keeper = not wasKeeper and player:GetAttribute(PetService.KEEPER_ATTRIBUTE) == true,
+	})
 	RemoteDefs.event("PlayVO"):FireClient(player, Letters.expect(letterId).vo.name, false)
 	print(`[Pets] {player.Name}: прилетел буквёнок {Letters.expect(letterId).glyph}`)
 end
@@ -84,7 +96,7 @@ local function onEquip(player: Player, letterId: any)
 	end
 
 	-- Буква не освоена — буквёнка нет, и выбрать его нельзя. Клиенту не верим.
-	local chosen = Pets.choose(profile.letters, letterId)
+	local chosen = Pets.choose(profile.letters, letterId, profile.equipped.pets)
 	if not chosen then
 		return
 	end

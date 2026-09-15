@@ -1,8 +1,8 @@
 --!nonstrict
 --[[
 	Буквята в мире: строит и водит питомцев всех игроков вокруг.
-	Кто за кем летает, решает сервер и пишет атрибутом игрока PetLetter
-	(Services/PetService); здесь только картинка и касание.
+	Кто за кем летает, решает сервер и пишет атрибутами игрока PetLetter и PetLetter2
+	(Services/PetService); здесь только картинка, касание и титул Хранителя.
 
 	Никакой физики (docs/07-TECH-ARCH.md § 8): буквёнок — анкерные детали,
 	которые каждый кадр подтягиваются к месту за плечом хозяина. Не толкается,
@@ -30,11 +30,13 @@ local Glyph = require(script.Parent.Parent.UI.Glyph)
 
 local PetController = {}
 
-local ATTRIBUTE = "PetLetter"
+-- Слоты: первый буквёнок за правым плечом, второй (за 10 освоенных букв) — за левым.
+local ATTRIBUTES = { "PetLetter", "PetLetter2" }
+local KEEPER_ATTRIBUTE = "AlphabetKeeper"
 local FOLDER_NAME = "AlphabetFallPets"
 local BODY_SIZE = 2.2
--- Место за правым плечом хозяина: сбоку, чуть сзади и выше головы не мешает камере.
-local OFFSET = CFrame.new(2.6, 1.2, 2.4)
+-- Сбоку, чуть сзади и выше: голова не мешает камере.
+local OFFSETS = { CFrame.new(2.6, 1.2, 2.4), CFrame.new(-2.6, 1.2, 2.4) }
 local FOLLOW_SPEED = 6 -- чем больше, тем плотнее держится за хозяином
 -- Хозяин телепортировался (портал, падение в туннеле) — буквёнок прыгает следом, а не летит через весь мир.
 local SNAP_DISTANCE = 60
@@ -45,7 +47,7 @@ type Pet = {
 	letterId: string,
 }
 
-local pets: { [Player]: Pet } = {}
+local pets: { [Player]: { [number]: Pet } } = {}
 local folder: Folder? = nil
 
 local function container(): Folder
@@ -134,26 +136,82 @@ local function place(pet: Pet, at: CFrame)
 	end
 end
 
-local function sync(player: Player)
-	local letterId = player:GetAttribute(ATTRIBUTE)
-	local current = pets[player]
+local function sync(player: Player, slot: number)
+	local letterId = player:GetAttribute(ATTRIBUTES[slot])
+	local slots = pets[player] or {}
+	pets[player] = slots
+	local current = slots[slot]
 
 	if current and current.letterId == letterId then
 		return
 	end
 	if current then
 		current.model:Destroy()
-		pets[player] = nil
+		slots[slot] = nil
 	end
 	if typeof(letterId) == "string" and Letters.get(letterId) then
-		pets[player] = build(letterId)
+		slots[slot] = build(letterId)
 	end
 end
 
+--[[
+	Титул «Хранитель Азбуки» над головой — за все 33 освоенные буквы. Текст наш,
+	а не введённый игроком, поэтому показывать его другим можно без фильтра
+	(docs/11-COMPLIANCE.md § 2). Висит на голове персонажа и переживает перерождение.
+]]
+local TITLE_NAME = "AlphabetKeeperTitle"
+
+local function syncTitle(player: Player)
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	if not head then
+		return
+	end
+	local existing = head:FindFirstChild(TITLE_NAME)
+	local isKeeper = player:GetAttribute(KEEPER_ATTRIBUTE) == true
+	if not isKeeper then
+		if existing then
+			existing:Destroy()
+		end
+		return
+	end
+	if existing then
+		return
+	end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = TITLE_NAME
+	billboard.Size = UDim2.fromOffset(220, 40)
+	billboard.StudsOffset = Vector3.new(0, 2.6, 0)
+	billboard.MaxDistance = 80
+	billboard.LightInfluence = 0
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = "👑 Хранитель Азбуки"
+	label.TextColor3 = Color3.fromRGB(255, 214, 102)
+	label.TextStrokeTransparency = 0.2
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.Parent = billboard
+	billboard.Parent = head
+end
+
 local function watch(player: Player)
-	sync(player)
-	player:GetAttributeChangedSignal(ATTRIBUTE):Connect(function()
-		sync(player)
+	for slot, attribute in ATTRIBUTES do
+		sync(player, slot)
+		player:GetAttributeChangedSignal(attribute):Connect(function()
+			sync(player, slot)
+		end)
+	end
+
+	syncTitle(player)
+	player:GetAttributeChangedSignal(KEEPER_ATTRIBUTE):Connect(function()
+		syncTitle(player)
+	end)
+	player.CharacterAdded:Connect(function(character: Model)
+		character:WaitForChild("Head", 10)
+		syncTitle(player)
 	end)
 end
 
@@ -161,24 +219,26 @@ local function step(dt: number)
 	local now = os.clock()
 	local alpha = math.min(1, dt * FOLLOW_SPEED)
 
-	for player, pet in pets do
+	for player, slots in pets do
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if root and root:IsA("BasePart") then
-			-- Покачивание в воздухе: у каждого буквёнка своя фаза, чтобы соседи не качались хором.
-			local bob = math.sin(now * 2.2 + player.UserId % 7) * 0.3
-			local goal = root.CFrame * OFFSET * CFrame.new(0, bob, 0)
-			local from = pet.body.CFrame
-			local at = if (from.Position - goal.Position).Magnitude > SNAP_DISTANCE
-				then goal
-				else from:Lerp(goal, alpha)
-			place(pet, at)
-			if pet.model.Parent == nil then
-				pet.model.Parent = container()
+		for slot, pet in slots do
+			if root and root:IsA("BasePart") then
+				-- Покачивание в воздухе: у каждого буквёнка своя фаза, чтобы соседи не качались хором.
+				local bob = math.sin(now * 2.2 + player.UserId % 7 + slot * 1.7) * 0.3
+				local goal = root.CFrame * OFFSETS[slot] * CFrame.new(0, bob, 0)
+				local from = pet.body.CFrame
+				local at = if (from.Position - goal.Position).Magnitude > SNAP_DISTANCE
+					then goal
+					else from:Lerp(goal, alpha)
+				place(pet, at)
+				if pet.model.Parent == nil then
+					pet.model.Parent = container()
+				end
+			elseif pet.model.Parent ~= nil then
+				-- Хозяин без персонажа (перерождается) — буквёнок прячется, а не висит в пустоте.
+				pet.model.Parent = nil
 			end
-		elseif pet.model.Parent ~= nil then
-			-- Хозяин без персонажа (перерождается) — буквёнок прячется, а не висит в пустоте.
-			pet.model.Parent = nil
 		end
 	end
 end
@@ -189,11 +249,10 @@ function PetController.init()
 	end
 	Players.PlayerAdded:Connect(watch)
 	Players.PlayerRemoving:Connect(function(player: Player)
-		local pet = pets[player]
-		if pet then
+		for _, pet in pets[player] or {} do
 			pet.model:Destroy()
-			pets[player] = nil
 		end
+		pets[player] = nil
 	end)
 
 	RunService.Heartbeat:Connect(step)

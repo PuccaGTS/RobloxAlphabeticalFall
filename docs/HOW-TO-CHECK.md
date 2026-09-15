@@ -412,6 +412,20 @@ local S=game.ServerScriptService.Server.Services local M=require(game.Replicated
       **остаётся**. Коснуться А на Башне → за персонажем теперь буквёнок А.
 - [ ] Коснуться на Башне **неосвоенной** буквы → буквёнок не меняется.
 
+**Второй слот и Хранитель.** Освоить сразу первые 9 или все 33 буквы:
+
+```lua
+local S=game.ServerScriptService.Server.Services local M=require(game.ReplicatedStorage.Shared.Logic.MasteryRules) local L=require(game.ReplicatedStorage.Shared.Config.Letters) local p=game.Players:GetPlayers()[1] local N=9 require(S.ProfileService).update(p,function(pr) for i,id in L.ordered() do if i<=N then local x=M.newProgress(os.time()) x.mastery=3 pr.letters[id]=x end end end) require(S.PetService).grant(p,L.ordered()[N])
+```
+
+- [ ] `N=9` → один буквёнок. Затем `N=10` → «Теперь с тобой летают два буквёнка!»,
+      второй буквёнок за **левым** плечом.
+- [ ] Коснуться на Башне третьей освоенной буквы → она за правым плечом, прежний
+      правый переехал за левое.
+- [ ] `N=33` → через несколько секунд «👑 Все 33 буквы! Ты — Хранитель Азбуки!»,
+      над головой золотая надпись. Перерождение (сброс персонажа) её не снимает.
+- [ ] ⚙ → «Начать заново» → надпись и буквята пропадают.
+
 ### 3.8. Родительский режим
 
 Подробности — [13-PARENT-MODE.md](13-PARENT-MODE.md) § 9.

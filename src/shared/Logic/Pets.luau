@@ -23,8 +23,14 @@ local MasteryRules = require(script.Parent.MasteryRules)
 
 local Pets = {}
 
--- Сколько буквят летает за ребёнком одновременно. Больше — по docs/04 § слоты, позже.
-Pets.SLOTS = 1
+--[[
+	Сколько буквят летает за ребёнком одновременно: один с самого начала, второй —
+	за десять освоенных букв. В docs/04-ECONOMY.md § 4 второй слот стоял «на 10 уровне
+	Хранителя», но уровня Хранителя в игре нет, а слот за учёбу понятнее и честнее:
+	тот же порог, что у Азбучной арки. Третий слот за Game Pass — вместе с покупками.
+]]
+Pets.MAX_SLOTS = 2
+Pets.SECOND_SLOT_AT = 10
 
 local function masteryOf(letters: any, letterId: string): number
 	if typeof(letters) ~= "table" then
@@ -55,6 +61,18 @@ function Pets.owned(letters: any): { string }
 	return list
 end
 
+function Pets.slotsFor(letters: any): number
+	return if #Pets.owned(letters) >= Pets.SECOND_SLOT_AT then Pets.MAX_SLOTS else 1
+end
+
+--[[
+	Все 33 буквы освоены: ребёнок — Хранитель Азбуки (docs/01-GDD.md, docs/04-ECONOMY.md § 4).
+	Титул не хранится, как и сами буквята: он есть, пока освоены все буквы.
+]]
+function Pets.isKeeper(letters: any): boolean
+	return #Pets.owned(letters) == Letters.count()
+end
+
 --[[
 	Кто летает, приведённый в порядок: только свои буквята, без повторов,
 	не больше слотов. Из DataStore может прийти что угодно, а подделанный
@@ -65,8 +83,9 @@ function Pets.sanitizeEquipped(equipped: any, letters: any): { string }
 	if typeof(equipped) ~= "table" then
 		return clean
 	end
+	local slots = Pets.slotsFor(letters)
 	for _, id in equipped do
-		if #clean >= Pets.SLOTS then
+		if #clean >= slots then
 			break
 		end
 		if Pets.isOwned(letters, id) and not table.find(clean, id) then
@@ -83,22 +102,36 @@ end
 ]]
 function Pets.afterMastered(equipped: any, letters: any, letterId: string): { string }
 	local clean = Pets.sanitizeEquipped(equipped, letters)
-	if #clean < Pets.SLOTS and Pets.isOwned(letters, letterId) and not table.find(clean, letterId) then
+	if
+		#clean < Pets.slotsFor(letters)
+		and Pets.isOwned(letters, letterId)
+		and not table.find(clean, letterId)
+	then
 		table.insert(clean, letterId)
 	end
 	return clean
 end
 
 --[[
-	Ребёнок выбрал буквёнка (коснулся освоенной буквы на Башне). Слот один,
-	поэтому выбранный просто заменяет прежнего. nil — выбрать нельзя: буква
-	не освоена или такой буквы нет.
+	Ребёнок выбрал буквёнка (коснулся освоенной буквы на Башне). Выбранный
+	встаёт первым — на место за правым плечом, — а прежний первый сдвигается
+	во второй слот, если он есть; самый давний улетает. Уже летающего выбор
+	не выгоняет: коснулся своего буквёнка на Башне — он просто остался.
+	nil — выбрать нельзя: буква не освоена или такой буквы нет.
 ]]
-function Pets.choose(letters: any, letterId: any): { string }?
+function Pets.choose(letters: any, letterId: any, equipped: any): { string }?
 	if not Pets.isOwned(letters, letterId) then
 		return nil
 	end
-	return { letterId }
+	local clean = Pets.sanitizeEquipped(equipped, letters)
+	if table.find(clean, letterId) then
+		return clean
+	end
+	table.insert(clean, 1, letterId)
+	while #clean > Pets.slotsFor(letters) do
+		table.remove(clean)
+	end
+	return clean
 end
 
 return Pets

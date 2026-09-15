@@ -181,7 +181,7 @@ end)
 	Буква освоена — прилетел буквёнок. Главная награда обучения, и её обязаны
 	заметить: буква крупно на экране, звон награды. Имя буквы произносит сервер.
 ]]
-RemoteDefs.event("PetGranted").OnClientEvent:Connect(function(letterId: string)
+RemoteDefs.event("PetGranted").OnClientEvent:Connect(function(letterId: string, news: any)
 	local letter = typeof(letterId) == "string" and Letters.get(letterId)
 	if not letter then
 		return
@@ -189,6 +189,19 @@ RemoteDefs.event("PetGranted").OnClientEvent:Connect(function(letterId: string)
 	HUD.showIntro(letter.glyph)
 	HUD.toast(`Новый друг — буквёнок {letter.glyph}!`, 4)
 	SfxController.play("reward")
+
+	-- Вслед за буквёнком — то, что открылось вместе с ним. По очереди, чтобы не слиплось.
+	if typeof(news) == "table" then
+		if news.secondSlot then
+			task.delay(4.5, HUD.toast, "Теперь с тобой летают два буквёнка!", 4)
+		end
+		if news.keeper then
+			task.delay(9, function()
+				HUD.toast("👑 Все 33 буквы! Ты — Хранитель Азбуки!", 6)
+				SfxController.play("reward")
+			end)
+		end
+	end
 end)
 
 -- Объект в мире просит открыть экран (пад магазина в хабе).

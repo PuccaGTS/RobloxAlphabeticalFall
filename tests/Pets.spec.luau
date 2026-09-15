@@ -53,7 +53,7 @@ return function()
 			local letters = lettersWith({ a = 3, b = 3 })
 			expect(#Pets.sanitizeEquipped({ "v" }, letters)).to.equal(0)
 			local clean = Pets.sanitizeEquipped({ "a", "a", "b" }, letters)
-			expect(#clean).to.equal(Pets.SLOTS)
+			expect(#clean).to.equal(1)
 			expect(clean[1]).to.equal("a")
 			expect(#Pets.sanitizeEquipped("мусор", letters)).to.equal(0)
 		end)
@@ -86,5 +86,76 @@ return function()
 			end
 			expect(#Pets.owned(lettersWith(all))).to.equal(Letters.count())
 		end)
+	end)
+
+	-- Первые n букв алфавита освоены.
+	local function firstMastered(n)
+		local statuses = {}
+		for index, id in Letters.ordered() do
+			if index <= n then
+				statuses[id] = MasteryRules.MASTERED
+			end
+		end
+		return lettersWith(statuses)
+	end
+
+	describe("Pets — второй слот и Хранитель", function()
+		it(
+			"второй слот открывается ровно на десятой освоенной букве",
+			function()
+				expect(Pets.slotsFor(firstMastered(0))).to.equal(1)
+				expect(Pets.slotsFor(firstMastered(Pets.SECOND_SLOT_AT - 1))).to.equal(1)
+				expect(Pets.slotsFor(firstMastered(Pets.SECOND_SLOT_AT))).to.equal(2)
+				expect(Pets.slotsFor(firstMastered(Letters.count()))).to.equal(Pets.MAX_SLOTS)
+			end
+		)
+
+		it(
+			"десятая буква сама выпускает второго буквёнка к первому",
+			function()
+				local letters = firstMastered(Pets.SECOND_SLOT_AT)
+				local ordered = Letters.ordered()
+				local equipped = Pets.afterMastered({ ordered[1] }, letters, ordered[Pets.SECOND_SLOT_AT])
+				expect(#equipped).to.equal(2)
+				expect(equipped[1]).to.equal(ordered[1])
+				expect(equipped[2]).to.equal(ordered[Pets.SECOND_SLOT_AT])
+			end
+		)
+
+		it(
+			"выбранный встаёт первым, давний улетает, летающий не выгоняется",
+			function()
+				local letters = firstMastered(12)
+				local ordered = Letters.ordered()
+				local a, b, c = ordered[1], ordered[2], ordered[3]
+				local chosen = Pets.choose(letters, c, { a, b })
+				expect(table.concat(chosen, ",")).to.equal(`{c},{a}`)
+				expect(table.concat(Pets.choose(letters, a, { a, b }), ",")).to.equal(`{a},{b}`)
+			end
+		)
+
+		it("пока слот один, выбор просто заменяет буквёнка", function()
+			local letters = lettersWith({ a = 3, b = 3 })
+			local chosen = Pets.choose(letters, "b", { "a" })
+			expect(#chosen).to.equal(1)
+			expect(chosen[1]).to.equal("b")
+		end)
+
+		it(
+			"двух буквят при одном слоте не бывает, даже из испорченного профиля",
+			function()
+				local letters = lettersWith({ a = 3, b = 3 })
+				expect(#Pets.sanitizeEquipped({ "a", "b" }, letters)).to.equal(1)
+			end
+		)
+
+		it(
+			"Хранитель Азбуки — только при всех 33 освоенных",
+			function()
+				expect(Pets.isKeeper(firstMastered(Letters.count() - 1))).to.equal(false)
+				expect(Pets.isKeeper(firstMastered(Letters.count()))).to.equal(true)
+				expect(Pets.isKeeper(nil)).to.equal(false)
+			end
+		)
 	end)
 end
