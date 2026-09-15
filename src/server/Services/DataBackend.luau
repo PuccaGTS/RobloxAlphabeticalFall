@@ -45,6 +45,9 @@ export type Backend = {
 	loadAsync: (self: Backend, key: string) -> (any, string?),
 	saveAsync: (self: Backend, key: string, data: any, release: boolean) -> (boolean, string?),
 	releaseAsync: (self: Backend, key: string) -> boolean,
+	-- Удаление ключа целиком: запрос на удаление данных (docs/11-COMPLIANCE.md § 4).
+	-- busy = true — ключ держит живая чужая сессия, и ничего не удалено.
+	removeAsync: (self: Backend, key: string, force: boolean) -> (boolean, string?, boolean),
 }
 
 local function ourLockId(): string
@@ -181,6 +184,41 @@ function Store:releaseAsync(key: string): boolean
 	return ok
 end
 
+--[[
+	Удаление профиля. Живую чужую блокировку без force не трогаем: тот сервер
+	держит профиль в памяти и при выходе игрока записал бы его обратно — удаление
+	молча не состоялось бы. Сказать «повторите через пять минут» честнее.
+	Своя блокировка (игрок на этом сервере) не мешает: ProfileService уже выбросил
+	профиль из памяти, прежде чем звать сюда.
+]]
+function Store:removeAsync(key: string, force: boolean): (boolean, string?, boolean)
+	local lastError: string? = nil
+	for attempt = 1, MAX_ATTEMPTS do
+		local ok, result = pcall(function()
+			return self._store:GetAsync(key)
+		end)
+		if ok then
+			if not force and isForeignLiveLock(result, os.time()) then
+				return false, "профиль открыт на другом сервере", true
+			end
+			local removed, err = pcall(function()
+				self._store:RemoveAsync(key)
+			end)
+			if removed then
+				return true, nil, false
+			end
+			lastError = tostring(err)
+		else
+			lastError = tostring(result)
+		end
+		warn(
+			`[DataBackend] удаление "{key}" не удалось (попытка {attempt}): {lastError}`
+		)
+		task.wait(RETRY_DELAY * attempt)
+	end
+	return false, lastError, false
+end
+
 -- ===== Память (Studio без доступа к DataStore) ===================================
 
 local Memory = {}
@@ -203,6 +241,11 @@ end
 
 function Memory:releaseAsync(_key: string): boolean
 	return true
+end
+
+function Memory:removeAsync(key: string, _force: boolean): (boolean, string?, boolean)
+	self._data[key] = nil
+	return true, nil, false
 end
 
 -- ===== Выбор бэкенда =============================================================

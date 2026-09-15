@@ -197,6 +197,77 @@ function ProfileService.pushSnapshot(player: Player)
 	pushSnapshot(player)
 end
 
+--[[
+	Запрос на удаление данных (Roblox Right to Erasure, docs/11-COMPLIANCE.md § 4).
+	Запускается руками из консоли сервера или Command Bar Studio по номеру аккаунта
+	из запроса — порядок в docs/11-COMPLIANCE.md § 4.1:
+
+	  require(game.ServerScriptService.Server.Services.ProfileService).erase(123456)
+
+	Профиль лежит в двух областях — «dev» (Studio) и «live» (боевые серверы), —
+	и удаляется из обеих: удаление должно быть полным, где бы ни играли.
+	Кроме профиля, игра об аккаунте ничего не хранит.
+
+	Если игрок сейчас на этом сервере, профиль сначала выбрасывается из памяти
+	без сохранения, а игрок выходит из игры: иначе при выходе профиль записался бы
+	обратно. На другом сервере его так не достать — тогда удаление этой области
+	откладывается с пометкой «повторите через 5 минут», пока force не передан.
+
+	Возвращает true, если удалено отовсюду, и строки отчёта по областям.
+]]
+function ProfileService.erase(userId: number, force: boolean?): (boolean, { string })
+	assert(typeof(userId) == "number" and userId > 0, "erase: нужен номер аккаунта Roblox")
+	local key = `player_{userId}`
+	local report: { string } = {}
+	local allDone = true
+
+	local online = Players:GetPlayerByUserId(userId)
+	if online then
+		profiles[online] = nil
+		playClock[online] = nil
+		online:Kick(
+			"Данные этого аккаунта удалены по запросу. Спасибо, что играли!"
+		)
+		table.insert(
+			report,
+			"игрок был на этом сервере: профиль выброшен без сохранения"
+		)
+	end
+
+	for _, scope in { "dev", "live" } do
+		-- Своя область — через уже выбранный бэкенд: в Studio без API это память,
+		-- и удаление видно сразу. Чужая — напрямую в DataStore, если он доступен.
+		local backendForScope: DataBackend.Backend? = nil
+		if scope == STORE_SCOPE and backend then
+			backendForScope = backend
+		else
+			local ok, store = pcall(DataBackend.newDataStore, STORE_NAME, scope)
+			backendForScope = if ok then store else nil
+		end
+
+		if not backendForScope then
+			allDone = false
+			table.insert(report, `{scope}: DataStore недоступен`)
+		else
+			local removed, err, busy = backendForScope:removeAsync(key, force == true)
+			if removed then
+				table.insert(report, `{scope}: удалено`)
+			else
+				allDone = false
+				table.insert(
+					report,
+					if busy
+						then `{scope}: {err} — повторите через 5 минут или с force = true`
+						else `{scope}: ошибка {err}`
+				)
+			end
+		end
+	end
+
+	print(`[ProfileService] erasure {userId}: {table.concat(report, "; ")}`)
+	return allDone, report
+end
+
 function ProfileService.start()
 	if started then
 		return
