@@ -7,6 +7,8 @@
 	скорости — есть только расстояния, из которых складывается ритм забега.
 ]]
 
+local Obstacles = require(script.Parent.Obstacles)
+
 local Tunnel = {}
 
 Tunnel.LANE_COUNT = 3
@@ -27,6 +29,32 @@ Tunnel.FINISH_RUNWAY = 35
 	остаётся достаточно длинным, чтобы ворота были видны заранее.
 ]]
 Tunnel.MIN_GATE_SPACING = 55
+
+--[[
+	Длина отрезка мерится временем, а не студами (docs/14-TUNNEL-MODE.md § 3.4):
+	между сохранками 40–70 секунд пути. Столько ребёнок 4–7 лет держит непрерывное
+	усилие, и столько же не жалко потерять при падении.
+
+	Раньше здесь была только геометрия, и отрезок из двух препятствий занимал
+	60 студов — три секунды бега вместо сорока. Теперь число препятствий задаёт
+	уровень, а остаток до нижней границы добирается беговыми клетками.
+]]
+Tunnel.SEGMENT_SECONDS_MIN = 40
+Tunnel.SEGMENT_SECONDS_MAX = 70
+
+--[[
+	Беговая клетка: кусок целого пола между связками паркура. Три секунды бега —
+	ребёнок разгоняется, слушает букву, подбирает ряд букв, если он здесь стоит.
+	Клетки идут ПОСЛЕ элементов, поэтому последняя всегда упирается в зону ворот:
+	ворота видно заранее, и решение принимается на ровном месте.
+]]
+Tunnel.RUN_PITCH = 60
+--[[
+	Сколько беговых клеток отрезок примет самое большее. Потолок нужен там, где
+	паркура почти нет (ворота с числами): без него отрезок превратился бы
+	в четыреста студов пустого пола ради формальных сорока секунд.
+]]
+Tunnel.MAX_RUN_CELLS = 8
 --[[
 	Отрезок между воротами режется на клетки. В клетке препятствия элемент
 	начинается с отступом OBSTACLE_LEAD и обязан кончиться до конца клетки —
@@ -76,9 +104,9 @@ Tunnel.PARAMS = {
 		Ряд встаёт только в просвет между препятствиями, поэтому на отрезке
 		их не больше, чем препятствий, — сколько бы здесь ни было написано.
 	]]
-	collect = { 1, 1, 1, 2, 2 },
+	collect = { 2, 2, 3, 3, 3 },
 	choices = { 2, 2, 3, 3, 4 }, -- сколько проёмов в воротах
-	obstacles = { 1, 1, 2, 2, 3 }, -- элементов между воротами
+	obstacles = { 3, 3, 4, 4, 5 }, -- элементов между воротами
 	-- Средние элементы — не с первого дня, сложные — только уверенным.
 	-- У уровня мира букв свой потолок ряда (Config/Levels): первые уровни только базовые.
 	obstacleTier = { 1, 1, 2, 2, 3 },
@@ -89,11 +117,11 @@ Tunnel.PARAMS = {
 
 Tunnel.COURSE_PARAMS = {
 	gates = { 2, 2, 3, 3, 3 },
-	collect = { 1, 2, 2, 2, 3 },
+	collect = { 2, 3, 3, 3, 4 },
 	choices = { 2, 2, 3, 3, 4 },
 	-- Полоса обязана оставаться паркурнее туннеля: даже поздние уровни мира букв
-	-- с их 4–6 элементами на отрезке не должны её догонять.
-	obstacles = { 4, 5, 6, 7, 8 },
+	-- с их 11–14 элементами на отрезке не должны её догонять.
+	obstacles = { 12, 14, 15, 16, 18 },
 	obstacleTier = { 1, 1, 2, 2, 3 },
 	missSlowSeconds = { 1.6, 1.4, 1.2, 1.1, 1.0 },
 	missSlowFactor = { 0.45, 0.45, 0.5, 0.5, 0.55 },
@@ -112,7 +140,7 @@ Tunnel.COURSE_PARAMS = {
 ]]
 Tunnel.MATH_PARAMS = {
 	choices = { 2, 2, 3, 3, 3 },
-	obstacles = { 0, 1, 1, 2, 2 },
+	obstacles = { 1, 2, 2, 3, 3 },
 	obstacleTier = { 1, 1, 1, 2, 2 },
 	missSlowSeconds = { 1.6, 1.4, 1.2, 1.1, 1.0 },
 	missSlowFactor = { 0.45, 0.45, 0.5, 0.5, 0.55 },
@@ -201,6 +229,34 @@ Tunnel.PISTON_DEPTH = 3 -- толщина вдоль бега
 Tunnel.PISTON_HEIGHT = 5
 Tunnel.PISTON_SECONDS = 4 -- в одну сторону; медленнее, чем ребёнок идёт пешком
 
+--[[
+	Карусель: диск с перекладинами крутится в одной дорожке. Оборот за двенадцать
+	секунд — это меньше двух студов в секунду на конце перекладины, то есть
+	медленнее, чем ребёнок идёт пешком.
+]]
+Tunnel.CAROUSEL_SPAN = 8 -- он же диаметр диска
+Tunnel.CAROUSEL_BARS = 4
+Tunnel.CAROUSEL_BAR_HEIGHT = 1.4 -- по колено: перешагивается, не сбивает
+Tunnel.CAROUSEL_SECONDS = 12 -- полный оборот
+
+--[[
+	Подъёмник: площадка идёт вверх-вниз, наверху мостик над той же дорожкой.
+	Четыре секунды в одну сторону — столько же, сколько у платформы: ждать
+	приходится ровно столько, сколько ребёнок готов ждать.
+]]
+Tunnel.LIFT_SPAN = 10 -- длина мостика вдоль бега
+Tunnel.LIFT_HEIGHT = 6 -- высота мостика: выше прыжка, поэтому подъёмник и нужен
+Tunnel.LIFT_PAD = 4 -- сторона площадки
+Tunnel.LIFT_SECONDS = 4
+
+--[[
+	Спираль: ступени по кругу вокруг столба, вверх и обратно вниз. Ничего
+	не движется, торопиться некуда — шаг между ступенями обычный, как у лестницы.
+]]
+Tunnel.SPIRAL_SPAN = 12 -- он же диаметр витка
+Tunnel.SPIRAL_STEPS = 8
+Tunnel.SPIRAL_HEIGHT = 5 -- на сколько поднимает верхняя ступень
+
 -- Гребёнка: стена поперёк коридора с узкой щелью в каждой дорожке.
 Tunnel.COMB_THICKNESS = 1.5
 Tunnel.COMB_SLOT = 4 -- ширина щели: пройти можно, но прицелиться надо
@@ -222,13 +278,92 @@ function Tunnel.laneOffset(lane: number): number
 	return (lane - (Tunnel.LANE_COUNT + 1) / 2) * Tunnel.LANE_WIDTH
 end
 
--- Длина отрезка между воротами при заданном числе препятствий и рядов букв на нём.
-function Tunnel.segmentLength(obstacleCount: number, rowCount: number?): number
+-- Длина отрезка между воротами: клетки препятствий, рядов букв и пробежек.
+function Tunnel.segmentLength(obstacleCount: number, rowCount: number?, runCount: number?): number
 	local needed = Tunnel.CLEARANCE_AFTER_GATE
 		+ obstacleCount * Tunnel.OBSTACLE_PITCH
 		+ (rowCount or 0) * Tunnel.ROW_PITCH
+		+ (runCount or 0) * Tunnel.RUN_PITCH
 		+ Tunnel.CLEARANCE_BEFORE_GATE
 	return math.max(needed, Tunnel.MIN_GATE_SPACING)
+end
+
+--[[
+	Сколько секунд элемент отнимает сверх пробега своей клетки: подойти, примерить
+	прыжок, подождать, пока шар отойдёт или платформа вернётся. Числа взяты из
+	самих элементов — маятник ходит дугу за PENDULUM_SECONDS, плита держит
+	FADE_SOLID_SECONDS, — и округлены вниз: ребёнок редко ждёт полный цикл.
+
+	Это оценка для раскладки, а не замер. Точные числа подбираются на детях,
+	и менять их здесь безопасно: длина отрезка пересчитается сама.
+]]
+local SECONDS: { [string]: number } = {
+	barrier = 1,
+	gap = 1,
+	arch = 1.5, -- перепрыгнуть нельзя, надо заранее сменить дорожку
+	beam = 2.5, -- по узкой балке идут шагом, а не бегут
+	steps = 3,
+	pendulum = 3,
+	platform = 4, -- единственный элемент, где ждать приходится по-настоящему
+	fading = 3.5,
+	trampoline = 2,
+	ice = 1.5,
+	stones = 3, -- три прыжка подряд
+	roller = 1.5,
+	pistons = 3,
+	comb = 2,
+	carousel = 2.5, -- пропустить перекладину
+	lift = 5, -- дождаться площадки, подняться, пройти мостик и спрыгнуть
+	spiral = 3,
+}
+
+function Tunnel.obstacleSeconds(kind: string): number
+	return SECONDS[kind] or 0
+end
+
+--[[
+	Средняя цена элемента ряда: раскладка ещё не знает, что ей выпадет, а длину
+	отрезка считать уже надо. Берём среднее по каталогу, доступному на этом ряду.
+]]
+function Tunnel.tierSeconds(tier: number): number
+	local ids = Obstacles.upToTier(tier)
+	if #ids == 0 then
+		return 0
+	end
+	local total = 0
+	for _, id in ids do
+		total += Tunnel.obstacleSeconds(Obstacles.expect(id).kind)
+	end
+	return total / #ids
+end
+
+-- Сколько секунд занимает отрезок: пробег всей его длины плюс цена препятствий.
+function Tunnel.segmentSeconds(
+	obstacleCount: number,
+	tier: number,
+	rowCount: number?,
+	runCount: number?
+): number
+	local length = Tunnel.segmentLength(obstacleCount, rowCount, runCount)
+	return length / Tunnel.WALK_SPEED + obstacleCount * Tunnel.tierSeconds(tier)
+end
+
+--[[
+	Сколько беговых клеток добавить, чтобы отрезок дотянул до нижней границы
+	бюджета. Паркур считается первым: клетки добирают остаток, а не заменяют
+	собой элементы. Выше потолка не бывает, и лишней клетки, из-за которой
+	отрезок перевалил бы за верхнюю границу, тоже: последняя добавляется,
+	только пока отрезок короче минимума.
+]]
+function Tunnel.runCells(obstacleCount: number, tier: number, rowCount: number?): number
+	local count = 0
+	while count < Tunnel.MAX_RUN_CELLS do
+		if Tunnel.segmentSeconds(obstacleCount, tier, rowCount, count) >= Tunnel.SEGMENT_SECONDS_MIN then
+			break
+		end
+		count += 1
+	end
+	return count
 end
 
 --[[
@@ -252,6 +387,9 @@ local LENGTHS: { [string]: number } = {
 	roller = Tunnel.ROLLER_DIAMETER,
 	pistons = Tunnel.PISTON_DEPTH,
 	comb = Tunnel.COMB_THICKNESS,
+	carousel = Tunnel.CAROUSEL_SPAN,
+	lift = Tunnel.LIFT_SPAN,
+	spiral = Tunnel.SPIRAL_SPAN,
 }
 
 function Tunnel.obstacleLength(kind: string): number?

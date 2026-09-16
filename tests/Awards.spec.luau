@@ -106,4 +106,42 @@ return function()
 			expect(Awards.of(nil).flags).to.equal(0)
 		end)
 	end)
+
+	--[[
+		Комнаты дома (docs/15-HOME-BASE.md § 5): их нельзя купить, они открываются
+		за освоенное. Комната — это не «сколько-то первых букв», а именно та буква,
+		которую ребёнок выучил: на полке стоит она.
+	]]
+	describe("Awards — комнаты дома", function()
+		it("у новичка комнат нет", function()
+			local earned = Awards.of(ProfileTemplate.new(NOW))
+			expect(#earned.letterRooms).to.equal(0)
+			expect(#earned.mathRooms).to.equal(0)
+		end)
+
+		it("изученной буквы мало, нужна освоенная", function()
+			expect(#Awards.of(withLetters(5, MasteryRules.LEARNED)).letterRooms).to.equal(0)
+			expect(#Awards.of(withLetters(5, MasteryRules.MASTERED)).letterRooms).to.equal(5)
+		end)
+
+		it("комнаты идут по алфавиту", function()
+			local rooms = Awards.of(withLetters(3, MasteryRules.MASTERED)).letterRooms
+			local ordered = Letters.ordered()
+			for index, letterId in rooms do
+				expect(letterId).to.equal(ordered[index])
+			end
+		end)
+
+		it("ступень счёта тоже открывает комнату", function()
+			local profile = ProfileTemplate.new(NOW)
+			local spec = MathConfig.get(2)
+			local progress = MasteryRules.newProgress(NOW)
+			progress.mastery = MasteryRules.MASTERED
+			profile.math[spec.id] = progress
+
+			local rooms = Awards.of(profile).mathRooms
+			expect(#rooms).to.equal(1)
+			expect(rooms[1]).to.equal(spec.id)
+		end)
+	end)
 end

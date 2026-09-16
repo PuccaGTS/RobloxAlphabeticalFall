@@ -214,4 +214,38 @@ return function()
 			expect(Shop.streakDays({ price = 10 })).to.equal(nil)
 		end)
 	end)
+
+	--[[
+		Переключатель родителя «скрыть покупки за Robux» (docs/13-PARENT-MODE.md § 3).
+		Прячется показ, а не владение: снять с ребёнка оплаченное настройка не вправе.
+	]]
+	describe("Shop.visibleIds", function()
+		it("без настройки видно всё", function()
+			expect(#Shop.visibleIds(false)).to.equal(Shop.count())
+			expect(#Shop.visibleIds(nil)).to.equal(Shop.count())
+		end)
+
+		it("со скрытием не остаётся ни одной покупки за Robux", function()
+			for _, id in Shop.visibleIds(true) do
+				expect(Shop.expect(id).robuxProduct).to.equal(nil)
+			end
+		end)
+
+		it("звёздочки скрытием не затрагиваются", function()
+			local starItems = 0
+			for _, id in Shop.visibleIds(true) do
+				if Shop.expect(id).price then
+					starItems += 1
+				end
+			end
+
+			local all = 0
+			for _, id in Shop.ids() do
+				if Shop.expect(id).price then
+					all += 1
+				end
+			end
+			expect(starItems).to.equal(all)
+		end)
+	end)
 end

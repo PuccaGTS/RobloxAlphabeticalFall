@@ -269,6 +269,31 @@ function showSound(root: Instance, data: any, settings: any)
 			end
 		end
 	)
+
+	--[[
+		Покупки за Robux (docs/13-PARENT-MODE.md § 3). Ребёнок просит то, что видит,
+		поэтому выключатель прячет сами карточки, а не кнопку покупки.
+	]]
+	label(root, "Покупки за Robux", 20, TEXT)
+	label(
+		root,
+		"Скрыть из магазина всё, что продаётся за настоящие деньги. Купленное "
+			.. "раньше останется у ребёнка. Звёздочки за занятия это не затрагивает.",
+		18,
+		MUTED
+	)
+	choices(
+		root,
+		{ { text = "Показывать", value = false }, { text = "Скрыть", value = true } },
+		settings.hideRobux == true,
+		function(value)
+			if auth({ action = "set_hide_robux", on = value }).ok then
+				settings.hideRobux = value
+				data.settings = settings
+				showReport("Настройки", data)
+			end
+		end
+	)
 end
 
 --[[

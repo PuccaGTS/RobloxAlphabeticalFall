@@ -106,6 +106,7 @@ end
 	  set_rest  — напоминание об отдыхе раз в 20 минут: вкл/выкл;
 	  set_volume — громкость музыки, эффектов или голоса ступенью из SoundSettings;
 	  set_subtitles — показывать субтитры и при записанной озвучке;
+	  set_hide_robux — скрыть из витрины покупки за Robux;
 	  reset_letter — забыть прогресс одной буквы: ребёнок «зазубрил» её без понимания.
 	           Звёздочки, питомец и открытые ступени остаются: заработанное не отнимаем.
 	  restart — «начать заново»: обучение с нуля (Logic/ProfileRestart). Второе
@@ -241,6 +242,24 @@ local function onAuth(player: Player, request: any)
 		return { ok = true }
 	end
 
+	--[[
+		Покупки за Robux в витрине (docs/13-PARENT-MODE.md § 3). Прячем показ,
+		а не владение: купленное раньше остаётся у ребёнка.
+	]]
+	if action == "set_hide_robux" then
+		if not isSignedIn(player) then
+			return refuse("not_signed_in")
+		end
+		if typeof(request.on) ~= "boolean" then
+			return refuse("bad_request")
+		end
+		ProfileService.update(player, function(p)
+			p.settings.hideRobux = request.on
+		end)
+		logChange(player, `hide_robux {if request.on then "on" else "off"}`)
+		return { ok = true }
+	end
+
 	if action == "reset_letter" then
 		if not isSignedIn(player) then
 			return refuse("not_signed_in")
@@ -351,6 +370,7 @@ local function onReport(player: Player)
 			sfx = sound.sfx,
 			voice = sound.voice,
 			subtitles = sound.subtitles,
+			hideRobux = sound.hideRobux == true,
 			-- Буквы, по которым есть прогресс: только их и есть смысл сбрасывать.
 			touched = touchedLetters(profile),
 		},

@@ -7,6 +7,8 @@
 	  · Азбучная арка над калиткой — за 10 букв подряд от А;
 	  · Шпиль Азбуки — за все 33 буквы в статусе «освоенная»;
 	  · флаг с цифрой за каждый пройденный уровень мира математики;
+	  · комната буквы в доме — за каждую освоенную букву, и комната цифры —
+	    за каждую освоенную ступень счёта (docs/15-HOME-BASE.md § 5);
 	  · Шпиль Счёта — за девять базовых ступеней счёта в статусе «освоенная».
 	    Равные группы и умножение сюда не входят: они необязательные и ничего
 	    не блокируют (docs/16-MATH.md § 2), и шпиль за них был бы наградой
@@ -40,6 +42,13 @@ export type Earned = {
 	spire: boolean,
 	mathFlags: number, -- то же для пути мира математики
 	countSpire: boolean,
+	--[[
+		Комнаты дома: буквы и ступени счёта в статусе «освоенная», по порядку.
+		Не число, а сами id: на полке стоит именно та буква, которую ребёнок
+		выучил, а не «сколько-то первых».
+	]]
+	letterRooms: { string },
+	mathRooms: { string },
 }
 
 -- Статус буквы или ступени счёта: у обоих прогресс устроен одинаково.
@@ -93,6 +102,26 @@ function Awards.of(profile: any): Earned
 		end
 	end
 
+	--[[
+		Комнаты открываются по одной, за каждую освоенную букву и ступень счёта.
+		Порядок — алфавитный и по ступеням: полка растёт слева направо,
+		и ребёнок видит, докуда он дошёл.
+	]]
+	local letterRooms: { string } = {}
+	for _, letterId in Letters.ordered() do
+		if masteryOf(letters, letterId) >= MasteryRules.MASTERED then
+			table.insert(letterRooms, letterId)
+		end
+	end
+
+	local mathRooms: { string } = {}
+	for stage = 1, MathConfig.count() do
+		local spec = MathConfig.get(stage)
+		if spec and masteryOf(math_, spec.id) >= MasteryRules.MASTERED then
+			table.insert(mathRooms, spec.id)
+		end
+	end
+
 	local cleared = Levels.sanitize(levels)
 	return {
 		flags = cleared[Levels.WORLD],
@@ -100,6 +129,8 @@ function Awards.of(profile: any): Earned
 		spire = allMastered,
 		mathFlags = cleared[Levels.MATH_WORLD],
 		countSpire = countMastered,
+		letterRooms = letterRooms,
+		mathRooms = mathRooms,
 	}
 end
 

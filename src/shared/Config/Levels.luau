@@ -43,9 +43,14 @@ export type Level = {
 	maxChoices: number,
 	--[[
 		Паркур уровня (docs/19-OBSTACLES.md § 3.3): сколько элементов на отрезке
-		и до какого ряда. Первые уровни — один-два базовых и ничего движущегося:
+		и до какого ряда. Первые уровни — только базовые и ничего движущегося:
 		ребёнок учит буквы, а не выживает. К концу пути отрезок длинный,
 		и в нём встречается всё, что игра умеет.
+
+		Чисел стало вдвое-втрое больше, чем было: отрезок обязан занимать
+		сорок секунд (Tunnel.SEGMENT_SECONDS_MIN), и добирать их паркуром
+		правильнее, чем пустым полом. Остаток всё же добирается беговыми
+		клетками — на первых уровнях их много, на последних почти нет.
 	]]
 	obstacles: { number }, -- { меньше, больше }: точное число добавляет сложность
 	maxTier: number,
@@ -54,17 +59,17 @@ export type Level = {
 local Levels = {}
 
 Levels.all = {
-	{ index = 1, segments = 4, maxChoices = 2, obstacles = { 1, 2 }, maxTier = 1 },
-	{ index = 2, segments = 4, maxChoices = 3, obstacles = { 1, 2 }, maxTier = 1 },
-	{ index = 3, segments = 5, maxChoices = 3, obstacles = { 2, 3 }, maxTier = 1 },
-	{ index = 4, segments = 5, maxChoices = 3, obstacles = { 2, 3 }, maxTier = 1 },
-	{ index = 5, segments = 5, maxChoices = 3, obstacles = { 2, 4 }, maxTier = 2 },
-	{ index = 6, segments = 5, maxChoices = 3, obstacles = { 3, 4 }, maxTier = 2 },
-	{ index = 7, segments = 6, maxChoices = 3, obstacles = { 3, 4 }, maxTier = 2 },
-	{ index = 8, segments = 6, maxChoices = 3, obstacles = { 3, 5 }, maxTier = 2 },
-	{ index = 9, segments = 6, maxChoices = 3, obstacles = { 4, 5 }, maxTier = 3 },
-	{ index = 10, segments = 6, maxChoices = 3, obstacles = { 4, 6 }, maxTier = 3 },
-	{ index = 11, segments = 6, maxChoices = 3, obstacles = { 4, 6 }, maxTier = 3 },
+	{ index = 1, segments = 4, maxChoices = 2, obstacles = { 6, 8 }, maxTier = 1 },
+	{ index = 2, segments = 4, maxChoices = 3, obstacles = { 6, 8 }, maxTier = 1 },
+	{ index = 3, segments = 5, maxChoices = 3, obstacles = { 7, 9 }, maxTier = 1 },
+	{ index = 4, segments = 5, maxChoices = 3, obstacles = { 7, 9 }, maxTier = 1 },
+	{ index = 5, segments = 5, maxChoices = 3, obstacles = { 8, 10 }, maxTier = 2 },
+	{ index = 6, segments = 5, maxChoices = 3, obstacles = { 8, 10 }, maxTier = 2 },
+	{ index = 7, segments = 6, maxChoices = 3, obstacles = { 9, 11 }, maxTier = 2 },
+	{ index = 8, segments = 6, maxChoices = 3, obstacles = { 9, 11 }, maxTier = 2 },
+	{ index = 9, segments = 6, maxChoices = 3, obstacles = { 10, 12 }, maxTier = 3 },
+	{ index = 10, segments = 6, maxChoices = 3, obstacles = { 10, 13 }, maxTier = 3 },
+	{ index = 11, segments = 6, maxChoices = 3, obstacles = { 11, 14 }, maxTier = 3 },
 } :: { Level }
 
 -- Сколько элементов добавляет адаптивная сложность к нижней границе уровня.

@@ -25,6 +25,7 @@ local Base = require(Shared.Config.Base)
 local Letters = require(Shared.Config.Letters)
 local Stages = require(Shared.Config.Stages)
 local MathLevels = require(Shared.Config.MathLevels)
+local MathConfig = require(Shared.Config.Math)
 local Awards = require(Shared.Logic.Awards)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
@@ -282,6 +283,202 @@ local function buildYard(plot: Model, at: CFrame, level: number)
 end
 
 --[[
+	Мебель справа от дома, на виду с дорожки. Уровни набираются: стол остаётся,
+	когда куплена кровать, — это набор вещей, а не лестница качества.
+
+	Без дома мебель не ставится совсем: купленное не пропадает, а ждёт дом,
+	как и крыша.
+]]
+local function buildFurniture(plot: Model, at: CFrame, level: number, houseLevel: number)
+	if level <= 0 or houseLevel <= 0 then
+		return
+	end
+
+	local x = 12
+
+	if level >= 1 then
+		local top = part(
+			"TableTop",
+			Vector3.new(4, 0.4, 3),
+			at * CFrame.new(x, FLOOR + 2.2, -4),
+			Color3.fromRGB(205, 165, 120),
+			plot
+		)
+		top.Material = Enum.Material.WoodPlanks
+		part("TableLeg", Vector3.new(0.6, 2, 0.6), at * CFrame.new(x, FLOOR + 1, -4), SOIL, plot)
+	end
+
+	if level >= 2 then
+		part(
+			"BedFrame",
+			Vector3.new(3.4, 1, 6),
+			at * CFrame.new(x, FLOOR + 0.5, 3),
+			Color3.fromRGB(190, 150, 110),
+			plot
+		)
+		local blanket = part(
+			"BedBlanket",
+			Vector3.new(3.6, 0.5, 4),
+			at * CFrame.new(x, FLOOR + 1.2, 4),
+			Color3.fromRGB(240, 170, 190),
+			plot
+		)
+		blanket.Material = Enum.Material.Fabric
+	end
+
+	if level >= 3 then
+		local rug = part(
+			"Rug",
+			Vector3.new(6, 0.2, 6),
+			at * CFrame.new(x - 1, FLOOR + 0.1, -10),
+			Color3.fromRGB(150, 190, 230),
+			plot
+		)
+		rug.Material = Enum.Material.Fabric
+		rug.CanCollide = false
+	end
+
+	if level >= 4 then
+		local shelf = part(
+			"Shelf",
+			Vector3.new(0.6, 5, 4),
+			at * CFrame.new(x + 3, FLOOR + 2.5, -1),
+			Color3.fromRGB(215, 185, 145),
+			plot
+		)
+		shelf.Material = Enum.Material.WoodPlanks
+		for board = 1, 2 do
+			part(
+				`ShelfBoard_{board}`,
+				Vector3.new(2, 0.3, 4),
+				at * CFrame.new(x + 2, FLOOR + 1.6 + board * 1.6, -1),
+				Color3.fromRGB(230, 205, 170),
+				plot
+			)
+		end
+	end
+end
+
+--[[
+	Декор двора. Стоит на своих местах и ни от чего не зависит: флажки можно
+	повесить над калиткой и на пустом участке — это первая покупка в игре
+	и первое «здесь живу я».
+]]
+local function buildDecor(plot: Model, at: CFrame, level: number)
+	if level <= 0 then
+		return
+	end
+
+	local colors = {
+		Color3.fromRGB(255, 130, 130),
+		Color3.fromRGB(255, 205, 120),
+		Color3.fromRGB(150, 220, 160),
+		Color3.fromRGB(150, 190, 245),
+	}
+
+	if level >= 1 then
+		-- Гирлянда над калиткой: её видно с дорожки раньше самого дома.
+		for index = 1, 7 do
+			local flag = part(
+				`YardFlag_{index}`,
+				Vector3.new(1.2, 1.2, 0.15),
+				at
+					* CFrame.new(
+						(index - 4) * 2.2,
+						FLOOR + 6 - math.abs(index - 4) * 0.25,
+						-Base.PLOT_SIZE / 2 + 2
+					),
+				colors[(index - 1) % #colors + 1],
+				plot
+			)
+			flag.CanCollide = false
+		end
+	end
+
+	if level >= 2 then
+		for index = 1, 3 do
+			local balloon = part(
+				`Balloon_{index}`,
+				Vector3.new(2, 2.4, 2),
+				at * CFrame.new(-13 + index * 1.6, FLOOR + 7 + index * 0.6, -12),
+				colors[index],
+				plot
+			)
+			balloon.Shape = Enum.PartType.Ball
+			balloon.CanCollide = false
+			part(
+				`BalloonString_{index}`,
+				Vector3.new(0.1, 5, 0.1),
+				at * CFrame.new(-13 + index * 1.6, FLOOR + 3.5 + index * 0.6, -12),
+				Color3.fromRGB(240, 240, 240),
+				plot
+			).CanCollide =
+				false
+		end
+	end
+
+	if level >= 3 then
+		for index = 1, 4 do
+			local post = part(
+				`LanternPost_{index}`,
+				Vector3.new(0.4, 4, 0.4),
+				at * CFrame.new(-5, FLOOR + 2, -14 + index * 3),
+				Color3.fromRGB(120, 110, 100),
+				plot
+			)
+			post.CanCollide = false
+			local lamp = part(
+				`Lantern_{index}`,
+				Vector3.new(1.4, 1.4, 1.4),
+				at * CFrame.new(-5, FLOOR + 4.6, -14 + index * 3),
+				Color3.fromRGB(255, 230, 160),
+				plot
+			)
+			lamp.Material = Enum.Material.Neon
+			lamp.CanCollide = false
+		end
+	end
+
+	if level >= 4 then
+		local x = -13
+		for _, side in { -1, 1 } do
+			part(
+				`SwingPost_{side}`,
+				Vector3.new(0.6, 7, 0.6),
+				at * CFrame.new(x + side * 2.5, FLOOR + 3.5, 6),
+				Color3.fromRGB(180, 140, 100),
+				plot
+			)
+		end
+		part(
+			"SwingBar",
+			Vector3.new(6, 0.5, 0.5),
+			at * CFrame.new(x, FLOOR + 7, 6),
+			Color3.fromRGB(180, 140, 100),
+			plot
+		)
+		for _, side in { -1, 1 } do
+			part(
+				`SwingRope_{side}`,
+				Vector3.new(0.15, 4, 0.15),
+				at * CFrame.new(x + side * 1.2, FLOOR + 5, 6),
+				Color3.fromRGB(235, 225, 200),
+				plot
+			).CanCollide =
+				false
+		end
+		local seat = part(
+			"SwingSeat",
+			Vector3.new(3, 0.3, 1.4),
+			at * CFrame.new(x, FLOOR + 3, 6),
+			Color3.fromRGB(255, 180, 120),
+			plot
+		)
+		seat.Material = Enum.Material.WoodPlanks
+	end
+end
+
+--[[
 	Забор по краю участка. На верхнем уровне столбики — буквы: это витрина
 	обучения, вынесенная на границу двора, и её видно соседям.
 ]]
@@ -455,6 +652,130 @@ local function buildCountSpire(plot: Model, at: CFrame)
 	caption(top, "1 2 3 … 9", 3, 280)
 end
 
+--[[
+	Комнаты дома (docs/15-HOME-BASE.md § 5). Их нельзя купить: комната появляется
+	за освоенную букву и за освоенную ступень счёта, и полка в ней растёт сама.
+
+	Пристроены сзади дома — открытые, без крыши и четвёртой стены: заходить внутрь
+	ребёнку незачем, а видеть свою полку он должен с дорожки, не влезая никуда.
+	Без дома комнат не бывает: пристраивать их не к чему.
+]]
+local ROOM_DEPTH = 6
+local ROOM_Z = 12
+local TILE_STEP = 1.4
+local TILES_IN_ROW = 6
+
+local function buildRoom(
+	plot: Model,
+	at: CFrame,
+	name: string,
+	centerX: number,
+	width: number,
+	title: string,
+	tiles: { { glyph: string, color: Color3 } }
+)
+	if #tiles == 0 then
+		return
+	end
+
+	local rows = math.ceil(#tiles / TILES_IN_ROW)
+	local wallHeight = math.max(4, 1.6 + rows * TILE_STEP + 1)
+
+	local floorSlab = part(
+		`{name}Floor`,
+		Vector3.new(width, 0.4, ROOM_DEPTH),
+		at * CFrame.new(centerX, FLOOR + 0.2, ROOM_Z),
+		Color3.fromRGB(225, 210, 190),
+		plot
+	)
+	floorSlab.Material = Enum.Material.WoodPlanks
+
+	local back = part(
+		`{name}Wall`,
+		Vector3.new(width, wallHeight, 0.5),
+		at * CFrame.new(centerX, FLOOR + wallHeight / 2, ROOM_Z + ROOM_DEPTH / 2),
+		Color3.fromRGB(240, 230, 215),
+		plot
+	)
+	back.Material = Enum.Material.SmoothPlastic
+	caption(back, title, 2, 200)
+
+	for _, side in { -1, 1 } do
+		part(
+			`{name}Side_{side}`,
+			Vector3.new(0.5, wallHeight, ROOM_DEPTH),
+			at * CFrame.new(centerX + side * (width / 2), FLOOR + wallHeight / 2, ROOM_Z),
+			Color3.fromRGB(235, 222, 205),
+			plot
+		)
+	end
+
+	--[[
+		Полки с буквами: ряд заполняется слева направо, новый ряд ложится выше.
+		Плитка — та самая буква, которую ребёнок освоил, её же цвета
+		(Config/Letters): полка читается как список выученного, а не как узор.
+	]]
+	for index, tile in tiles do
+		local row = math.floor((index - 1) / TILES_IN_ROW)
+		local column = (index - 1) % TILES_IN_ROW
+		local inRow = math.min(TILES_IN_ROW, #tiles - row * TILES_IN_ROW)
+		local x = centerX + (column - (inRow - 1) / 2) * TILE_STEP
+
+		if column == 0 then
+			local shelf = part(
+				`{name}Shelf_{row}`,
+				Vector3.new(inRow * TILE_STEP, 0.2, 1),
+				at * CFrame.new(centerX, FLOOR + 1.2 + row * TILE_STEP, ROOM_Z + ROOM_DEPTH / 2 - 0.8),
+				Color3.fromRGB(205, 180, 150),
+				plot
+			)
+			shelf.Material = Enum.Material.WoodPlanks
+			shelf.CanCollide = false
+		end
+
+		local tilePart = part(
+			`{name}Tile_{index}`,
+			Vector3.new(TILE_STEP - 0.25, TILE_STEP - 0.25, 0.3),
+			at * CFrame.new(x, FLOOR + 1.9 + row * TILE_STEP, ROOM_Z + ROOM_DEPTH / 2 - 0.8),
+			tile.color,
+			plot
+		)
+		tilePart.CanCollide = false
+		caption(tilePart, tile.glyph, 1.2, 90)
+	end
+end
+
+local function buildRooms(plot: Model, at: CFrame, earned: Awards.Earned, houseLevel: number)
+	if houseLevel <= 0 then
+		return
+	end
+
+	local letterTiles = {}
+	-- preview из консоли Studio зовут руками и неполной таблицей: комнат может не быть вовсе.
+	for _, letterId in earned.letterRooms or {} do
+		local letter = Letters.expect(letterId)
+		table.insert(letterTiles, { glyph = letter.glyph, color = letter.color })
+	end
+	buildRoom(plot, at, "LetterRoom", -7, 10, "Комнаты букв", letterTiles)
+
+	--[[
+		На плитке — номер ступени счёта, а не её порядок в списке освоенных:
+		ступени осваиваются вразнобой, и «третья комната» должна означать
+		третью ступень, а не третью по счёту победу.
+	]]
+	local mathTiles = {}
+	for stage = 1, MathConfig.count() do
+		local spec = MathConfig.get(stage)
+		if spec and table.find(earned.mathRooms or {}, spec.id) then
+			table.insert(mathTiles, {
+				glyph = tostring(stage),
+				color = MATH_FLAG_COLORS[(stage - 1) % #MATH_FLAG_COLORS + 1],
+			})
+		end
+	end
+	buildRoom(plot, at, "MathRoom", 7, 10, "Комнаты цифр", mathTiles)
+end
+
 local function renderAwards(plot: Plot, earned: Awards.Earned)
 	buildFlags(plot.model, plot.cframe, earned.flags)
 	buildMathFlags(plot.model, plot.cframe, earned.mathFlags)
@@ -487,11 +808,11 @@ local function buildUpgradePad(
 	level: number
 )
 	local category = Base.expect(categoryId)
-	local offset = (index - (#Base.CATEGORIES + 1) / 2) * 7
+	local offset = (index - (#Base.CATEGORIES + 1) / 2) * Base.PAD_STEP
 
 	local pad = part(
 		`Upgrade_{categoryId}`,
-		Vector3.new(6, 1, 6),
+		Vector3.new(Base.PAD_WIDTH, 1, Base.PAD_WIDTH),
 		at * CFrame.new(offset, 1.2, -Base.PLOT_SIZE / 2 + 5),
 		Color3.fromRGB(255, 235, 190),
 		plot
@@ -542,6 +863,8 @@ local function renderBuildings(plot: Plot, base: { [string]: number })
 	buildHouse(plot.model, at, base.house)
 	buildRoof(plot.model, at, base.roof, base.house)
 	buildFence(plot.model, at, base.fence)
+	buildFurniture(plot.model, at, base.furniture, base.house)
+	buildDecor(plot.model, at, base.decor)
 end
 
 local function renderSign(plot: Plot, text: string)
@@ -567,8 +890,10 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 	end
 
 	local base = Base.sanitize(profile and profile.base)
+	local earned = Awards.of(profile)
 	renderBuildings(plot, base)
-	renderAwards(plot, Awards.of(profile))
+	renderAwards(plot, earned)
+	buildRooms(plot.model, plot.cframe, earned, base.house)
 	renderSign(plot, `Дом: {player.DisplayName}`)
 
 	for index, categoryId in Base.ids() do
@@ -591,9 +916,11 @@ function BaseService.preview(index: number, levels: { [string]: number }, earned
 	end
 
 	clearPlot(plot)
-	renderBuildings(plot, Base.sanitize(levels))
+	local clean = Base.sanitize(levels)
+	renderBuildings(plot, clean)
 	if earned then
 		renderAwards(plot, earned)
+		buildRooms(plot.model, plot.cframe, earned, clean.house)
 	end
 	renderSign(plot, "Показ")
 end

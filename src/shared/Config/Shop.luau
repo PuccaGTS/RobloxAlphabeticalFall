@@ -1010,6 +1010,25 @@ function Module.ids(): { string }
 	return ids
 end
 
+--[[
+	Витрина, какой её видит ребёнок. hideRobux — переключатель родительского
+	режима (docs/13-PARENT-MODE.md § 3): семьям, где за настоящие деньги
+	не покупают ничего, незачем и показывать такие карточки — ребёнок
+	просит то, что видит.
+
+	Прячется только показ. Купленное за Robux раньше остаётся в гардеробе
+	и надетым: отнимать оплаченное настройка не имеет права.
+]]
+function Module.visibleIds(hideRobux: boolean?): { string }
+	local ids: { string } = {}
+	for _, id in Module.ids() do
+		if not (hideRobux and Items[id].robuxProduct) then
+			table.insert(ids, id)
+		end
+	end
+	return ids
+end
+
 -- За сколько дней серии буквы дня выдаётся предмет, или nil, если не за серию.
 function Module.streakDays(item: ShopItem): number?
 	local grantedBy = item.grantedBy

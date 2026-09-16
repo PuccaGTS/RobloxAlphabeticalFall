@@ -29,6 +29,31 @@ function CourseLayout.shuffled(list: { any }, random: Random): { any }
 	return copy
 end
 
+--[[
+	Из чего состоит отрезок по порядку: клетка препятствия или беговая клетка.
+
+	Пробежки идут ПОСЛЕ элементов и распределены поровну, поэтому отрезок никогда
+	не начинается с длинного пустого пола, а кончается им всегда: перед воротами
+	ребёнок бежит по ровному и успевает выбрать проём (docs/14-TUNNEL-MODE.md § 4.1).
+]]
+function CourseLayout.cells(obstacleCount: number, runCount: number): { string }
+	local cells: { string } = {}
+	local placed = 0
+	for step = 1, obstacleCount do
+		table.insert(cells, "obstacle")
+		local want = math.floor(runCount * step / obstacleCount + 0.5)
+		while placed < want do
+			table.insert(cells, "run")
+			placed += 1
+		end
+	end
+	while placed < runCount do
+		table.insert(cells, "run")
+		placed += 1
+	end
+	return cells
+end
+
 -- Дорожки в случайном порядке: на какой из них окажется верный ответ, заранее не угадать.
 function CourseLayout.lanes(random: Random): { number }
 	local lanes = {}
@@ -101,15 +126,23 @@ function CourseLayout.layout(
 		local rowRandom = plan.rowRandom
 		local makeRow = plan.makeRow
 
-		-- Перед какими препятствиями встанет ряд букв. Решает свой генератор рядов.
+		--[[
+			Сколько беговых клеток нужно, чтобы отрезок занял свои сорок секунд
+			(Tunnel.runCells). Паркур считается первым, пробежки добирают остаток:
+			на поздних уровнях, где элементов много, их почти нет.
+		]]
+		local wanted = if makeRow and rowRandom and #catalog > 0 then plan.rowsPerSegment or 0 else 0
+		local runCount = Tunnel.runCells(plan.obstacleCount, plan.obstacleTier, wanted)
+		local cells = CourseLayout.cells(plan.obstacleCount, runCount)
+
+		-- Перед какими клетками встанет ряд букв. Решает свой генератор рядов.
 		local rowBefore: { [number]: boolean } = {}
-		local rowCount = 0
-		if makeRow and rowRandom and #catalog > 0 then
+		local rowCount = math.min(wanted, #cells)
+		if rowCount > 0 and rowRandom then
 			local steps: { number } = {}
-			for step = 1, plan.obstacleCount do
+			for step = 1, #cells do
 				table.insert(steps, step)
 			end
-			rowCount = math.min(plan.rowsPerSegment or 0, #steps)
 			for order, step in CourseLayout.shuffled(steps, rowRandom) do
 				if order > rowCount then
 					break
@@ -119,16 +152,17 @@ function CourseLayout.layout(
 		end
 
 		--[[
-			Секрет получает свою клетку перед одним из препятствий отрезка —
+			Секрет получает свою клетку перед одной из клеток отрезка —
 			как ряд букв, только в крайней дорожке и на постаменте.
 		]]
 		local secretBefore: number? = nil
 		local secretRandom = plan.secretRandom
-		if plan.secretSegment == index and secretRandom and plan.obstacleCount > 0 and #catalog > 0 then
-			secretBefore = secretRandom:NextInteger(1, plan.obstacleCount)
+		if plan.secretSegment == index and secretRandom and #cells > 0 and #catalog > 0 then
+			secretBefore = secretRandom:NextInteger(1, #cells)
 		end
 
-		local segment = Tunnel.segmentLength(plan.obstacleCount, rowCount + (if secretBefore then 1 else 0))
+		local segment =
+			Tunnel.segmentLength(plan.obstacleCount, rowCount + (if secretBefore then 1 else 0), runCount)
 
 		--[[
 			Отрезок режется на клетки: клетка ряда букв (если он здесь есть), потом
@@ -141,7 +175,7 @@ function CourseLayout.layout(
 		local rowZs: { number } = {}
 		local movingUsed = 0
 
-		for step = 1, plan.obstacleCount do
+		for step, cell in cells do
 			if rowBefore[step] then
 				table.insert(rowZs, cursor + Tunnel.ROW_PLACE)
 				cursor += Tunnel.ROW_PITCH
@@ -153,6 +187,12 @@ function CourseLayout.layout(
 					lane = if secretRandom:NextInteger(1, 2) == 1 then 1 else Tunnel.LANE_COUNT,
 				}
 				cursor += Tunnel.ROW_PITCH
+			end
+
+			if cell == "run" then
+				-- Беговая клетка: целый пол, ничего не строится.
+				cursor += Tunnel.RUN_PITCH
+				continue
 			end
 
 			if #catalog > 0 then

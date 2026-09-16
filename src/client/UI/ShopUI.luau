@@ -213,8 +213,16 @@ function ShopUI.update(snapshot)
 	local inventory = snapshot.inventory or {}
 	local equipped = snapshot.equipped or {}
 
+	--[[
+		Родитель мог выключить показ покупок за Robux (docs/13-PARENT-MODE.md § 3).
+		Прячем карточку целиком: кнопка «нельзя» — это всё равно витрина,
+		а ребёнок просит то, что видит.
+	]]
+	local hideRobux = typeof(snapshot.settings) == "table" and snapshot.settings.hideRobux == true
+
 	for id, card in cards do
 		local item = Shop.expect(id)
+		card.Visible = not (hideRobux and item.robuxProduct)
 		local action = card:FindFirstChild("Action") :: TextButton
 		local owned = table.find(inventory, id) ~= nil
 		local isEquipped = equipped[item.category] == id

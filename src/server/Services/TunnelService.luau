@@ -875,6 +875,155 @@ local OBSTACLE_BUILDERS: { [string]: (Model, CFrame, any, number) -> () } = {
 	end,
 
 	--[[
+		Карусель: низкий диск с четырьмя перекладинами крутится в одной дорожке.
+		Оборот занимает двенадцать секунд, перекладины по колено: их перешагивают
+		или пропускают. Диск не поднимает и не уносит — он просто мешает пройти
+		напрямую, и обойти его можно всегда.
+	]]
+	carousel = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		local at = origin * CFrame.new(x, 0.2, -(obstacle.z + Tunnel.CAROUSEL_SPAN / 2))
+
+		local disc = build(
+			`Carousel_{index}`,
+			Vector3.new(Tunnel.CAROUSEL_SPAN, 0.4, Tunnel.CAROUSEL_SPAN),
+			at,
+			Color3.fromRGB(250, 200, 120),
+			model
+		)
+		disc.CanCollide = false
+
+		--[[
+			Перекладины — дети диска: крутится один твин, а не четыре, иначе
+			они разошлись бы по фазе и карусель перестала бы быть каруселью.
+		]]
+		local hub = build(
+			`CarouselHub_{index}`,
+			Vector3.new(1, Tunnel.CAROUSEL_BAR_HEIGHT, 1),
+			at * CFrame.new(0, Tunnel.CAROUSEL_BAR_HEIGHT / 2, 0),
+			Color3.fromRGB(200, 150, 90),
+			model
+		)
+		hub.CanCollide = false
+
+		for bar = 1, Tunnel.CAROUSEL_BARS do
+			local angle = (bar - 1) / Tunnel.CAROUSEL_BARS * math.pi * 2
+			local arm = build(
+				`CarouselBar_{index}_{bar}`,
+				Vector3.new(0.6, Tunnel.CAROUSEL_BAR_HEIGHT, Tunnel.CAROUSEL_SPAN / 2),
+				hub.CFrame * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, -Tunnel.CAROUSEL_SPAN / 4),
+				Color3.fromRGB(235, 175, 105),
+				model
+			)
+			--[[
+				Перекладина приварена к втулке и НЕ закреплена сама: твин крутит
+				одну втулку, сварка тянет за собой перекладины. Закрепи их —
+				и они остались бы висеть на месте, пока втулка крутится под ними.
+			]]
+			arm.Anchored = false
+			arm.Massless = true
+
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = hub
+			weld.Part1 = arm
+			weld.Parent = hub
+		end
+
+		local info =
+			TweenInfo.new(Tunnel.CAROUSEL_SECONDS, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1)
+		TweenService:Create(hub, info, { CFrame = hub.CFrame * CFrame.Angles(0, math.pi, 0) }):Play()
+	end,
+
+	--[[
+		Подъёмник: площадка ходит от пола до мостика, мостик идёт над той же
+		дорожкой и кончается спуском. Наверху ничего не подстерегает — это просто
+		другой путь через отрезок, с высоты которого видно ворота впереди.
+
+		Ждать площадку не обязательно: соседние дорожки свободны, а падать
+		с мостика некуда — под ним обычный пол.
+	]]
+	lift = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		local low = origin * CFrame.new(x, 0.25, -(obstacle.z + Tunnel.LIFT_PAD / 2))
+		local high = origin * CFrame.new(x, Tunnel.LIFT_HEIGHT, -(obstacle.z + Tunnel.LIFT_PAD / 2))
+
+		local pad = build(
+			`Lift_{index}`,
+			Vector3.new(Tunnel.LIFT_PAD, 0.5, Tunnel.LIFT_PAD),
+			low,
+			Color3.fromRGB(150, 205, 235),
+			model
+		)
+		pad.Material = Enum.Material.SmoothPlastic
+		pad.Anchored = true
+
+		-- Мостик наверху: по нему бегут дальше и спрыгивают с дальнего края.
+		local bridge = build(
+			`LiftBridge_{index}`,
+			Vector3.new(Tunnel.LIFT_PAD, 0.5, Tunnel.LIFT_SPAN - Tunnel.LIFT_PAD),
+			origin
+				* CFrame.new(
+					x,
+					Tunnel.LIFT_HEIGHT,
+					-(obstacle.z + Tunnel.LIFT_PAD + (Tunnel.LIFT_SPAN - Tunnel.LIFT_PAD) / 2)
+				),
+			Color3.fromRGB(190, 220, 240),
+			model
+		)
+		bridge.Material = Enum.Material.SmoothPlastic
+
+		-- Столбик под мостиком: видно, что мостик на чём-то стоит, а не висит.
+		local post = build(
+			`LiftPost_{index}`,
+			Vector3.new(0.8, Tunnel.LIFT_HEIGHT, 0.8),
+			origin * CFrame.new(x, Tunnel.LIFT_HEIGHT / 2, -(obstacle.z + Tunnel.LIFT_SPAN - 0.5)),
+			Color3.fromRGB(170, 175, 185),
+			model
+		)
+		post.CanCollide = false
+
+		swing(pad, high, Tunnel.LIFT_SECONDS)
+	end,
+
+	--[[
+		Спираль: ступени по кругу вокруг столба — половина витка вверх, половина
+		вниз. Стоит неподвижно, ждёт сколько угодно; шаг между ступенями обычный,
+		как у ступеней базового ряда.
+	]]
+	spiral = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		local radius = Tunnel.SPIRAL_SPAN / 4
+		local centerZ = obstacle.z + Tunnel.SPIRAL_SPAN / 2
+
+		local pole = build(
+			`SpiralPole_{index}`,
+			Vector3.new(1, Tunnel.SPIRAL_HEIGHT + 2, 1),
+			origin * CFrame.new(x, (Tunnel.SPIRAL_HEIGHT + 2) / 2, -centerZ),
+			Color3.fromRGB(170, 175, 185),
+			model
+		)
+		pole.CanCollide = false
+
+		for step = 1, Tunnel.SPIRAL_STEPS do
+			-- Подъём до середины витка и спуск обратно: спираль возвращает на пол.
+			local half = Tunnel.SPIRAL_STEPS / 2
+			local climb = if step <= half then step else Tunnel.SPIRAL_STEPS - step + 1
+			local height = climb / half * Tunnel.SPIRAL_HEIGHT
+
+			local angle = (step - 1) / Tunnel.SPIRAL_STEPS * math.pi * 2 - math.pi / 2
+			local plate = build(
+				`SpiralStep_{index}_{step}`,
+				Vector3.new(3, 0.4, 3),
+				origin
+					* CFrame.new(x + math.cos(angle) * radius, height, -(centerZ + math.sin(angle) * radius)),
+				Color3.fromRGB(215, 195, 235),
+				model
+			)
+			plate.Material = Enum.Material.SmoothPlastic
+		end
+	end,
+
+	--[[
 		Гребёнка: стена поперёк коридора с узкой щелью в каждой дорожке.
 		Путь не перекрыт — щель есть везде, — но в неё надо прицелиться.
 	]]

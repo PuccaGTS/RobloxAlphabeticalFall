@@ -6,11 +6,24 @@ local Base = require(Shared.Config.Base)
 
 return function()
 	describe("Config: участок", function()
-		it("четыре категории по четыре уровня", function()
-			expect(#Base.CATEGORIES).to.equal(4)
+		it("шесть категорий по четыре уровня", function()
+			expect(#Base.CATEGORIES).to.equal(6)
 			for _, id in Base.ids() do
 				expect(Base.maxLevel(id)).to.equal(4)
 				expect(#Base.expect(id).levels).to.equal(4)
+			end
+		end)
+
+		--[[
+			Дом, крыша, двор и забор — сам участок; мебель и декор — обстановка
+			(docs/15-HOME-BASE.md § 3). Без последних двух двор остаётся голым
+			навсегда, сколько бы ребёнок ни учился.
+		]]
+		it("мебель и декор двора заведены", function()
+			for _, id in { "furniture", "decor" } do
+				local category = Base.expect(id)
+				expect(#category.prices).to.equal(4)
+				expect(category.prices[1] <= 30).to.equal(true)
 			end
 		end)
 
@@ -43,6 +56,17 @@ return function()
 			for _, category in Base.CATEGORIES do
 				expect(category.prices[1] <= 50).to.equal(true)
 			end
+		end)
+
+		--[[
+			Пады улучшений стоят в один ряд у калитки, и ряд обязан влезть в участок:
+			категорий стало шесть, и пад, уехавший за забор, ребёнок просто
+			не найдёт. Раскладку делает BaseService, числа живут в конфиге.
+		]]
+		it("ряд падов улучшений влезает в участок", function()
+			local row = (#Base.CATEGORIES - 1) * Base.PAD_STEP + Base.PAD_WIDTH
+			expect(row <= Base.PLOT_SIZE).to.equal(true)
+			expect(Base.PAD_STEP > Base.PAD_WIDTH).to.equal(true)
 		end)
 
 		--[[
