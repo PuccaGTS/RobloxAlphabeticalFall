@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Tunnel = require(Shared.Config.Tunnel)
+local Letters = require(Shared.Config.Letters)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 local Challenges = require(Shared.Config.Challenges)
 local TrackShape = require(Shared.Logic.TrackShape)
@@ -585,6 +586,181 @@ end
 	находку упадут звёздочки. Найденный однажды секрет больше не строится.
 ]]
 local SECRET_GOLD = Color3.fromRGB(255, 205, 80)
+
+--[[
+	Лестница особого участка (Tunnel.STAIR_*): ступени, плиты с буквами на каждой,
+	прозрачные преграды и горка вниз. План — spec.params.stairs.
+
+	Вопрос N задаётся плитами на ступени N−1 (первый — на полу перед лестницей),
+	а преграда N стоит на передней грани ступени N. Встал на верную плиту —
+	преграда исчезает, на указателе ступени вместо «?» загорается буква.
+
+	В пройденном до выхода отрезке лестница стоит без плит и преград: вопросов
+	там больше нет, но путь должен остаться тем же.
+]]
+local STAIR_STONE = { Color3.fromRGB(215, 200, 240), Color3.fromRGB(190, 170, 225) }
+
+local function stairStepZ(stairs, index: number): number
+	return stairs.z + Tunnel.STAIR_LEAD + (index - 1) * Tunnel.STAIR_DEPTH
+end
+
+local function stairTop(index: number): number
+	return index * Tunnel.STAIR_RISE
+end
+
+local function buildStairs(model: Model, origin: CFrame, stairs: any, player: Player, resumeFrom: number)
+	if not stairs or #stairs.steps == 0 then
+		return
+	end
+	local active = stairs.segment > resumeFrom
+	local count = #stairs.steps
+
+	-- Табличка у подножия: с какой буквы начинается подъём.
+	local startSign = build(
+		"StairStartSign",
+		Vector3.new(4, 4, 0.5),
+		origin * CFrame.new(-Tunnel.WIDTH / 2 + 3, 6, -(stairs.z + 1)),
+		Letters.expect(stairs.steps[1].fromId).color,
+		model
+	)
+	startSign.CanCollide = false
+	attachGlyph(startSign, `{stairs.steps[1].fromGlyph} → ?`, Color3.fromRGB(255, 255, 255))
+
+	for index, step in stairs.steps do
+		local z = stairStepZ(stairs, index)
+		local top = stairTop(index)
+
+		local block = build(
+			`StairStep_{index}`,
+			Vector3.new(Tunnel.WIDTH, top, Tunnel.STAIR_DEPTH),
+			origin * CFrame.new(0, top / 2, -(z + Tunnel.STAIR_DEPTH / 2)),
+			STAIR_STONE[index % 2 + 1],
+			model
+		)
+		block.Material = Enum.Material.Slate
+
+		local sign = build(
+			`StairSign_{index}`,
+			Vector3.new(3, 3, 0.4),
+			origin * CFrame.new(-Tunnel.WIDTH / 2 + 2, top + 3.5, -(z + Tunnel.STAIR_DEPTH / 2)),
+			if active then Color3.fromRGB(240, 235, 250) else Letters.expect(step.targetId).color,
+			model
+		)
+		sign.CanCollide = false
+		attachGlyph(
+			sign,
+			if active then "?" else step.targetGlyph,
+			if active then Color3.fromRGB(150, 130, 190) else Color3.fromRGB(255, 255, 255)
+		)
+
+		if active then
+			local barrier = build(
+				`StairBarrier_{index}`,
+				Vector3.new(Tunnel.WIDTH, 12, 0.6),
+				origin * CFrame.new(0, (index - 1) * Tunnel.STAIR_RISE + 6, -z),
+				Color3.fromRGB(200, 230, 255),
+				model
+			)
+			barrier.Material = Enum.Material.ForceField
+			barrier.Transparency = 0.2
+
+			-- Плиты вопроса стоят там, откуда ребёнок смотрит на эту преграду.
+			local padY = (index - 1) * Tunnel.STAIR_RISE + Tunnel.STAIR_PAD.Y / 2
+			local padZ = if index == 1 then stairs.z + Tunnel.STAIR_LEAD / 2 else z - Tunnel.STAIR_DEPTH / 2
+
+			for slot, choice in step.choices do
+				local pad = build(
+					`StairPad_{index}_{slot}`,
+					Tunnel.STAIR_PAD,
+					origin * CFrame.new(Tunnel.laneOffset(choice.lane), padY, -padZ),
+					choice.color,
+					model
+				)
+				pad.Material = Enum.Material.SmoothPlastic
+
+				local tile = build(
+					`StairTile_{index}_{slot}`,
+					Vector3.new(2.6, 2.6, 0.3),
+					origin * CFrame.new(Tunnel.laneOffset(choice.lane), padY + 3, -padZ),
+					Color3.fromRGB(252, 250, 245),
+					model
+				)
+				tile.CanCollide = false
+				attachGlyph(tile, choice.glyph, choice.color)
+
+				local last = 0
+				pad.Touched:Connect(function(hit: BasePart)
+					local character = hit.Parent
+					if not character or Players:GetPlayerFromCharacter(character) ~= player then
+						return
+					end
+					local now = os.clock()
+					if now - last < 1 then
+						return
+					end
+					last = now
+					ChallengeService.submitAction(player, { kind = "stair", step = index, slot = slot })
+				end)
+			end
+		end
+	end
+
+	-- Горка вниз с верхней ступени: клин высокой стороной к лестнице.
+	local rampZ = stairStepZ(stairs, count + 1)
+	local ramp = Instance.new("WedgePart")
+	ramp.Name = "StairRamp"
+	ramp.Size = Vector3.new(Tunnel.WIDTH, stairTop(count), Tunnel.STAIR_RAMP)
+	ramp.CFrame = origin * CFrame.new(0, stairTop(count) / 2, -(rampZ + Tunnel.STAIR_RAMP / 2))
+	ramp.Color = Color3.fromRGB(250, 205, 120)
+	ramp.Anchored = true
+	ramp.Material = Enum.Material.SmoothPlastic
+	ramp.Parent = model
+end
+
+-- Ответ на лестнице: преграда уходит, указатель зажигается или верная плита подсказывает.
+local function onStairAnswer(player: Player, result: any)
+	local run = runs[player]
+	if not run then
+		return
+	end
+	local stairs = run.spec.params.stairs
+	local step = stairs and stairs.steps[result.step]
+	if not step then
+		return
+	end
+
+	if result.correct then
+		local barrier = run.model:FindFirstChild(`StairBarrier_{result.step}`)
+		if barrier then
+			barrier:Destroy()
+		end
+		for slot in step.choices do
+			for _, name in { `StairPad_{result.step}_{slot}`, `StairTile_{result.step}_{slot}` } do
+				local part = run.model:FindFirstChild(name)
+				if part and part:IsA("BasePart") then
+					part.Material = Enum.Material.SmoothPlastic
+					part.Transparency = if slot == result.slot then 0 else 0.7
+				end
+			end
+		end
+		local sign = run.model:FindFirstChild(`StairSign_{result.step}`)
+		if sign and sign:IsA("BasePart") then
+			sign.Color = Letters.expect(step.targetId).color
+			attachGlyph(sign, step.targetGlyph, Color3.fromRGB(255, 255, 255))
+		end
+		return
+	end
+
+	TunnelService.slow(player, result.cooldown or Tunnel.STAIR_MISS_SECONDS, 0.5)
+	for slot, choice in step.choices do
+		if choice.letterId == step.targetId then
+			local pad = run.model:FindFirstChild(`StairPad_{result.step}_{slot}`)
+			if pad and pad:IsA("BasePart") then
+				pad.Material = Enum.Material.Neon
+			end
+		end
+	end
+end
 
 local function buildSecret(model: Model, origin: CFrame, secret: any, player: Player, resumeFrom: number)
 	if not secret or secret.found or secret.segment <= resumeFrom then
@@ -1573,6 +1749,7 @@ function TunnelService.spawn(player: Player, spec: any)
 	buildObstacles(model, origin, spec.params.obstacles)
 	buildRows(model, origin, spec.params.rows or {}, player, spec.params.resumeFrom or 0)
 	buildSecret(model, origin, spec.params.secret, player, spec.params.resumeFrom or 0)
+	buildStairs(model, origin, spec.params.stairs, player, spec.params.resumeFrom or 0)
 	buildFinish(model, origin, length, player)
 
 	local character = player.Character
@@ -1741,13 +1918,20 @@ function TunnelService.start()
 			return
 		end
 
-		-- Подобранная буква исчезает: второй раз её не взять, и ребёнок видит, что взял.
+		-- Подобранная буква исчезает вместе с рамкой: второй раз её не взять.
 		if result.collect then
 			local run = runs[player]
-			local tile = run and run.model:FindFirstChild(`Collect_{result.row}_{result.slot}`)
-			if tile then
-				tile:Destroy()
+			for _, name in { `Collect_{result.row}_{result.slot}`, `CollectFrame_{result.row}_{result.slot}` } do
+				local part = run and run.model:FindFirstChild(name)
+				if part then
+					part:Destroy()
+				end
 			end
+			return
+		end
+
+		if result.stair then
+			onStairAnswer(player, result)
 			return
 		end
 

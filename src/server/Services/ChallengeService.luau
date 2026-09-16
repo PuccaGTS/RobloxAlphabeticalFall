@@ -447,6 +447,30 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		return
 	end
 
+	--[[
+		Плита на лестнице особого участка. Верная — звёздочка и название взятой
+		буквы; неверная — голос называет букву под ногами, и только. Как и подбор
+		букв на дорожке, в статистику освоения это не идёт.
+	]]
+	if result.stair then
+		if result.correct then
+			ProgressService.awardCollect(player, result.letterId)
+			RemoteDefs.event("PlaySfx"):FireClient(player, "correct")
+			local letter = Letters.get(result.letterId)
+			if letter then
+				playVO(player, letter.vo.name)
+			end
+		else
+			RemoteDefs.event("PlaySfx"):FireClient(player, "miss")
+			local tapped = Letters.get(result.tappedLetterId)
+			if tapped then
+				playVO(player, tapped.vo.name)
+			end
+		end
+		fire(answerHooks, player, state.spec, result)
+		return
+	end
+
 	if result.collect then
 		ProgressService.awardCollect(player, result.letterId)
 		fire(answerHooks, player, state.spec, result)

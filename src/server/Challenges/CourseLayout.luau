@@ -101,6 +101,8 @@ function CourseLayout.layout(
 		-- Секрет уровня: на каком отрезке он спрятан и свой генератор места.
 		secretSegment: number?,
 		secretRandom: Random?,
+		-- Особый участок уровня: на каком отрезке, перед воротами (Tunnel.SPECIAL_PITCH).
+		specialSegment: number?,
 	}
 )
 	local catalog = Obstacles.upToTier(plan.obstacleTier)
@@ -120,6 +122,7 @@ function CourseLayout.layout(
 	-- Где лежат беговые клетки: на них трасса получает форму (Logic/TrackShape).
 	local runs = {}
 	local secret = nil
+	local special = nil
 	local previousId: string? = nil
 
 	local z = Tunnel.START_RUNWAY
@@ -136,6 +139,15 @@ function CourseLayout.layout(
 		local wanted = if makeRow and rowRandom and #catalog > 0 then plan.rowsPerSegment or 0 else 0
 		local runCount = Tunnel.runCells(plan.obstacleCount, plan.obstacleTier, wanted)
 		local cells = CourseLayout.cells(plan.obstacleCount, runCount)
+		--[[
+			Особый участок — последняя клетка отрезка: после паркура и пробежек,
+			прямо перед зоной ворот. Лестница стоит на ровном, как и всё, кроме
+			пробежек, и после неё ребёнок успевает увидеть ворота.
+		]]
+		local hasSpecial = plan.specialSegment == index
+		if hasSpecial then
+			table.insert(cells, "special")
+		end
 
 		-- Перед какими клетками встанет ряд букв. Решает свой генератор рядов.
 		local rowBefore: { [number]: boolean } = {}
@@ -163,8 +175,11 @@ function CourseLayout.layout(
 			secretBefore = secretRandom:NextInteger(1, #cells)
 		end
 
-		local segment =
-			Tunnel.segmentLength(plan.obstacleCount, rowCount + (if secretBefore then 1 else 0), runCount)
+		local segment = Tunnel.segmentLength(
+			plan.obstacleCount,
+			rowCount + (if secretBefore then 1 else 0),
+			runCount
+		) + (if hasSpecial then Tunnel.SPECIAL_PITCH else 0)
 
 		--[[
 			Отрезок режется на клетки: клетка ряда букв (если он здесь есть), потом
@@ -189,6 +204,12 @@ function CourseLayout.layout(
 					lane = if secretRandom:NextInteger(1, 2) == 1 then 1 else Tunnel.LANE_COUNT,
 				}
 				cursor += Tunnel.ROW_PITCH
+			end
+
+			if cell == "special" then
+				special = { segment = index, z = cursor }
+				cursor += Tunnel.SPECIAL_PITCH
+				continue
 			end
 
 			if cell == "run" then
@@ -258,7 +279,7 @@ function CourseLayout.layout(
 		table.insert(checkpoints, { index = index, z = z + Tunnel.CHECKPOINT_OFFSET })
 	end
 
-	return gates, obstacles, checkpoints, z + Tunnel.FINISH_RUNWAY, rows, secret, runs
+	return gates, obstacles, checkpoints, z + Tunnel.FINISH_RUNWAY, rows, secret, runs, special
 end
 
 return CourseLayout
