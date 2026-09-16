@@ -19,9 +19,11 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Tunnel = require(Shared.Config.Tunnel)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 local Challenges = require(Shared.Config.Challenges)
+local TrackShape = require(Shared.Logic.TrackShape)
 
 local ChallengeService = require(script.Parent.ChallengeService)
 local ProgressService = require(script.Parent.ProgressService)
+local DecorShapes = require(script.Parent.Parent.World.DecorShapes)
 
 local TunnelService = {}
 
@@ -156,23 +158,112 @@ local function laneHoles(obstacles: { any }): { { { from: number, to: number } }
 	return holes
 end
 
-local function buildFloor(model: Model, origin: CFrame, length: number, obstacles: { any })
+--[[
+	Путь забега: трасса с формой (Logic/TrackShape) вместо прямой доски.
+
+	Все строители написаны в духе «origin * CFrame.new(x, y, -z)»: z — сколько
+	пройдено от старта, x — вбок, y — вверх. Путь подменяет origin и понимает
+	ровно эту запись: z он переводит в точку на изогнутой трассе, а x и y
+	откладывает уже от неё. Поэтому ворота, препятствия, ряды букв и сохранки
+	встали на петляющую трассу без единой правки в своих строителях —
+	и стоят вертикально: наклон есть только у пола на горках.
+]]
+local function makePath(origin: CFrame, spec: any)
+	local sampler = TrackShape.sampler(spec.params.track or {}, spec.params.length)
+	local path = { origin = origin, sampler = sampler }
+
+	function path.frame(z: number): CFrame
+		return origin * sampler.frame(z)
+	end
+
+	function path.flat(z: number): CFrame
+		return origin * sampler.flat(z)
+	end
+
+	return setmetatable(path, {
+		__mul = function(self, offset: CFrame): CFrame
+			local position = offset.Position
+			return self.flat(-position.Z) * CFrame.new(position.X, position.Y, 0) * offset.Rotation
+		end,
+	})
+end
+
+--[[
+	Режет участок [from, to] на куски: прямые участки — одним куском, зоны формы —
+	короткими, чтобы пол и бортики легли по горке и виражу без щелей.
+	piece(mid, length, curved) вызывается на каждый кусок.
+]]
+local CURVE_CHUNK = 4
+
+local function pieces(path, from: number, to: number, chunk: number, piece: (number, number, boolean) -> ())
+	local cuts = { from, to }
+	for _, zone in path.sampler.zones do
+		if zone.from > from and zone.from < to then
+			table.insert(cuts, zone.from)
+		end
+		if zone.to > from and zone.to < to then
+			table.insert(cuts, zone.to)
+		end
+	end
+	table.sort(cuts)
+
+	for i = 1, #cuts - 1 do
+		local a, b = cuts[i], cuts[i + 1]
+		if b - a >= 0.5 then
+			if path.sampler.zoneAt((a + b) / 2) then
+				local cursor = a
+				while cursor < b - 0.01 do
+					local next_ = math.min(cursor + chunk, b)
+					piece((cursor + next_) / 2, next_ - cursor, true)
+					cursor = next_
+				end
+			else
+				piece((a + b) / 2, b - a, false)
+			end
+		end
+	end
+end
+
+local FLOOR_COLOR = Color3.fromRGB(205, 195, 175)
+local FLOOR_ZONE_COLOR = Color3.fromRGB(235, 215, 160)
+
+local function buildFloor(model: Model, path, length: number, obstacles: { any })
 	local holes = laneHoles(obstacles)
+
+	--[[
+		В зонах формы ям не бывает никогда (там ничего не стоит), поэтому пол
+		кладётся во всю ширину сразу: кусков втрое меньше, а горка — одним цветом.
+	]]
+	pieces(path, 0, length, CURVE_CHUNK, function(mid: number, size: number, curved: boolean)
+		if not curved then
+			return
+		end
+		local part = build(
+			`FloorCurve_{math.floor(mid)}`,
+			Vector3.new(Tunnel.WIDTH, 2, size + 0.5),
+			path.frame(mid) * CFrame.new(0, -1, 0),
+			FLOOR_ZONE_COLOR,
+			model
+		)
+		part.Material = Enum.Material.SmoothPlastic
+	end)
 
 	for lane = 1, Tunnel.LANE_COUNT do
 		local x = Tunnel.laneOffset(lane)
 
 		local function span(from: number, to: number)
-			if to - from < 0.5 then
-				return
-			end
-			build(
-				`Floor_{lane}_{math.floor(from)}`,
-				Vector3.new(Tunnel.LANE_WIDTH, 2, to - from),
-				origin * CFrame.new(x, -1, -(from + to) / 2),
-				Color3.fromRGB(205, 195, 175),
-				model
-			)
+			pieces(path, from, to, CURVE_CHUNK, function(mid: number, size: number, curved: boolean)
+				if curved then
+					return
+				end
+				build(
+					`Floor_{lane}_{math.floor(mid - size / 2)}`,
+					Vector3.new(Tunnel.LANE_WIDTH, 2, size),
+					path.frame(mid) * CFrame.new(x, -1, 0),
+					FLOOR_COLOR,
+					model
+				)
+			end)
 		end
 
 		local cursor = 0
@@ -184,32 +275,69 @@ local function buildFloor(model: Model, origin: CFrame, length: number, obstacle
 	end
 end
 
-local function buildCorridor(model: Model, origin: CFrame, length: number, obstacles: { any })
+--[[
+	Бортики вместо глухих стен. Туннель с синими стенами высотой в шестнадцать
+	студов был коридором, из которого не видно ничего, кроме следующей стены.
+	Теперь по краю трассы идёт низкий цветной бортик, за ним видно долину
+	с деревьями и небо, а выше бортика стоит невидимая стенка: спрыгнуть
+	с трассы в сторону по-прежнему нельзя.
+]]
+local RAIL_HEIGHT = 2.5
+local RAIL_COLORS = {
+	Color3.fromRGB(120, 180, 235),
+	Color3.fromRGB(245, 175, 110),
+	Color3.fromRGB(150, 210, 140),
+	Color3.fromRGB(215, 160, 225),
+}
+
+local function buildCorridor(model: Model, path, length: number, obstacles: { any })
 	local half = Tunnel.WIDTH / 2
 
-	buildFloor(model, origin, length, obstacles)
+	buildFloor(model, path, length, obstacles)
 
 	for _, side in { -1, 1 } do
-		build(
-			`Wall_{side}`,
-			Vector3.new(Tunnel.WALL_THICKNESS, Tunnel.HEIGHT, length),
-			origin * CFrame.new(side * (half + Tunnel.WALL_THICKNESS / 2), Tunnel.HEIGHT / 2, -length / 2),
-			Color3.fromRGB(120, 165, 220),
-			model
-		)
+		local x = side * (half + Tunnel.WALL_THICKNESS / 2)
+
+		pieces(path, 0, length, CURVE_CHUNK + 1, function(mid: number, size: number, curved: boolean)
+			local color = RAIL_COLORS[math.floor(mid / 60) % #RAIL_COLORS + 1]
+			local rail = build(
+				`Rail_{side}_{math.floor(mid)}`,
+				Vector3.new(Tunnel.WALL_THICKNESS, RAIL_HEIGHT, size + (if curved then 0.6 else 0)),
+				path.frame(mid) * CFrame.new(x, RAIL_HEIGHT / 2, 0),
+				color,
+				model
+			)
+			rail.Material = Enum.Material.SmoothPlastic
+		end)
+
+		pieces(path, 0, length, CURVE_CHUNK * 2, function(mid: number, size: number, curved: boolean)
+			local guard = build(
+				`Guard_{side}_{math.floor(mid)}`,
+				Vector3.new(Tunnel.WALL_THICKNESS, Tunnel.HEIGHT, size + (if curved then 1.5 else 0)),
+				path.flat(mid) * CFrame.new(x, Tunnel.HEIGHT / 2, 0),
+				Color3.fromRGB(255, 255, 255),
+				model
+			)
+			guard.Transparency = 1
+		end)
 	end
 
-	-- Разметка дорожек: ребёнку нужно видеть, что дорожек ровно три.
+	-- Разметка дорожек на прямых: ребёнку нужно видеть, что дорожек ровно три.
 	for lane = 1, Tunnel.LANE_COUNT - 1 do
 		local x = Tunnel.laneOffset(lane) + Tunnel.LANE_WIDTH / 2
-		local stripe = build(
-			`LaneStripe_{lane}`,
-			Vector3.new(0.4, 0.1, length),
-			origin * CFrame.new(x, 0.05, -length / 2),
-			Color3.fromRGB(235, 230, 215),
-			model
-		)
-		stripe.CanCollide = false
+		pieces(path, 0, length, CURVE_CHUNK, function(mid: number, size: number, curved: boolean)
+			if curved then
+				return
+			end
+			local stripe = build(
+				`LaneStripe_{lane}_{math.floor(mid)}`,
+				Vector3.new(0.4, 0.1, size),
+				path.frame(mid) * CFrame.new(x, 0.05, 0),
+				Color3.fromRGB(235, 230, 215),
+				model
+			)
+			stripe.CanCollide = false
+		end)
 	end
 end
 
@@ -1142,17 +1270,12 @@ end
 	Ни жизней, ни счётчика падений, ни потери звёздочек: падение стоит нескольких
 	секунд пути и ничего больше. См. docs/17-CONTENT-PLAN.md § 3.1.
 ]]
-local function buildSoftBottom(model: Model, origin: CFrame, length: number, player: Player)
-	local floor = build(
-		"SoftBottom",
-		Vector3.new(Tunnel.WIDTH + 20, 2, length + 40),
-		origin * CFrame.new(0, -Tunnel.FALL_DEPTH, -length / 2),
-		Color3.fromRGB(225, 235, 250),
-		model
-	)
-	floor.Material = Enum.Material.Foil
+local VALLEY_DROP = Tunnel.FALL_DEPTH + 10 -- ниже самой глубокой ямки трассы
+local VALLEY_WIDTH = Tunnel.WIDTH + 140
+local VALLEY_CHUNK = 40
 
-	floor.Touched:Connect(function(hit: BasePart)
+local function buildSoftBottom(model: Model, path, length: number, player: Player)
+	local function onTouch(hit: BasePart)
 		local character = hit.Parent
 		if not character or Players:GetPlayerFromCharacter(character) ~= player then
 			return
@@ -1167,13 +1290,223 @@ local function buildSoftBottom(model: Model, origin: CFrame, length: number, pla
 		run.fallingUntil = os.clock() + 1
 
 		--[[
-			Звук падения мягкий и водяной: внизу облако, а не смерть, и звук
+			Звук падения мягкий и водяной: внизу трава, а не смерть, и звук
 			обязан подтверждать это, а не пугать.
 		]]
 		RemoteDefs.event("PlaySfx"):FireClient(player, "fall")
 
 		character:PivotTo(run.origin * CFrame.new(0, 4, -run.checkpointZ))
+	end
+
+	--[[
+		Внизу не облако-подложка, а зелёная долина вдоль всей трассы: она и ловит
+		упавшего, и делает мир вокруг трассы местом. Долина ровная, трасса над ней
+		петляет и ходит горками, и сверху видно, как высоко бежишь.
+	]]
+	local baseY = path.origin.Position.Y - VALLEY_DROP
+	local z = 0
+	while z < length + VALLEY_CHUNK do
+		local flat = path.flat(math.clamp(z, 0, length))
+		local at = CFrame.new(flat.Position.X, baseY, flat.Position.Z) * flat.Rotation
+		local ground = build(
+			`Valley_{math.floor(z)}`,
+			Vector3.new(VALLEY_WIDTH, 2, VALLEY_CHUNK + 8),
+			at,
+			Color3.fromRGB(135, 195, 120),
+			model
+		)
+		ground.Material = Enum.Material.Grass
+		ground.Touched:Connect(onTouch)
+		z += VALLEY_CHUNK
+	end
+end
+
+--[[
+	Деревья и кусты в долине по обе стороны трассы. Верхушки поднимаются почти
+	до уровня бега: ребёнок видит, что мчится над лесом, а не по полосе в пустоте.
+	Расстановка детерминирована сидом забега — как и всё остальное в нём.
+]]
+local SCENERY = { "tree_round", "tree_pine", "bush_round", "tree_round", "rock_small", "tree_pine" }
+local SCENERY_STEP = 34
+
+local function buildScenery(model: Model, path, length: number, seed: number)
+	local random = Random.new(seed + 3571)
+	local baseY = path.origin.Position.Y - VALLEY_DROP + 1
+	local z = 10
+	local slot = 0
+	while z < length do
+		for _, side in { -1, 1 } do
+			slot += 1
+			local id = SCENERY[random:NextInteger(1, #SCENERY)]
+			local tree = DecorShapes.build({ id = id })
+			if tree then
+				local lateral = side * (Tunnel.WIDTH / 2 + 12 + random:NextNumber() * 30)
+				local spot = path.flat(math.min(z + random:NextNumber() * 10, length))
+					* CFrame.new(lateral, 0, 0)
+				tree.Name = `Scenery_{slot}`
+				tree.Parent = model
+				if id ~= "rock_small" and id ~= "bush_round" then
+					tree:ScaleTo(1.6 + random:NextNumber() * 0.6)
+				end
+				tree:PivotTo(
+					CFrame.new(spot.Position.X, baseY, spot.Position.Z)
+						* CFrame.Angles(0, random:NextNumber() * 6.28, 0)
+				)
+				local box, size = tree:GetBoundingBox()
+				tree:PivotTo(tree:GetPivot() + Vector3.new(0, baseY - (box.Position.Y - size.Y / 2), 0))
+				for _, descendant in tree:GetDescendants() do
+					if descendant:IsA("BasePart") then
+						descendant.Anchored = true
+						descendant.CanCollide = false
+					end
+				end
+			end
+		end
+		z += SCENERY_STEP
+	end
+end
+
+--[[
+	Что стоит на зонах формы. Горка без ничего — просто горка; с аркой наверху
+	и стрелками ускорения у подножия это уже аттракцион, ради которого ребёнок
+	бежит пробежку, а не пережидает её.
+
+	  · горка, волна, подъём — радужная арка над вершиной и стрелки-ускорители;
+	  · вираж и змейка — большая вертушка снаружи поворота;
+	  · ямка и спуск — звезда, качающаяся над трассой.
+
+	Ничто из этого не мешает бежать: декор не сталкивается, ускоритель только
+	подталкивает вперёд на полторы секунды.
+]]
+local ARCH_COLORS = {
+	Color3.fromRGB(240, 110, 110),
+	Color3.fromRGB(250, 180, 90),
+	Color3.fromRGB(250, 225, 100),
+	Color3.fromRGB(130, 210, 130),
+	Color3.fromRGB(110, 170, 240),
+	Color3.fromRGB(180, 130, 230),
+}
+local BOOST_SECONDS = 1.5
+local BOOST_FACTOR = 1.5
+
+local function buildArch(model: Model, path, z: number, name: string)
+	local at = path.flat(z)
+	local half = Tunnel.WIDTH / 2 + 1.5
+	local top = 13
+	for index, color in ARCH_COLORS do
+		local angle = math.pi * (index - 0.5) / #ARCH_COLORS
+		local x = -math.cos(angle) * half
+		local y = math.sin(angle) * top
+		local piece = build(
+			`{name}_{index}`,
+			Vector3.new(3.2, 3.2, 1.4),
+			at * CFrame.new(x, y + 1, 0) * CFrame.Angles(0, 0, angle - math.pi / 2),
+			color,
+			model
+		)
+		piece.Material = Enum.Material.Neon
+		piece.CanCollide = false
+	end
+end
+
+local function buildSpinner(model: Model, at: CFrame, name: string, radius: number)
+	local hub = build(`{name}_Hub`, Vector3.new(1.4, 1.4, 1.4), at, Color3.fromRGB(250, 250, 250), model)
+	hub.CanCollide = false
+	for blade = 1, 4 do
+		local color = ARCH_COLORS[(blade * 2 - 1) % #ARCH_COLORS + 1]
+		local angle = (blade - 1) * math.pi / 2
+		local part = build(
+			`{name}_Blade_{blade}`,
+			Vector3.new(radius, 2.4, 0.4),
+			hub.CFrame * CFrame.Angles(0, 0, angle) * CFrame.new(radius / 2, 0, 0),
+			color,
+			model
+		)
+		part.CanCollide = false
+		-- Лопасть приварена к втулке и не закреплена сама: твин крутит одну втулку.
+		part.Anchored = false
+		part.Massless = true
+		weldTo(hub, part)
+	end
+	local info = TweenInfo.new(6, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1)
+	TweenService:Create(hub, info, { CFrame = hub.CFrame * CFrame.Angles(0, 0, math.pi) }):Play()
+end
+
+local function buildBoost(model: Model, path, z: number, name: string, player: Player)
+	for chevron = 0, 2 do
+		local arrow = build(
+			`{name}_Arrow_{chevron}`,
+			Vector3.new(Tunnel.WIDTH - 4, 0.15, 1.2),
+			path.frame(z + chevron * 2.2) * CFrame.new(0, 0.08, 0),
+			Color3.fromRGB(120, 235, 255),
+			model
+		)
+		arrow.Material = Enum.Material.Neon
+		arrow.CanCollide = false
+	end
+
+	local trigger = build(
+		`{name}_Trigger`,
+		Vector3.new(Tunnel.WIDTH, 4, 7),
+		path.flat(z + 2.2) * CFrame.new(0, 2, 0),
+		Color3.fromRGB(120, 235, 255),
+		model
+	)
+	trigger.CanCollide = false
+	trigger.Transparency = 1
+
+	local last = 0
+	trigger.Touched:Connect(function(hit: BasePart)
+		local character = hit.Parent
+		if not character or Players:GetPlayerFromCharacter(character) ~= player then
+			return
+		end
+		local run = runs[player]
+		local now = os.clock()
+		-- После неверных ворот ускоритель не отменяет замедление: ошибка стоит времени.
+		if not run or now - last < 2 or now < run.slowUntil then
+			return
+		end
+		last = now
+		TunnelService.boost(player, BOOST_SECONDS, BOOST_FACTOR)
 	end)
+end
+
+local function buildZoneDecor(model: Model, path, player: Player)
+	for index, zone in path.sampler.zones do
+		local mid = (zone.from + zone.to) / 2
+		local name = `Zone_{index}`
+		if zone.kind == "hill" or zone.kind == "wave" or zone.kind == "climb" then
+			buildArch(model, path, mid, `{name}_Arch`)
+			buildBoost(model, path, zone.from + 1, name, player)
+		elseif zone.kind == "zigzag" or zone.kind == "turn_left" or zone.kind == "turn_right" then
+			-- Снаружи поворота: там, куда ребёнок и так смотрит на вираже.
+			local outside = if zone.kind == "turn_left" then 1 else -1
+			local at = path.flat(mid) * CFrame.new(outside * (Tunnel.WIDTH / 2 + 9), 8, 0)
+			local post = build(
+				`{name}_Post`,
+				Vector3.new(0.8, 16, 0.8),
+				at * CFrame.new(0, -8, 0),
+				Color3.fromRGB(240, 240, 245),
+				model
+			)
+			post.CanCollide = false
+			buildSpinner(model, at * CFrame.Angles(0, math.pi / 2, 0), `{name}_Spinner`, 7)
+		elseif zone.kind == "dip" or zone.kind == "descent" then
+			local star = build(
+				`{name}_Star`,
+				Vector3.new(3, 3, 3),
+				path.flat(mid) * CFrame.new(0, 11, 0),
+				Color3.fromRGB(255, 214, 102),
+				model
+			)
+			star.Shape = Enum.PartType.Ball
+			star.Material = Enum.Material.Neon
+			star.CanCollide = false
+			local info = TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+			TweenService:Create(star, info, { CFrame = star.CFrame * CFrame.new(0, 2, 0) }):Play()
+		end
+	end
 end
 
 local function buildFinish(model: Model, origin: CFrame, length: number, player: Player)
@@ -1225,7 +1558,8 @@ function TunnelService.spawn(player: Player, spec: any)
 	TunnelService.despawn(player)
 
 	local index = plotFor(player)
-	local origin = CFrame.new(Tunnel.PLOT_ORIGIN + Vector3.new(index * Tunnel.PLOT_SPACING, 0, 0))
+	local origin =
+		makePath(CFrame.new(Tunnel.PLOT_ORIGIN + Vector3.new(index * Tunnel.PLOT_SPACING, 0, 0)), spec)
 	local length = spec.params.length
 
 	local model = Instance.new("Model")
@@ -1267,6 +1601,8 @@ function TunnelService.spawn(player: Player, spec: any)
 		buildCheckpoint(model, origin, checkpoint, player, checkpoint.index <= resumeFrom)
 	end
 	buildSoftBottom(model, origin, length, player)
+	buildScenery(model, origin, length, spec.seed or 0)
+	buildZoneDecor(model, origin, player)
 
 	if character then
 		character:PivotTo(origin * CFrame.new(0, 4, -math.max(startZ, 4)))
@@ -1298,6 +1634,34 @@ function TunnelService.slow(player: Player, seconds: number, factor: number)
 		local current = runs[player]
 		local currentHumanoid = humanoidOf(player)
 		if current and currentHumanoid and os.clock() >= current.slowUntil - 0.05 then
+			currentHumanoid.WalkSpeed = Tunnel.WALK_SPEED
+		end
+	end)
+end
+
+--[[
+	Ускоритель на горке: короткий рывок вперёд. Не награда и не условие —
+	просто весело, и на подъёме ребёнок не вязнет.
+]]
+function TunnelService.boost(player: Player, seconds: number, factor: number)
+	local run = runs[player]
+	local humanoid = humanoidOf(player)
+	if not run or not humanoid then
+		return
+	end
+
+	run.boostUntil = os.clock() + seconds
+	humanoid.WalkSpeed = Tunnel.WALK_SPEED * factor
+
+	task.delay(seconds, function()
+		local current = runs[player]
+		local currentHumanoid = humanoidOf(player)
+		if
+			current
+			and currentHumanoid
+			and os.clock() >= (current.boostUntil or 0) - 0.05
+			and os.clock() >= current.slowUntil
+		then
 			currentHumanoid.WalkSpeed = Tunnel.WALK_SPEED
 		end
 	end)

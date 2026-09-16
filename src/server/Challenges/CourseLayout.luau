@@ -117,6 +117,8 @@ function CourseLayout.layout(
 	local obstacles = {}
 	local checkpoints = {}
 	local rows = {}
+	-- Где лежат беговые клетки: на них трасса получает форму (Logic/TrackShape).
+	local runs = {}
 	local secret = nil
 	local previousId: string? = nil
 
@@ -127,7 +129,7 @@ function CourseLayout.layout(
 		local makeRow = plan.makeRow
 
 		--[[
-			Сколько беговых клеток нужно, чтобы отрезок занял свои сорок секунд
+			Сколько беговых клеток нужно, чтобы отрезок занял свои тридцать секунд
 			(Tunnel.runCells). Паркур считается первым, пробежки добирают остаток:
 			на поздних уровнях, где элементов много, их почти нет.
 		]]
@@ -190,7 +192,8 @@ function CourseLayout.layout(
 			end
 
 			if cell == "run" then
-				-- Беговая клетка: целый пол, ничего не строится.
+				-- Беговая клетка: ничего не строится, зато здесь горка, вираж или змейка.
+				table.insert(runs, { from = cursor, to = cursor + Tunnel.RUN_PITCH })
 				cursor += Tunnel.RUN_PITCH
 				continue
 			end
@@ -255,7 +258,7 @@ function CourseLayout.layout(
 		table.insert(checkpoints, { index = index, z = z + Tunnel.CHECKPOINT_OFFSET })
 	end
 
-	return gates, obstacles, checkpoints, z + Tunnel.FINISH_RUNWAY, rows, secret
+	return gates, obstacles, checkpoints, z + Tunnel.FINISH_RUNWAY, rows, secret, runs
 end
 
 return CourseLayout

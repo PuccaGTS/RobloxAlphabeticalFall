@@ -27,6 +27,10 @@ local Tunnel = require(Shared.Config.Tunnel)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 
 local CourseLayout = require(script.Parent.CourseLayout)
+local TrackShape = require(Shared.Logic.TrackShape)
+
+-- Свой генератор у формы трассы: ворота и препятствия по старому сиду не сдвигаются.
+local TRACK_SEED_SALT = 15485863
 
 local MathGates = {}
 
@@ -117,7 +121,7 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 
 	local random = Random.new(seed)
 
-	local gates, obstacles, checkpoints, length = CourseLayout.layout(random, {
+	local gates, obstacles, checkpoints, length, _rows, _secret, runs = CourseLayout.layout(random, {
 		gateCount = gateCount,
 		obstacleCount = obstacleCount,
 		obstacleTier = obstacleTier,
@@ -164,6 +168,8 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 			obstacles = obstacles,
 			checkpoints = checkpoints,
 			length = length,
+			-- Та же форма трассы, что у мира букв: горки и виражи на пробежках.
+			track = TrackShape.plan(runs, seed + TRACK_SEED_SALT),
 			slowSeconds = slowSeconds,
 			slowFactor = slowFactor,
 		},

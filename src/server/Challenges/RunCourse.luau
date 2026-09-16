@@ -30,6 +30,7 @@ local Tunnel = require(Shared.Config.Tunnel)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 
 local CourseLayout = require(script.Parent.CourseLayout)
+local TrackShape = require(Shared.Logic.TrackShape)
 
 local RunCourse = {}
 
@@ -37,6 +38,8 @@ local RunCourse = {}
 local ROW_SEED_SALT = 7919
 -- То же для секрета уровня.
 local SECRET_SEED_SALT = 104729
+-- Свой генератор у формы трассы: иначе сдвинулись бы ворота уже сохранённых забегов.
+local TRACK_SEED_SALT = 15485863
 
 --[[
 	Ряд букв на дорожке перед воротами: буква этого отрезка и одна отвлекающая —
@@ -211,7 +214,7 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 		local secretRandom = if level then Random.new(seed + SECRET_SEED_SALT) else nil
 		local secretSegment = if secretRandom then secretRandom:NextInteger(1, gateCount) else nil
 
-		local gates, obstacles, checkpoints, length, rows, secret = CourseLayout.layout(random, {
+		local gates, obstacles, checkpoints, length, rows, secret, runs = CourseLayout.layout(random, {
 			gateCount = gateCount,
 			obstacleCount = obstacleCount,
 			obstacleTier = obstacleTier,
@@ -281,6 +284,7 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 				rows = rows,
 				secret = secret,
 				length = length,
+				track = TrackShape.plan(runs, seed + TRACK_SEED_SALT),
 				slowSeconds = slowSeconds,
 				slowFactor = slowFactor,
 			},
