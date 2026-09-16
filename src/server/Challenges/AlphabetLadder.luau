@@ -27,6 +27,9 @@ local AlphabetLadder = {}
 AlphabetLadder.id = "alphabet_ladder"
 AlphabetLadder.trains = { "order", "name" }
 AlphabetLadder.minLetters = 2
+AlphabetLadder.MIN_RUNGS = 5
+-- Пауза перед итогом: звезда на вершине должна успеть загореться у ребёнка на глазах.
+AlphabetLadder.finishDelay = 4
 
 local function shuffled(list: { any }, random: Random): { any }
 	local copy = table.clone(list)
@@ -72,25 +75,44 @@ function AlphabetLadder.Build(_player: Player, letters: { string }, difficulty: 
 	local missCooldown = DifficultyCurve.pick(meta.params.missCooldown, difficulty)
 	local hintAfterSec = DifficultyCurve.pick(meta.params.hintAfterSec, difficulty)
 
-	local pool = orderedPool(letters)
-	assert(#pool >= AlphabetLadder.minLetters, "AlphabetLadder: нужно минимум две буквы")
-
-	-- Ступеней не больше, чем есть переходов между доступными буквами.
-	local rungs = math.min(requestedRungs, #pool - 1)
+	local known = orderedPool(letters)
+	assert(#known >= AlphabetLadder.minLetters, "AlphabetLadder: нужно минимум две буквы")
 
 	local seed = math.floor(os.clock() * 1000) % 2 ^ 31
 	local random = Random.new(seed)
 
 	--[[
-		С какой буквы начинаем подъём.
+		Лестница не бывает короче MIN_RUNGS ступеней.
 
-		Первая буква очереди повторений — та, которую сегодня стоит показать, —
-		берётся за начало, но только если сверху над ней хватает букв на всю лестницу.
-		Иначе отступаем вниз: лучше начать раньше, чем оборвать лестницу на середине.
+		Раньше ступеней было столько, сколько переходов между открытыми буквами,
+		и новичок с тремя буквами получал лестницу в две ступени: «какая после А?
+		какая после Б? — победа». Смысла в этом не было ни для ребёнка, ни для
+		азбуки, которой испытание учит.
+
+		Теперь, если открытых букв не хватает, лестница поднимается дальше по
+		алфавиту. Новая буква приходит ТОЛЬКО верным ответом и всегда с подсказкой:
+		её плита светится с самого начала, а голос называет её, когда ребёнок
+		наступит. Отвлекающие варианты по-прежнему только из знакомых букв —
+		угадывать среди незнакомых ребёнка никто не заставляет.
 	]]
-	local start = table.find(pool, letters[1]) or 1
-	start = math.min(start, #pool - rungs)
-	start = math.max(start, 1)
+	local rungs = math.max(requestedRungs, AlphabetLadder.MIN_RUNGS)
+
+	local start = table.find(known, letters[1]) or 1
+	local ordered = Letters.ordered()
+	local startOrder = table.find(ordered, known[start]) or 1
+	-- Не выше, чем позволяет конец алфавита: лучше начать раньше, чем оборвать подъём.
+	startOrder = math.max(1, math.min(startOrder, #ordered - rungs))
+	rungs = math.min(rungs, #ordered - startOrder)
+
+	local pool: { string } = {}
+	for order = startOrder, startOrder + rungs do
+		table.insert(pool, ordered[order])
+	end
+	local isKnown: { [string]: boolean } = {}
+	for _, id in known do
+		isKnown[id] = true
+	end
+	start = 1
 
 	local sections = {}
 	for position = 1, rungs do
@@ -98,7 +120,7 @@ function AlphabetLadder.Build(_player: Player, letters: { string }, difficulty: 
 		local targetId = pool[start + position]
 
 		local choices = { targetId }
-		for _, id in shuffled(pool, random) do
+		for _, id in shuffled(known, random) do
 			if #choices >= choiceCount then
 				break
 			end
@@ -131,6 +153,8 @@ function AlphabetLadder.Build(_player: Player, letters: { string }, difficulty: 
 			targetGlyph = Letters.expect(targetId).glyph,
 			targetVO = Letters.expect(targetId).vo.name,
 			choices = choiceData,
+			-- Буквы, которую ребёнок ещё не открыл: плита верного ответа светится сразу.
+			hint = not isKnown[targetId],
 		})
 	end
 

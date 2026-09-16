@@ -104,21 +104,50 @@ return function()
 			end
 		end)
 
-		it("варианты берутся только из доступных букв", function()
+		--[[
+			Незнакомая буква может прийти только верным ответом и только с подсказкой.
+			Отвлекать незнакомыми нельзя: угадывать среди них ребёнок не обязан.
+		]]
+		it("отвлекающие варианты только из доступных букв", function()
 			local available = prefix(5)
 			local spec = build(available)
 			for _, section in spec.params.sections do
 				for _, choice in section.choices do
-					expect(table.find(available, choice.letterId)).to.be.ok()
+					if choice.letterId ~= section.targetId then
+						expect(table.find(available, choice.letterId)).to.be.ok()
+					end
 				end
 			end
 		end)
 
+		--[[
+			Лестница в две ступени — это не задание: «после А — Б, после Б — В,
+			победа». Так было у новичка с тремя открытыми буквами.
+		]]
 		it(
-			"на двух буквах строится лестница из одной ступени",
+			"лестница не короче пяти ступеней даже у новичка",
 			function()
-				local spec = build(prefix(2), 5)
-				expect(#spec.params.sections).to.equal(1)
+				for count = 2, 6 do
+					local spec = build(prefix(count), 1)
+					expect(#spec.params.sections >= AlphabetLadder.MIN_RUNGS).to.equal(true)
+				end
+			end
+		)
+
+		it(
+			"незнакомая буква на лестнице всегда с подсказкой",
+			function()
+				local available = prefix(3)
+				local spec = build(available, 1)
+				local hinted = 0
+				for _, section in spec.params.sections do
+					local known = table.find(available, section.targetId) ~= nil
+					expect(section.hint).to.equal(not known)
+					if section.hint then
+						hinted += 1
+					end
+				end
+				expect(hinted > 0).to.equal(true)
 			end
 		)
 

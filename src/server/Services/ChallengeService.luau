@@ -538,7 +538,24 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 	playPhrase(player, voAfter)
 
 	if result.finished then
-		finish(player, "completed")
+		--[[
+			Испытание может попросить паузу перед итогом: лестнице нужно показать
+			загоревшуюся звезду на вершине. Без паузы ребёнка уносило с поляны
+			в тот же миг, как он встал на последнюю плиту, и награды за подъём
+			он не видел вовсе.
+		]]
+		local delay = state.module.finishDelay or 0
+		if delay > 0 then
+			local spec = state.spec
+			task.delay(delay, function()
+				local current = active[player]
+				if current and current.spec == spec then
+					finish(player, "completed")
+				end
+			end)
+		else
+			finish(player, "completed")
+		end
 	end
 end
 
