@@ -23,7 +23,7 @@ local TrackShape = require(Shared.Logic.TrackShape)
 
 local ChallengeService = require(script.Parent.ChallengeService)
 local ProgressService = require(script.Parent.ProgressService)
-local DecorShapes = require(script.Parent.Parent.World.DecorShapes)
+local DecorService = require(script.Parent.DecorService)
 
 local TunnelService = {}
 
@@ -1338,7 +1338,7 @@ local function buildScenery(model: Model, path, length: number, seed: number)
 		for _, side in { -1, 1 } do
 			slot += 1
 			local id = SCENERY[random:NextInteger(1, #SCENERY)]
-			local tree = DecorShapes.build({ id = id })
+			local tree = DecorService.modelFor(id)
 			if tree then
 				local lateral = side * (Tunnel.WIDTH / 2 + 12 + random:NextNumber() * 30)
 				local spot = path.flat(math.min(z + random:NextNumber() * 10, length))
@@ -1346,7 +1346,7 @@ local function buildScenery(model: Model, path, length: number, seed: number)
 				tree.Name = `Scenery_{slot}`
 				tree.Parent = model
 				if id ~= "rock_small" and id ~= "bush_round" then
-					tree:ScaleTo(1.6 + random:NextNumber() * 0.6)
+					tree:ScaleTo(tree:GetScale() * (1.6 + random:NextNumber() * 0.6))
 				end
 				tree:PivotTo(
 					CFrame.new(spot.Position.X, baseY, spot.Position.Z)

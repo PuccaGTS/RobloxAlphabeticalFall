@@ -34,7 +34,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local ChallengeService = require(script.Parent.ChallengeService)
 local ProgressService = require(script.Parent.ProgressService)
 local RateLimiter = require(script.Parent.RateLimiter)
-local DecorShapes = require(script.Parent.Parent.World.DecorShapes)
+local DecorService = require(script.Parent.DecorService)
 
 local BaseService = {}
 
@@ -965,14 +965,14 @@ local function buildGardens(folder: Instance)
 		local angle = (index - 0.5) / Base.PLOT_COUNT * math.pi * 2
 		local outward = Vector3.new(math.cos(angle), 0, math.sin(angle))
 		for slot, id in GARDEN do
-			local model = DecorShapes.build({ id = id })
+			local model = DecorService.modelFor(id)
 			if model then
 				local distance = Base.RING_RADIUS + (slot - 2) * (Base.PLOT_SIZE / 2.5)
 				local spot = outward * distance
 				model.Name = `Garden_{index}_{slot}`
 				model.Parent = gardens
 				if id ~= "bush_round" then
-					model:ScaleTo(1.3)
+					model:ScaleTo(model:GetScale() * 1.3)
 				end
 				model:PivotTo(CFrame.new(spot) * CFrame.Angles(0, angle + slot, 0))
 				local box, size = model:GetBoundingBox()

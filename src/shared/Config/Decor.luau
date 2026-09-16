@@ -50,11 +50,18 @@ export type Item = {
 	size: Vector3,
 	color: Color3, -- цвет заглушки; на готовую модель не влияет
 	collide: boolean, -- сквозь кусты и цветы ребёнок проходит насквозь
+	--[[
+		Номер модели в Creator Store (docs/21-DECOR.md § 7.1). Сервер берёт её сам
+		через InsertService, если файла в assets/models нет: достаточно один раз
+		нажать Get на странице модели, и сохранять её в файл из Studio не нужно.
+	]]
+	assetId: number?,
 }
 
 local ITEMS: { Item } = {
 	{
 		id = "tree_pine",
+		assetId = 5616880673,
 		title = "Ёлка",
 		kind = "tree",
 		size = Vector3.new(8, 16, 8),
@@ -63,6 +70,7 @@ local ITEMS: { Item } = {
 	},
 	{
 		id = "tree_round",
+		assetId = 13870570014,
 		title = "Круглое дерево",
 		kind = "tree",
 		size = Vector3.new(10, 14, 10),
@@ -71,6 +79,7 @@ local ITEMS: { Item } = {
 	},
 	{
 		id = "bush_round",
+		assetId = 14720410685,
 		title = "Куст",
 		kind = "bush",
 		size = Vector3.new(5, 2.5, 5),
@@ -79,6 +88,7 @@ local ITEMS: { Item } = {
 	},
 	{
 		id = "flower_bed",
+		assetId = 1353190583,
 		title = "Клумба",
 		kind = "flower",
 		-- Два студа в высоту — это цветы на стеблях, а не голая земля.
@@ -88,6 +98,7 @@ local ITEMS: { Item } = {
 	},
 	{
 		id = "rock_small",
+		assetId = 2557020130,
 		title = "Камень",
 		kind = "rock",
 		size = Vector3.new(4, 3, 4),
@@ -96,6 +107,7 @@ local ITEMS: { Item } = {
 	},
 	{
 		id = "bench",
+		assetId = 7499829922,
 		title = "Лавочка",
 		kind = "bench",
 		size = Vector3.new(6, 3, 2.5),
@@ -104,6 +116,7 @@ local ITEMS: { Item } = {
 	},
 	{
 		id = "lamp",
+		assetId = 565846542,
 		title = "Фонарь",
 		kind = "lamp",
 		size = Vector3.new(2, 12, 2),
@@ -112,6 +125,7 @@ local ITEMS: { Item } = {
 	},
 	{
 		id = "fountain",
+		assetId = 5477511653,
 		title = "Фонтан",
 		kind = "fountain",
 		size = Vector3.new(14, 6, 14),

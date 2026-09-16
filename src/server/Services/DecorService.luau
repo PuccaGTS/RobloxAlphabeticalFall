@@ -21,6 +21,7 @@
 	пройти. На него можно залезть, его можно обойти — и всё.
 ]]
 
+local InsertService = game:GetService("InsertService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -183,6 +184,78 @@ local function takeModel(folder: Instance?, item): Model?
 end
 
 --[[
+	Модель из Creator Store по номеру (Config/Decor.assetId).
+
+	Грузится один раз на сервер и дальше только клонируется. InsertService отдаёт
+	модели, которыми владеет автор игры: поэтому каждую надо один раз «взять»
+	кнопкой Get. Не взята, нет сети, сняли с публикации — pcall вернёт ошибку,
+	в лог уйдёт одна строка, и дальше предмет честно стоит эскизом.
+
+	Чужая модель подгоняется так, чтобы вписаться в габарит каталога: одна
+	и та же ёлка у разных авторов бывает и в два студа, и в сорок.
+]]
+local assetCache: { [string]: Model | false } = {}
+
+local function fitToCatalog(model: Model, item)
+	local _, size = model:GetBoundingBox()
+	if size.X <= 0 or size.Y <= 0 or size.Z <= 0 then
+		return
+	end
+	local ratio = math.min(item.size.X / size.X, item.size.Y / size.Y, item.size.Z / size.Z)
+	if math.abs(ratio - 1) > 0.05 then
+		model:ScaleTo(model:GetScale() * ratio)
+	end
+end
+
+local function takeAsset(item): Model?
+	if not item.assetId then
+		return nil
+	end
+
+	local cached = assetCache[item.id]
+	if cached == nil then
+		local ok, result = pcall(function()
+			return InsertService:LoadAsset(item.assetId)
+		end)
+		if not ok or not result then
+			warn(
+				`[Decor] модель {item.assetId} для "{item.id}" не загрузилась: {result}`
+			)
+			assetCache[item.id] = false
+			return nil
+		end
+
+		local source = result:FindFirstChildWhichIsA("Model") or result:FindFirstChildWhichIsA("BasePart")
+		local template: Model
+		if source and source:IsA("Model") then
+			template = source
+		else
+			template = Instance.new("Model")
+			for _, child in result:GetChildren() do
+				child.Parent = template
+			end
+		end
+		template.Parent = nil
+		result:Destroy()
+
+		template.Name = item.id
+		sanitize(template, item, `{item.id} ({item.assetId})`)
+		if not template:FindFirstChildWhichIsA("BasePart", true) then
+			warn(
+				`[Decor] в модели {item.assetId} для "{item.id}" нет ни одной детали`
+			)
+			assetCache[item.id] = false
+			return nil
+		end
+		fitToCatalog(template, item)
+		assetCache[item.id] = template
+		cached = template
+	end
+
+	return if cached then cached:Clone() else nil
+end
+
+--[[
 	Приёмка размера. Модель вдвое крупнее обещанного каталогом ломает расстановку:
 	она лезет в проход, которого в конфиге не видно, и заметит это ребёнок.
 	Не отказываемся ставить — говорим в лог, чтобы поправили каталог или модель.
@@ -240,6 +313,11 @@ function DecorService.build(parent: Instance): number
 			if model then
 				sanitize(model, item, item.id)
 			else
+				model = takeAsset(item)
+				fromAsset = model ~= nil
+			end
+
+			if not model then
 				--[[
 					Модели художника ещё нет. Тогда собираем эскиз из примитивов,
 					и только если нет даже его — ставим коробку по габариту.
@@ -253,8 +331,9 @@ function DecorService.build(parent: Instance): number
 				end
 			end
 
-			if scale ~= 1 and model.ScaleTo then
-				model:ScaleTo(scale)
+			-- Масштаб поверх уже подогнанного: у модели по номеру он не единица.
+			if scale ~= 1 then
+				model:ScaleTo(model:GetScale() * scale)
 			end
 
 			model.Name = `{item.id}_{placed + 1}`
@@ -295,6 +374,40 @@ function DecorService.build(parent: Instance): number
 	end
 
 	return placed
+end
+
+--[[
+	Модель предмета для любого места мира: поляны занятий, долины под трассой,
+	сады между участками. Тот же порядок, что и на площади: файл художника,
+	модель по номеру, эскиз, коробка. Возвращается закреплённая и безопасная
+	модель, которую остаётся только поставить.
+]]
+function DecorService.modelFor(id: string, scale: number?): Model?
+	local item = Decor.get(id)
+	if not item then
+		return nil
+	end
+
+	local model = takeModel(assetsFolder(), item)
+	if model then
+		sanitize(model, item, item.id)
+	else
+		model = takeAsset(item)
+	end
+	if not model then
+		model = DecorShapes.build(item)
+		if model then
+			harden(model, item)
+		end
+	end
+	if not model then
+		model = buildStandIn(item, {})
+	end
+
+	if scale and scale ~= 1 then
+		model:ScaleTo(model:GetScale() * scale)
+	end
+	return model
 end
 
 -- Сколько чужих скриптов вырезано при последней сборке: для лога и для тестов.

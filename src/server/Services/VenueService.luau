@@ -23,7 +23,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Venues = require(Shared.Config.Venues)
 
 local ChallengeService = require(script.Parent.ChallengeService)
-local DecorShapes = require(script.Parent.Parent.World.DecorShapes)
+local DecorService = require(script.Parent.DecorService)
 
 local VenueService = {}
 
@@ -80,7 +80,7 @@ local function buildDecor(parent: Instance, center: Vector3, venue)
 	local radius = Venues.SIZE / 2 - 6
 	for slot = 1, 8 do
 		local id = venue.decor[(slot - 1) % #venue.decor + 1]
-		local model = DecorShapes.build({ id = id })
+		local model = DecorService.modelFor(id)
 		if model then
 			local angle = (slot - 1) / 8 * math.pi * 2 + math.pi / 8
 			local spot = center + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
