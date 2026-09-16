@@ -29,6 +29,7 @@ local Letters = require(script.Parent.Parent.Config.Letters)
 local Levels = require(script.Parent.Parent.Config.Levels)
 local MathConfig = require(script.Parent.Parent.Config.Math)
 local MasteryRules = require(script.Parent.MasteryRules)
+local Stages = require(script.Parent.Parent.Config.Stages)
 
 local Awards = {}
 
@@ -49,6 +50,8 @@ export type Earned = {
 	]]
 	letterRooms: { string },
 	mathRooms: { string },
+	-- Ступени алфавита, все буквы которых освоены: флаги на крыше (docs/15-HOME-BASE.md § 5).
+	stageFlags: { number },
 }
 
 -- Статус буквы или ступени счёта: у обоих прогресс устроен одинаково.
@@ -122,6 +125,20 @@ function Awards.of(profile: any): Earned
 		end
 	end
 
+	local stageFlags: { number } = {}
+	for _, stage in Stages.all do
+		local complete = true
+		for _, letterId in stage.letters do
+			if masteryOf(letters, letterId) < MasteryRules.MASTERED then
+				complete = false
+				break
+			end
+		end
+		if complete then
+			table.insert(stageFlags, stage.index)
+		end
+	end
+
 	local cleared = Levels.sanitize(levels)
 	return {
 		flags = cleared[Levels.WORLD],
@@ -131,6 +148,7 @@ function Awards.of(profile: any): Earned
 		countSpire = countMastered,
 		letterRooms = letterRooms,
 		mathRooms = mathRooms,
+		stageFlags = stageFlags,
 	}
 end
 

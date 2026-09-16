@@ -144,4 +144,22 @@ return function()
 			expect(rooms[1]).to.equal(spec.id)
 		end)
 	end)
+
+	describe("Awards — флаги ступеней на крыше", function()
+		it("флаг только за ступень, освоенную целиком", function()
+			local Stages = require(ReplicatedStorage.Shared.Config.Stages)
+			local first = #Stages.expect(1).letters
+			expect(#Awards.of(withLetters(first - 1, MasteryRules.MASTERED)).stageFlags).to.equal(0)
+			local earned = Awards.of(withLetters(first, MasteryRules.MASTERED))
+			expect(#earned.stageFlags).to.equal(1)
+			expect(earned.stageFlags[1]).to.equal(1)
+			expect(#Awards.of(withLetters(first, MasteryRules.LEARNED)).stageFlags).to.equal(0)
+		end)
+
+		it("за весь алфавит — флаги всех ступеней", function()
+			local Stages = require(ReplicatedStorage.Shared.Config.Stages)
+			local earned = Awards.of(withLetters(Letters.count(), MasteryRules.MASTERED))
+			expect(#earned.stageFlags).to.equal(Stages.count())
+		end)
+	end)
 end

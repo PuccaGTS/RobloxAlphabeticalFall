@@ -678,7 +678,7 @@ local function buildRoom(
 	centerX: number,
 	width: number,
 	title: string,
-	tiles: { { glyph: string, color: Color3 } }
+	tiles: { { glyph: string, color: Color3, vo: string? } }
 )
 	if #tiles == 0 then
 		return
@@ -748,6 +748,29 @@ local function buildRoom(
 		)
 		tilePart.CanCollide = false
 		caption(tilePart, tile.glyph, 1.2, 90)
+
+		--[[
+			Нажал на плитку — буква называет себя. Любому, кто нажал, а не только
+			хозяину: зашёл к соседу, коснулся его буквы — услышал её. Бесплатное
+			повторение, ради которого комнаты и стоят на виду.
+		]]
+		if tile.vo then
+			local click = Instance.new("ClickDetector")
+			click.MaxActivationDistance = 30
+			click.Parent = tilePart
+			local home = tilePart.CFrame
+			click.MouseClick:Connect(function(who: Player)
+				RemoteDefs.event("PlayVO"):FireClient(who, tile.vo)
+				if tilePart.Parent then
+					tilePart.CFrame = home * CFrame.new(0, 0, -0.4)
+					task.delay(0.2, function()
+						if tilePart.Parent then
+							tilePart.CFrame = home
+						end
+					end)
+				end
+			end)
+		end
 	end
 end
 
@@ -760,7 +783,7 @@ local function buildRooms(plot: Model, at: CFrame, earned: Awards.Earned, houseL
 	-- preview из консоли Studio зовут руками и неполной таблицей: комнат может не быть вовсе.
 	for _, letterId in earned.letterRooms or {} do
 		local letter = Letters.expect(letterId)
-		table.insert(letterTiles, { glyph = letter.glyph, color = letter.color })
+		table.insert(letterTiles, { glyph = letter.glyph, color = letter.color, vo = letter.vo.name })
 	end
 	buildRoom(plot, at, "LetterRoom", -7, 10, "Комнаты букв", letterTiles)
 
@@ -776,10 +799,63 @@ local function buildRooms(plot: Model, at: CFrame, earned: Awards.Earned, houseL
 			table.insert(mathTiles, {
 				glyph = tostring(stage),
 				color = MATH_FLAG_COLORS[(stage - 1) % #MATH_FLAG_COLORS + 1],
+				-- Чисел в записи десять: у одиннадцатой ступени голоса нет, плитка молчит.
+				vo = if stage <= MathConfig.MAX_NUMBER then `num_{stage}` else nil,
 			})
 		end
 	end
 	buildRoom(plot, at, "MathRoom", 7, 10, "Комнаты цифр", mathTiles)
+end
+
+--[[
+	Флаги ступеней на крыше (docs/15-HOME-BASE.md § 5): флажок за каждую ступень
+	алфавита, все буквы которой освоены. Цвет — первой буквы ступени, как у флагов
+	пройденных уровней вдоль забора. Без дома и крыши их ставить некуда.
+]]
+local HOUSE_TOPS = { 6, 8, 14, 20 }
+local ROOF_WIDTHS = { 11, 15, 17, 15 }
+
+local function buildRoofFlags(
+	plot: Model,
+	at: CFrame,
+	earned: Awards.Earned,
+	houseLevel: number,
+	roofLevel: number
+)
+	local flags = earned.stageFlags or {}
+	if houseLevel <= 0 or roofLevel <= 0 or #flags == 0 then
+		return
+	end
+	local half = ROOF_WIDTHS[houseLevel] / 2 + 0.6
+	local y = FLOOR + HOUSE_TOPS[houseLevel] + 3
+	for order, stageIndex in flags do
+		local stage = Stages.get(stageIndex)
+		if stage then
+			-- По периметру крыши, начиная с фасада: флаги видно с дорожки.
+			local t = (order - 0.5) / Stages.count()
+			local angle = t * math.pi * 2 + math.pi / 2
+			local x = math.clamp(math.cos(angle) * half * 1.42, -half, half)
+			local z = math.clamp(-math.sin(angle) * half * 1.42, -half, half)
+			local first = Letters.expect(stage.letters[1])
+			local pole = part(
+				`RoofFlagPole_{stageIndex}`,
+				Vector3.new(0.2, 2.6, 0.2),
+				at * CFrame.new(x, y + 1.3, z),
+				Color3.fromRGB(245, 245, 250),
+				plot
+			)
+			pole.CanCollide = false
+			local cloth = part(
+				`RoofFlag_{stageIndex}`,
+				Vector3.new(1.3, 0.8, 0.1),
+				at * CFrame.new(x + 0.7, y + 2.2, z),
+				first.color,
+				plot
+			)
+			cloth.CanCollide = false
+			caption(cloth, first.glyph, 0.9, 50)
+		end
+	end
 end
 
 local function renderAwards(plot: Plot, earned: Awards.Earned)
@@ -900,6 +976,7 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 	renderBuildings(plot, base)
 	renderAwards(plot, earned)
 	buildRooms(plot.model, plot.cframe, earned, base.house)
+	buildRoofFlags(plot.model, plot.cframe, earned, base.house, base.roof)
 	renderSign(plot, `Дом: {player.DisplayName}`)
 
 	for index, categoryId in Base.ids() do
@@ -927,6 +1004,7 @@ function BaseService.preview(index: number, levels: { [string]: number }, earned
 	if earned then
 		renderAwards(plot, earned)
 		buildRooms(plot.model, plot.cframe, earned, clean.house)
+		buildRoofFlags(plot.model, plot.cframe, earned, clean.house, clean.roof)
 	end
 	renderSign(plot, "Показ")
 end
