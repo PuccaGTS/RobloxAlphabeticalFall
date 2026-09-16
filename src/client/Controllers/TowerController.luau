@@ -78,15 +78,28 @@ local function buildSegment(letterId: string, index: number): BasePart
 		if mastery >= MasteryRules.MASTERED then
 			RemoteDefs.event("EquipPet"):FireServer(letterId)
 		end
-		-- Отклик обязателен: без него тап по букве ощущается как «ничего не произошло»,
-		-- особенно пока озвучки нет.
-		local original = part.Size
-		TweenService:Create(part, TweenInfo.new(0.12), { Size = original * 1.18 }):Play()
-		task.delay(0.14, function()
-			if part.Parent then
-				TweenService:Create(part, TweenInfo.new(0.2), { Size = original }):Play()
-			end
-		end)
+		--[[
+			Отклик обязателен: без него тап по букве ощущается как «ничего
+			не произошло», особенно пока озвучки нет.
+
+			Базовый размер берётся из конфига, а не из текущего: раньше он
+			читался прямо в обработчике, и второй тап по той же букве раздувал
+			сегмент от уже раздутого. Три тапа подряд — и буква Б закрывала
+			собой А и В.
+		]]
+		if not part:GetAttribute("Pressing") then
+			part:SetAttribute("Pressing", true)
+			TweenService:Create(part, TweenInfo.new(0.12), { Size = SEGMENT_SIZE * 1.18 }):Play()
+			task.delay(0.14, function()
+				if part.Parent then
+					TweenService:Create(part, TweenInfo.new(0.2), { Size = SEGMENT_SIZE }):Play()
+				end
+				task.wait(0.2)
+				if part.Parent then
+					part:SetAttribute("Pressing", false)
+				end
+			end)
+		end
 	end)
 
 	return part

@@ -55,7 +55,12 @@ local SOIL = Color3.fromRGB(178, 160, 130)
 
 -- Верх земли участка: всё, что на нём стоит, отсчитывается отсюда, иначе постройки
 -- уходят на студ под газон и дом выглядит просевшим.
-local FLOOR = 1
+--[[
+	Верх пола участка. Земля площади кончается на Y = 1, и пока пол участка
+	кончался там же, две поверхности дрались за один пиксель: издали весь двор
+	мерцал. Теперь пол лежит заметно выше земли, и мерцать нечему.
+]]
+local FLOOR = 1.4
 
 -- Где на участке стоит Азбучная Башня: за домом, у дальнего угла двора.
 local TOWER_SPOT = CFrame.new(-13, 4, 13)
@@ -231,8 +236,8 @@ end
 local function buildYard(plot: Model, at: CFrame, level: number)
 	local ground = part(
 		"Ground",
-		Vector3.new(Base.PLOT_SIZE, 1, Base.PLOT_SIZE),
-		at * CFrame.new(0, 0.5, 0),
+		Vector3.new(Base.PLOT_SIZE, FLOOR, Base.PLOT_SIZE),
+		at * CFrame.new(0, FLOOR / 2, 0),
 		if level >= 1 then GRASS else SOIL,
 		plot
 	)
@@ -242,7 +247,7 @@ local function buildYard(plot: Model, at: CFrame, level: number)
 		part(
 			"Path",
 			Vector3.new(4, 0.2, Base.PLOT_SIZE / 2),
-			at * CFrame.new(0, 1.05, -Base.PLOT_SIZE / 4),
+			at * CFrame.new(0, FLOOR + 0.1, -Base.PLOT_SIZE / 4),
 			Color3.fromRGB(230, 215, 185),
 			plot
 		)
@@ -266,14 +271,14 @@ local function buildYard(plot: Model, at: CFrame, level: number)
 		part(
 			"FountainBowl",
 			Vector3.new(8, 1.6, 8),
-			at * CFrame.new(0, 1.8, 13),
+			at * CFrame.new(0, FLOOR + 0.8, 13),
 			Color3.fromRGB(215, 220, 230),
 			plot
 		)
 		local water = part(
 			"FountainWater",
 			Vector3.new(6, 2.6, 6),
-			at * CFrame.new(0, 3, 13),
+			at * CFrame.new(0, FLOOR + 2, 13),
 			Color3.fromRGB(140, 200, 240),
 			plot
 		)
@@ -813,7 +818,7 @@ local function buildUpgradePad(
 	local pad = part(
 		`Upgrade_{categoryId}`,
 		Vector3.new(Base.PAD_WIDTH, 1, Base.PAD_WIDTH),
-		at * CFrame.new(offset, 1.2, -Base.PLOT_SIZE / 2 + 5),
+		at * CFrame.new(offset, FLOOR + 0.5, -Base.PLOT_SIZE / 2 + 5),
 		Color3.fromRGB(255, 235, 190),
 		plot
 	)
@@ -871,7 +876,7 @@ local function renderSign(plot: Plot, text: string)
 	local sign = part(
 		"Sign",
 		Vector3.new(8, 0.6, 0.6),
-		plot.cframe * CFrame.new(0, 4, -Base.PLOT_SIZE / 2 + 1),
+		plot.cframe * CFrame.new(0, FLOOR + 3, -Base.PLOT_SIZE / 2 + 1),
 		Color3.fromRGB(255, 240, 200),
 		plot.model
 	)

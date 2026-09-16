@@ -386,27 +386,47 @@ local function buildRows(model: Model, origin: CFrame, rows: { any }, player: Pl
 		-- Ряды пройденных до выхода отрезков не строим: их «монетки» уже взяты или упущены.
 		if row.segment > resumeFrom then
 			for slot, item in row.items do
+				--[[
+					Плитка светлая, а цвет буквы живёт в рамке и в самой букве.
+					Раньше плитка была целиком цвета буквы, а надпись висела
+					билбордом в один студ: на бегу это читалось как «синий
+					и красный квадратики», без единой буквы. Буква обязана
+					быть видна раньше, чем ребёнок до плитки добежал.
+				]]
+				local frame = build(
+					`CollectFrame_{row.index}_{slot}`,
+					Vector3.new(Tunnel.COLLECT_SIZE + 0.5, Tunnel.COLLECT_SIZE + 0.5, 0.3),
+					origin * CFrame.new(Tunnel.laneOffset(item.lane), Tunnel.COLLECT_HEIGHT, -row.z),
+					item.color,
+					model
+				)
+				frame.CanCollide = false
+				frame.Material = Enum.Material.Neon
+
 				local tile = build(
 					`Collect_{row.index}_{slot}`,
 					Vector3.new(Tunnel.COLLECT_SIZE, Tunnel.COLLECT_SIZE, 0.5),
 					origin * CFrame.new(Tunnel.laneOffset(item.lane), Tunnel.COLLECT_HEIGHT, -row.z),
-					item.color,
+					Color3.fromRGB(252, 250, 245),
 					model
 				)
 				tile.CanCollide = false
 
 				local billboard = Instance.new("BillboardGui")
 				billboard.Name = "Glyph"
-				billboard.Size = UDim2.fromScale(1, 1)
+				-- Размер в пикселях, как у букв над воротами: в студах билборд
+				-- получался с ноготь и на бегу не читался вовсе.
+				billboard.Size = UDim2.fromOffset(150, 150)
+				billboard.AlwaysOnTop = true
 				billboard.LightInfluence = 0
-				billboard.MaxDistance = 120
+				billboard.MaxDistance = 220
 				billboard.Parent = tile
 
 				local label = Instance.new("TextLabel")
 				label.Size = UDim2.fromScale(1, 1)
 				label.BackgroundTransparency = 1
 				label.Text = item.glyph
-				label.TextColor3 = Color3.fromRGB(255, 255, 255)
+				label.TextColor3 = item.color
 				label.TextStrokeColor3 = Color3.fromRGB(30, 26, 45)
 				label.TextStrokeTransparency = 0
 				label.TextScaled = true

@@ -186,22 +186,41 @@ local function caption(parent: BasePart, text: string, height: number)
 end
 
 --[[
+	Сколько секунд надо простоять на паде, прежде чем занятие начнётся.
+
+	Мгновенного старта здесь больше нет, и это главное правило пада: ребёнок
+	бегает по площади, задевает всё подряд, и занятие, начавшееся от случайного
+	касания, выбрасывало его из игры в чужой экран. Теперь пад отсчитывает
+	вслух — «3 · 2 · 1» — и отпускает, если ребёнок просто пробежал мимо.
+
+	У магазина отсчёт короче: открыть витрину — не то же самое, что улететь
+	в испытание, и передумать там можно одной кнопкой.
+]]
+local ACTIVATE_SECONDS = 3
+local SHOP_ACTIVATE_SECONDS = 1
+
+--[[
 	Запуск и по подсказке, и по касанию.
 
 	Дошкольник не будет искать клавишу E и не всегда попадёт по кнопке подсказки —
-	он просто придёт и встанет на пад. Касание обязано работать как основной способ.
+	он просто придёт и встанет на пад. Касание обязано работать как основной способ,
+	но не мгновенно: и касание, и подсказка ждут, пока ребёнок задержится.
 ]]
 local function makeActivator(
 	pad: BasePart,
 	actionText: string,
 	objectText: string,
 	action: (Player) -> (),
-	exit: CFrame?
+	exit: CFrame?,
+	seconds: number?
 )
+	local hold = seconds or ACTIVATE_SECONDS
+
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = actionText
 	prompt.ObjectText = objectText
-	prompt.HoldDuration = 0
+	-- Удержание, а не нажатие: случайное E больше ничего не запускает.
+	prompt.HoldDuration = math.min(hold, 1.5)
 	prompt.MaxActivationDistance = 14
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = pad
@@ -210,9 +229,35 @@ local function makeActivator(
 		if exit then
 			exitOf[player] = exit
 		end
+		lastTouch[player] = os.clock()
 		action(player)
 	end
 	prompt.Triggered:Connect(activate)
+
+	--[[
+		Отсчёт над падом. Живёт на самом паде и виден всем: ребёнок понимает,
+		что стоять надо здесь, а родитель — что сейчас что-то начнётся.
+	]]
+	local counter = Instance.new("BillboardGui")
+	counter.Name = "Countdown"
+	counter.Size = UDim2.fromOffset(200, 200)
+	counter.StudsOffset = Vector3.new(0, 7, 0)
+	counter.AlwaysOnTop = true
+	counter.LightInfluence = 0
+	counter.MaxDistance = 90
+	counter.Enabled = false
+	counter.Parent = pad
+
+	local counterLabel = Instance.new("TextLabel")
+	counterLabel.Size = UDim2.fromScale(1, 1)
+	counterLabel.BackgroundTransparency = 1
+	counterLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	counterLabel.TextStrokeColor3 = Color3.fromRGB(40, 30, 60)
+	counterLabel.TextStrokeTransparency = 0
+	counterLabel.TextScaled = true
+	counterLabel.Font = Enum.Font.FredokaOne
+	counterLabel.Text = ""
+	counterLabel.Parent = counter
 
 	--[[
 		Касание срабатывает много раз в секунду, пока ребёнок стоит на паде.
@@ -220,11 +265,17 @@ local function makeActivator(
 		повторные касания игнорируются.
 	]]
 	local standing: { [Player]: boolean } = {}
+	local counting: Player? = nil
+
+	local function stopCounting()
+		counting = nil
+		counter.Enabled = false
+	end
 
 	pad.Touched:Connect(function(hit: BasePart)
 		local character = hit.Parent
 		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player or standing[player] then
+		if not player or standing[player] or counting then
 			return
 		end
 
@@ -234,8 +285,28 @@ local function makeActivator(
 		end
 
 		standing[player] = true
-		lastTouch[player] = now
-		activate(player)
+		counting = player
+		counter.Enabled = true
+
+		task.spawn(function()
+			for left = math.ceil(hold), 1, -1 do
+				if counting ~= player or not standing[player] then
+					stopCounting()
+					return
+				end
+				counterLabel.Text = tostring(left)
+				task.wait(1)
+			end
+
+			if counting ~= player or not standing[player] then
+				stopCounting()
+				return
+			end
+
+			counterLabel.Text = "Поехали!"
+			stopCounting()
+			activate(player)
+		end)
 	end)
 
 	pad.TouchEnded:Connect(function(hit: BasePart)
@@ -243,6 +314,10 @@ local function makeActivator(
 		local player = character and Players:GetPlayerFromCharacter(character)
 		if player then
 			standing[player] = nil
+			-- Сошёл с пада — отсчёт отменён без единого слова: передумать можно молча.
+			if counting == player then
+				stopCounting()
+			end
 		end
 	end)
 end
@@ -574,6 +649,42 @@ function WorldService.build()
 		hub
 	)
 
+	--[[
+		Край мира. За домами земля кончалась обрывом: ребёнок, обежавший свой
+		участок сзади, падал в пустоту и «умирал», появляясь в центре площади.
+		Смерти в этой игре нет нигде, и здесь её быть тоже не должно.
+
+		Поэтому по периметру идёт живая изгородь: её видно, она читается как
+		«дальше не надо», и поверх неё — невысокая невидимая стена, чтобы
+		перепрыгнуть тоже не вышло.
+	]]
+	local edge = Base.GROUND_SIZE / 2
+	for _, side in { -1, 1 } do
+		for _, axis in { "x", "z" } do
+			local along = Vector3.new(
+				if axis == "x" then 3 else Base.GROUND_SIZE,
+				5,
+				if axis == "x" then Base.GROUND_SIZE else 3
+			)
+			local at = CFrame.new(
+				if axis == "x" then side * edge else 0,
+				3.5,
+				if axis == "x" then 0 else side * edge
+			)
+			local hedge = part(`WorldHedge_{axis}_{side}`, along, at, Color3.fromRGB(110, 170, 120), hub)
+			hedge.Material = Enum.Material.Grass
+
+			local wall = part(
+				`WorldWall_{axis}_{side}`,
+				Vector3.new(along.X, 30, along.Z),
+				at * CFrame.new(0, 16, 0),
+				Color3.fromRGB(255, 255, 255),
+				hub
+			)
+			wall.Transparency = 1
+		end
+	end
+
 	-- Дорожки от площади к кольцу участков: ребёнок видит, куда идти к домам.
 	for i = 1, 4 do
 		local angle = (i - 1) / 4 * math.pi * 2
@@ -624,7 +735,7 @@ function WorldService.build()
 	caption(shopPad, "🛍 Магазин", 5)
 	makeActivator(shopPad, "Открыть", "Магазин", function(player: Player)
 		RemoteDefs.event("OpenUI"):FireClient(player, "shop")
-	end)
+	end, nil, SHOP_ACTIVATE_SECONDS)
 
 	buildDailyStone(hub)
 	buildDecor(hub)

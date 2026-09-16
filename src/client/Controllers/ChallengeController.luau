@@ -235,7 +235,45 @@ local function stopControllers()
 	ScalesController.stop()
 end
 
+--[[
+	Переход между миром и испытанием. Раньше экран с падающими буквами возникал
+	мгновенно поверх площади, и ребёнок не понимал, куда делась игра.
+
+	Шторка гасит картинку за четверть секунды, под ней строится новый экран,
+	и через полсекунды она уходит. Это не украшение: резкая смена кадра —
+	то, на чём дошкольник теряет нить происходящего.
+]]
+local function fadeThrough()
+	local parent = player:FindFirstChildOfClass("PlayerGui")
+	if not parent then
+		return
+	end
+
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "ChallengeFade"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 200
+	gui.ResetOnSpawn = false
+	gui.Parent = parent
+
+	local veil = Instance.new("Frame")
+	veil.Size = UDim2.fromScale(1, 1)
+	veil.BackgroundColor3 = Color3.fromRGB(28, 24, 44)
+	veil.BackgroundTransparency = 1
+	veil.BorderSizePixel = 0
+	veil.Parent = gui
+
+	TweenService:Create(veil, TweenInfo.new(0.25), { BackgroundTransparency = 0 }):Play()
+	task.delay(0.45, function()
+		TweenService:Create(veil, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
+		task.delay(0.4, function()
+			gui:Destroy()
+		end)
+	end)
+end
+
 local function onSpec(newSpec: any)
+	fadeThrough()
 	cleanup()
 	stopControllers()
 	announceIntro(newSpec)
