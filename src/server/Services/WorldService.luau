@@ -25,6 +25,7 @@
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -323,59 +324,180 @@ local function makeActivator(
 end
 
 --[[
-	Портал мира: высокая арка в центре площади.
+	Портал мира: круглые каменные врата с живым вихрем внутри.
 
-	Портал крупнее пада занятия и стоит отдельно: это вход в мир, а не кнопка.
+	Первая версия была рамкой из трёх брусков и цветной плитой — на проверке
+	её назвали сырой и примитивной. Портал — первое, что ребёнок видит, появившись
+	на площади, и он обязан звать внутрь сам: камень по кругу, светящиеся руны,
+	закрученный вихрь, искры и буквы или цифры, которые медленно облетают врата.
 
-	Заколоченного портала здесь больше нет: пока ворота с числами не были построены,
-	мир математики стоял забитым досками, и та ветка кода вместе с подписью «скоро»
-	убрана — оба мира открыты. Понадобится снова — восстанавливается из истории,
-	держать в сервисе неиспользуемую ветку незачем.
+	Имена двух деталей держатся ради других систем: `Portal_{id}` — цель шага
+	обучения, `PortalArch_{id}` — к ней клиент крепит табличку «Уровень 3 из 11».
 ]]
+local PORTAL_RADIUS = 8
+local PORTAL_STONES = 20
+local PORTAL_GLYPHS = {
+	letters = { "А", "Б", "В", "Г", "Д", "Е" },
+	math = { "1", "2", "3", "4", "5", "+" },
+}
+
+local function weldTo(anchor: BasePart, piece: BasePart)
+	piece.Anchored = false
+	piece.Massless = true
+	piece.CanCollide = false
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = anchor
+	weld.Part1 = piece
+	weld.Parent = piece
+end
+
+local function spin(hub: BasePart, seconds: number, axis: Vector3)
+	local info = TweenInfo.new(seconds, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1)
+	local turn = CFrame.fromAxisAngle(axis, math.pi)
+	TweenService:Create(hub, info, { CFrame = hub.CFrame * turn }):Play()
+end
+
 local function buildPortal(hub: Folder, portal: any)
 	local position = Vector3.new(portal.offset, 1.5, -6)
 	local color = portal.color
+	local stone = Color3.fromRGB(205, 200, 215)
+	local center = position + Vector3.new(0, PORTAL_RADIUS + 2.5, 0)
 
-	local platform = part(`Portal_{portal.id}`, Vector3.new(18, 1, 18), CFrame.new(position), color, hub)
-	caption(platform, portal.caption, 12)
+	-- Круглый постамент в две ступени: к порталу поднимаются, а не натыкаются на него.
+	local platform = part(
+		`Portal_{portal.id}`,
+		Vector3.new(1.4, 20, 20),
+		CFrame.new(position) * CFrame.Angles(0, 0, math.rad(90)),
+		stone,
+		hub
+	)
+	platform.Shape = Enum.PartType.Cylinder
+	platform.Material = Enum.Material.Slate
+	caption(platform, portal.caption, PORTAL_RADIUS * 2 + 7)
 
-	part(
-		`PortalArch_{portal.id}`,
-		Vector3.new(18, 2, 2),
-		CFrame.new(position + Vector3.new(0, 16, 0)),
+	local step = part(
+		`PortalStep_{portal.id}`,
+		Vector3.new(1, 15, 15),
+		CFrame.new(position + Vector3.new(0, 1.1, 0)) * CFrame.Angles(0, 0, math.rad(90)),
 		color,
 		hub
 	)
-	for _, side in { -1, 1 } do
-		part(
-			`PortalLeg_{portal.id}_{side}`,
-			Vector3.new(2, 16, 2),
-			CFrame.new(position + Vector3.new(side * 8, 8, 0)),
-			color,
+	step.Shape = Enum.PartType.Cylinder
+	step.Material = Enum.Material.SmoothPlastic
+
+	-- Каменное кольцо. Каждый четвёртый камень — светящаяся руна цвета мира.
+	for index = 1, PORTAL_STONES do
+		local angle = (index - 1) / PORTAL_STONES * math.pi * 2
+		local rune = index % 4 == 1
+		local block = part(
+			if index == 1 then `PortalArch_{portal.id}` else `PortalStone_{portal.id}_{index}`,
+			Vector3.new(3, 2.8, 2.4),
+			CFrame.new(center) * CFrame.Angles(0, 0, angle) * CFrame.new(0, PORTAL_RADIUS, 0),
+			if rune then color else stone,
 			hub
 		)
+		block.Material = if rune then Enum.Material.Neon else Enum.Material.Slate
 	end
 
-	-- Светящееся полотно портала: вход должен быть виден с любой точки площади.
+	-- Полотно: светящийся диск. Сквозь него и входят — активатор висит на нём.
 	local veil = part(
 		`PortalVeil_{portal.id}`,
-		Vector3.new(14, 14, 0.6),
-		CFrame.new(position + Vector3.new(0, 8, 0)),
+		Vector3.new(0.4, PORTAL_RADIUS * 2 - 1.5, PORTAL_RADIUS * 2 - 1.5),
+		CFrame.new(center) * CFrame.Angles(0, math.rad(90), 0),
 		color,
 		hub
 	)
+	veil.Shape = Enum.PartType.Cylinder
 	veil.CanCollide = false
 	veil.Material = Enum.Material.Neon
-	veil.Transparency = 0.35
+	veil.Transparency = 0.45
+
+	--[[
+		Вихрь: шесть лопастей на невидимой втулке. Крутится одна втулка, лопасти
+		приварены к ней: так они не расходятся по фазе и не дёргаются.
+	]]
+	local swirl = part(`PortalSwirl_{portal.id}`, Vector3.new(0.5, 0.5, 0.5), CFrame.new(center), color, hub)
+	swirl.Transparency = 1
+	swirl.CanCollide = false
+	for blade = 1, 6 do
+		local angle = (blade - 1) / 6 * math.pi * 2
+		local arm = part(
+			`PortalSwirlBlade_{portal.id}_{blade}`,
+			Vector3.new(1.1, PORTAL_RADIUS - 2, 0.3),
+			CFrame.new(center)
+				* CFrame.Angles(0, 0, angle)
+				* CFrame.new(0.9, (PORTAL_RADIUS - 2) / 2, 0.35)
+				* CFrame.Angles(0, 0, math.rad(-25)),
+			Color3.fromRGB(255, 255, 255),
+			hub
+		)
+		arm.Material = Enum.Material.Neon
+		arm.Transparency = 0.55
+		weldTo(swirl, arm)
+	end
+	spin(swirl, 5, Vector3.new(0, 0, 1))
+
+	-- Буквы или цифры мира облетают врата: видно издалека, куда ведёт портал.
+	local orbit = part(`PortalOrbit_{portal.id}`, Vector3.new(0.5, 0.5, 0.5), CFrame.new(center), color, hub)
+	orbit.Transparency = 1
+	orbit.CanCollide = false
+	local glyphs = PORTAL_GLYPHS[portal.id] or {}
+	for index, glyph in glyphs do
+		local angle = (index - 1) / #glyphs * math.pi * 2
+		local bubble = part(
+			`PortalGlyph_{portal.id}_{index}`,
+			Vector3.new(2.6, 2.6, 2.6),
+			CFrame.new(center) * CFrame.Angles(0, 0, angle) * CFrame.new(0, PORTAL_RADIUS + 3.5, 0),
+			Color3.fromRGB(255, 255, 255),
+			hub
+		)
+		bubble.Shape = Enum.PartType.Ball
+		bubble.Transparency = 0.2
+		weldTo(orbit, bubble)
+
+		local billboard = Instance.new("BillboardGui")
+		billboard.Size = UDim2.fromOffset(70, 70)
+		billboard.AlwaysOnTop = true
+		billboard.LightInfluence = 0
+		billboard.MaxDistance = 160
+		billboard.Parent = bubble
+
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Text = glyph
+		label.TextColor3 = color
+		label.TextStrokeColor3 = Color3.fromRGB(40, 30, 60)
+		label.TextStrokeTransparency = 0
+		label.TextScaled = true
+		label.Font = Enum.Font.FredokaOne
+		label.Parent = billboard
+	end
+	spin(orbit, 18, Vector3.new(0, 0, 1))
+
+	local sparkles = Instance.new("ParticleEmitter")
+	sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparkles.Rate = 12
+	sparkles.Lifetime = NumberRange.new(1.2, 2)
+	sparkles.Speed = NumberRange.new(1, 3)
+	sparkles.SpreadAngle = Vector2.new(180, 180)
+	sparkles.Color = ColorSequence.new(color)
+	sparkles.Parent = veil
+
+	local light = Instance.new("PointLight")
+	light.Color = color
+	light.Range = 22
+	light.Brightness = 2
+	light.Parent = veil
 
 	--[[
 		Вход в мир. Испытание само решит, начать забег заново или продолжить
 		с последней арки: незаконченный забег лежит в профиле (Types.SavedRun).
 		Сохранки у миров свои — ключ забега это его испытание.
 
-		Срабатывает светящееся полотно арки, а не платформа под ней: в портал
-		входят, пройдя сквозь арку. Платформа 18 на 18 лежала посреди площади,
-		на неё наступали по пути куда угодно — и улетали в туннель, не собираясь.
+		Срабатывает светящееся полотно, а не постамент под ним: в портал входят,
+		пройдя сквозь врата. Постамент лежал посреди площади, на него наступали
+		по пути куда угодно — и улетали в туннель, не собираясь.
 	]]
 	local front = position + Vector3.new(0, 3, 13)
 	makeActivator(veil, portal.action, Challenges.expect(portal.challengeId).title, function(player: Player)
