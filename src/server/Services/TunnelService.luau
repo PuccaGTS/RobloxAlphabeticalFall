@@ -194,7 +194,8 @@ end
 	короткими, чтобы пол и бортики легли по горке и виражу без щелей.
 	piece(mid, length, curved) вызывается на каждый кусок.
 ]]
-local CURVE_CHUNK = 4
+-- Пять студов: на вираже в 20° щели не видно, а деталей на горку вчетверо меньше, чем по студу.
+local CURVE_CHUNK = 5
 
 local function pieces(path, from: number, to: number, chunk: number, piece: (number, number, boolean) -> ())
 	local cuts = { from, to }
@@ -299,11 +300,11 @@ local function buildCorridor(model: Model, path, length: number, obstacles: { an
 	for _, side in { -1, 1 } do
 		local x = side * (half + Tunnel.WALL_THICKNESS / 2)
 
-		pieces(path, 0, length, CURVE_CHUNK + 1, function(mid: number, size: number, curved: boolean)
+		pieces(path, 0, length, CURVE_CHUNK * 2, function(mid: number, size: number, curved: boolean)
 			local color = RAIL_COLORS[math.floor(mid / 60) % #RAIL_COLORS + 1]
 			local rail = build(
 				`Rail_{side}_{math.floor(mid)}`,
-				Vector3.new(Tunnel.WALL_THICKNESS, RAIL_HEIGHT, size + (if curved then 0.6 else 0)),
+				Vector3.new(Tunnel.WALL_THICKNESS, RAIL_HEIGHT, size + (if curved then 1.2 else 0)),
 				path.frame(mid) * CFrame.new(x, RAIL_HEIGHT / 2, 0),
 				color,
 				model
@@ -1587,11 +1588,205 @@ local OBSTACLE_BUILDERS: { [string]: (Model, CFrame, any, number) -> () } = {
 	end,
 }
 
+--[[
+	Отделка препятствий. Строители выше отвечают за то, что мешает бежать,
+	а здесь — за то, чтобы это читалось вещью, а не цветным брусом: у барьера
+	стойки и полосы, у свода колонны и замковый камень, у ступеней кромки,
+	у балки фонарики на концах.
+
+	Все детали отделки ни с чем не сталкиваются и ничего не ловят: форма
+	препятствия, по которой бегут и прыгают, остаётся ровно той, что проверена
+	тестами и детьми. Отделка только показывает её.
+]]
+local WHITE = Color3.fromRGB(250, 250, 245)
+local WARNING = Color3.fromRGB(245, 120, 90)
+
+local function trim(model: Model, name: string, size: Vector3, cframe: CFrame, color: Color3): BasePart
+	local piece = build(name, size, cframe, color, model)
+	piece.CanCollide = false
+	piece.CanQuery = false
+	piece.CanTouch = false
+	piece.CastShadow = false
+	return piece
+end
+
+local OBSTACLE_DRESSING: { [string]: (Model, CFrame, any, number) -> () } = {
+	-- Барьер как спортивный: белые стойки по краям и полосы на планке.
+	barrier = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		local half = (Tunnel.LANE_WIDTH - 1) / 2
+		for _, side in { -1, 1 } do
+			trim(
+				model,
+				`BarrierPost_{index}_{side}`,
+				Vector3.new(0.5, Tunnel.BARRIER_HEIGHT + 0.8, 0.5),
+				origin * CFrame.new(x + side * (half + 0.3), (Tunnel.BARRIER_HEIGHT + 0.8) / 2, -obstacle.z),
+				WHITE
+			)
+		end
+		for stripe = -1, 1 do
+			trim(
+				model,
+				`BarrierStripe_{index}_{stripe}`,
+				Vector3.new(0.9, Tunnel.BARRIER_HEIGHT * 0.5, Tunnel.BARRIER_LENGTH + 0.1),
+				origin * CFrame.new(x + stripe * half * 0.6, Tunnel.BARRIER_HEIGHT * 0.65, -obstacle.z),
+				WHITE
+			)
+		end
+	end,
+
+	-- Яма: полосатые кромки и по конусу с каждой стороны — дырку видно издалека.
+	gap = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		for _, edge in { obstacle.z, obstacle.z + Tunnel.GAP_LENGTH } do
+			for stripe = -2, 2 do
+				trim(
+					model,
+					`GapStripe_{index}_{math.floor(edge)}_{stripe}`,
+					Vector3.new(0.9, 0.45, 0.85),
+					origin * CFrame.new(x + stripe * 1.8, 0.23, -edge),
+					if stripe % 2 == 0 then WARNING else WHITE
+				)
+			end
+		end
+		for _, side in { -1, 1 } do
+			local cone = trim(
+				model,
+				`GapCone_{index}_{side}`,
+				Vector3.new(1.2, 1.6, 1.2),
+				origin * CFrame.new(x + side * (Tunnel.LANE_WIDTH / 2 - 0.8), 0.8, -obstacle.z + 0.8),
+				WARNING
+			)
+			cone.Shape = Enum.PartType.Ball
+		end
+	end,
+
+	-- Свод: колонны до пола по краям дорожки, светящаяся кромка снизу и замковый камень.
+	arch = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		for _, side in { -1, 1 } do
+			local column = trim(
+				model,
+				`ArchColumn_{index}_{side}`,
+				Vector3.new(0.8, Tunnel.ARCH_CLEARANCE, 1.7),
+				origin
+					* CFrame.new(
+						x + side * (Tunnel.LANE_WIDTH / 2 - 0.4),
+						Tunnel.ARCH_CLEARANCE / 2,
+						-obstacle.z
+					),
+				Color3.fromRGB(120, 105, 170)
+			)
+			column.Material = Enum.Material.Slate
+		end
+		local edge = trim(
+			model,
+			`ArchEdge_{index}`,
+			Vector3.new(Tunnel.LANE_WIDTH, 0.4, 1.7),
+			origin * CFrame.new(x, Tunnel.ARCH_CLEARANCE + 0.2, -obstacle.z),
+			Color3.fromRGB(255, 200, 110)
+		)
+		edge.Material = Enum.Material.Neon
+		local key = trim(
+			model,
+			`ArchKey_{index}`,
+			Vector3.new(2, 2.4, 1.9),
+			origin * CFrame.new(x, Tunnel.HEIGHT - 1.4, -obstacle.z),
+			Color3.fromRGB(255, 214, 102)
+		)
+		key.Material = Enum.Material.Slate
+	end,
+
+	-- Балка: торцевые доски и фонарики на концах — видно, где она начинается.
+	beam = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		for _, edge in { obstacle.z, obstacle.z + Tunnel.BEAM_LENGTH } do
+			trim(
+				model,
+				`BeamCap_{index}_{math.floor(edge)}`,
+				Vector3.new(Tunnel.BEAM_WIDTH + 0.6, 0.3, 0.6),
+				origin * CFrame.new(0, 0.1, -edge),
+				Color3.fromRGB(150, 110, 70)
+			)
+			for _, side in { -1, 1 } do
+				trim(
+					model,
+					`BeamLampPost_{index}_{math.floor(edge)}_{side}`,
+					Vector3.new(0.25, 2.4, 0.25),
+					origin * CFrame.new(side * (Tunnel.BEAM_WIDTH / 2 + 0.5), 1.2, -edge),
+					Color3.fromRGB(120, 100, 80)
+				)
+				local lamp = trim(
+					model,
+					`BeamLamp_{index}_{math.floor(edge)}_{side}`,
+					Vector3.new(0.7, 0.7, 0.7),
+					origin * CFrame.new(side * (Tunnel.BEAM_WIDTH / 2 + 0.5), 2.6, -edge),
+					Color3.fromRGB(255, 225, 150)
+				)
+				lamp.Shape = Enum.PartType.Ball
+				lamp.Material = Enum.Material.Neon
+			end
+		end
+	end,
+
+	-- Ступени: белая кромка на каждой, чтобы край был виден до прыжка.
+	steps = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local total = Tunnel.STEP_COUNT * 2
+		for step = 1, total do
+			local level = if step <= Tunnel.STEP_COUNT then step else total - step + 1
+			local height = level * Tunnel.STEP_HEIGHT
+			local z = obstacle.z + (step - 1) * Tunnel.STEP_RUN
+			trim(
+				model,
+				`StepNosing_{index}_{step}`,
+				Vector3.new(Tunnel.WIDTH, 0.25, 0.6),
+				origin * CFrame.new(0, height + 0.1, -(z + 0.3)),
+				WHITE
+			)
+			local tread = model:FindFirstChild(`Step_{index}_{step}`)
+			if tread and tread:IsA("BasePart") then
+				tread.Color = if step % 2 == 0
+					then Color3.fromRGB(165, 205, 160)
+					else Color3.fromRGB(195, 225, 180)
+				tread.Material = Enum.Material.Slate
+			end
+		end
+	end,
+
+	-- Гребёнка: у зубьев круглые шапки и два цвета — щели видно сразу.
+	comb = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local tooth = (Tunnel.LANE_WIDTH - Tunnel.COMB_SLOT) / 2
+		for lane = 1, Tunnel.LANE_COUNT do
+			for _, side in { -1, 1 } do
+				local x = Tunnel.laneOffset(lane) + side * (Tunnel.COMB_SLOT / 2 + tooth / 2)
+				local part = model:FindFirstChild(`Comb_{index}_{lane}_{side}`)
+				if part and part:IsA("BasePart") then
+					part.Color = if lane % 2 == 0
+						then Color3.fromRGB(130, 180, 150)
+						else Color3.fromRGB(110, 160, 200)
+					part.Material = Enum.Material.SmoothPlastic
+				end
+				local cap = trim(
+					model,
+					`CombCap_{index}_{lane}_{side}`,
+					Vector3.new(tooth + 0.4, tooth + 0.4, tooth + 0.4),
+					origin * CFrame.new(x, Tunnel.HEIGHT, -obstacle.z),
+					Color3.fromRGB(255, 214, 102)
+				)
+				cap.Shape = Enum.PartType.Ball
+			end
+		end
+	end,
+}
+
 local function buildObstacles(model: Model, origin: CFrame, obstacles: { any })
 	for index, obstacle in obstacles or {} do
 		local builder = OBSTACLE_BUILDERS[obstacle.kind]
 		if builder then
 			builder(model, origin, obstacle, index)
+			local dressing = OBSTACLE_DRESSING[obstacle.kind]
+			if dressing then
+				dressing(model, origin, obstacle, index)
+			end
 		else
 			warn(`[TunnelService] не умею строить препятствие "{obstacle.kind}"`)
 		end
@@ -1614,10 +1809,58 @@ local CHECKPOINT_LIT = Color3.fromRGB(120, 220, 140)
 local function buildCheckpoint(model: Model, origin: CFrame, checkpoint: any, player: Player, passed: boolean)
 	local at = origin * CFrame.new(0, 0, -checkpoint.z)
 
+	--[[
+		Арка: два столба по краям трассы, перекладина и высокий флагшток справа.
+		Раньше сохранка была светящейся планкой поперёк коридора — её было не отличить
+		от ворот и не понять, что здесь «записалось». Флаг поднят и горит, когда
+		арка пройдена.
+	]]
+	local archHeight = Tunnel.HEIGHT * 0.62
+	local stone = Color3.fromRGB(235, 230, 220)
+	for _, side in { -1, 1 } do
+		local post = build(
+			`CheckpointPost_{checkpoint.index}_{side}`,
+			Vector3.new(1.4, archHeight, 1.4),
+			at * CFrame.new(side * (Tunnel.WIDTH / 2 - 0.7), archHeight / 2, 0),
+			stone,
+			model
+		)
+		post.Material = Enum.Material.Marble
+		post.CanCollide = false
+		local cap = build(
+			`CheckpointCap_{checkpoint.index}_{side}`,
+			Vector3.new(2, 2, 2),
+			at * CFrame.new(side * (Tunnel.WIDTH / 2 - 0.7), archHeight + 1, 0),
+			CHECKPOINT_LIT,
+			model
+		)
+		cap.Shape = Enum.PartType.Ball
+		cap.CanCollide = false
+	end
+	local top = build(
+		`CheckpointTop_{checkpoint.index}`,
+		Vector3.new(Tunnel.WIDTH, 1.2, 1.4),
+		at * CFrame.new(0, archHeight, 0),
+		stone,
+		model
+	)
+	top.Material = Enum.Material.Marble
+	top.CanCollide = false
+
+	local poleX = Tunnel.WIDTH / 2 - 0.7
+	local pole = build(
+		`CheckpointPole_{checkpoint.index}`,
+		Vector3.new(0.35, 7, 0.35),
+		at * CFrame.new(poleX, archHeight + 4.5, 0),
+		Color3.fromRGB(245, 245, 250),
+		model
+	)
+	pole.CanCollide = false
+
 	local flag = build(
 		`CheckpointFlag_{checkpoint.index}`,
-		Vector3.new(Tunnel.WIDTH, 1, 1),
-		at * CFrame.new(0, Tunnel.HEIGHT * 0.5, 0),
+		Vector3.new(3.4, 2.2, 0.2),
+		at * CFrame.new(poleX - 1.9, archHeight + (if passed then 6.8 else 2.8), 0),
 		if passed then CHECKPOINT_LIT else CHECKPOINT_COLD,
 		model
 	)
@@ -1625,6 +1868,7 @@ local function buildCheckpoint(model: Model, origin: CFrame, checkpoint: any, pl
 	if passed then
 		flag.Material = Enum.Material.Neon
 	end
+	local flagTop = at * CFrame.new(poleX - 1.9, archHeight + 6.8, 0)
 
 	local trigger = build(
 		`CheckpointTrigger_{checkpoint.index}`,
@@ -1648,6 +1892,17 @@ local function buildCheckpoint(model: Model, origin: CFrame, checkpoint: any, pl
 		run.checkpointZ = checkpoint.z
 		flag.Color = CHECKPOINT_LIT
 		flag.Material = Enum.Material.Neon
+		-- Флаг взлетает на верх флагштока: точка записана.
+		TweenService:Create(flag, TweenInfo.new(0.6, Enum.EasingStyle.Back), { CFrame = flagTop }):Play()
+		local burst = Instance.new("ParticleEmitter")
+		burst.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		burst.Rate = 0
+		burst.Speed = NumberRange.new(6, 10)
+		burst.Lifetime = NumberRange.new(0.6, 1)
+		burst.SpreadAngle = Vector2.new(180, 180)
+		burst.Color = ColorSequence.new(CHECKPOINT_LIT)
+		burst.Parent = top
+		burst:Emit(30)
 		RemoteDefs.event("PlaySfx"):FireClient(player, "checkpoint")
 
 		--[[
@@ -1722,7 +1977,7 @@ end
 	Расстановка детерминирована сидом забега — как и всё остальное в нём.
 ]]
 local SCENERY = { "tree_round", "tree_pine", "bush_round", "tree_round", "rock_small", "tree_pine" }
-local SCENERY_STEP = 34
+local SCENERY_STEP = 44
 
 local function buildScenery(model: Model, path, length: number, seed: number)
 	local random = Random.new(seed + 3571)
