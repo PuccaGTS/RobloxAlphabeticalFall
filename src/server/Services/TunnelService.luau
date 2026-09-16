@@ -286,6 +286,11 @@ end
 	с трассы в сторону по-прежнему нельзя.
 ]]
 local RAIL_HEIGHT = 2.5
+local GUARD_MAX_SPAN = 80 -- длиннее кусок невидимой стенки не делаем
+local GUARD_STRAIGHT = 0.99995 -- косинус угла: меньше полуградуса поворота — это прямая
+local GUARD_SAMPLE = 5 -- шаг, с которым меряется размах высот под стенкой
+local GUARD_MAX_TURN = 0.07 -- радиан поворота внутри одного куска стенки, около четырёх градусов
+local GUARD_MIN_PIECE = 1.5
 local RAIL_COLORS = {
 	Color3.fromRGB(120, 180, 235),
 	Color3.fromRGB(245, 175, 110),
@@ -313,16 +318,79 @@ local function buildCorridor(model: Model, path, length: number, obstacles: { an
 			rail.Material = Enum.Material.SmoothPlastic
 		end)
 
-		pieces(path, 0, length, CURVE_CHUNK * 2, function(mid: number, size: number, curved: boolean)
+		--[[
+			Невидимые стенки кладутся длинными кусками везде, где трасса в плане
+			не поворачивает: на горках, ямках и подъёмах стенке незачем повторять
+			рельеф — она просто выше на размах высот. Раньше стенка шла кусками
+			по десять студов, как бортик, и на забеге 11-го уровня это было
+			почти полторы сотни деталей, которых никто не видит.
+		]]
+		local spanFrom: number? = nil
+		local spanTo = 0
+		local function flush()
+			if not spanFrom then
+				return
+			end
+			local from, to = spanFrom, spanTo
+			spanFrom = nil
+			local low, high = math.huge, -math.huge
+			local z = from
+			while true do
+				local y = path.flat(math.min(z, to)).Position.Y
+				low, high = math.min(low, y), math.max(high, y)
+				if z >= to then
+					break
+				end
+				z += GUARD_SAMPLE
+			end
+			local mid = (from + to) / 2
+			local midY = path.flat(mid).Position.Y
+			local tall = Tunnel.HEIGHT + (high - low)
 			local guard = build(
 				`Guard_{side}_{math.floor(mid)}`,
-				Vector3.new(Tunnel.WALL_THICKNESS, Tunnel.HEIGHT, size + (if curved then 1.5 else 0)),
-				path.flat(mid) * CFrame.new(x, Tunnel.HEIGHT / 2, 0),
+				-- Толще бортика и наружу: остаток изгиба на длинном куске не открывает щель.
+				Vector3.new(Tunnel.WALL_THICKNESS + 2, tall, to - from + 1.5),
+				path.flat(mid) * CFrame.new(x + side, low - midY + tall / 2, 0),
 				Color3.fromRGB(255, 255, 255),
 				model
 			)
 			guard.Transparency = 1
+		end
+
+		--[[
+			Крутой поворот режется на куски помельче, пока поворот внутри куска
+			не станет меньше GUARD_MAX_TURN. Иначе на углах зигзага прямой кусок
+			открывал у внешнего края клин, в который проскакивал ребёнок, а удлинять
+			кусок нельзя — на внутренней стороне поворота он вылезал бы на дорожку.
+		]]
+		local function turnOf(from: number, to: number): number
+			return math.acos(math.clamp(path.flat(from).LookVector:Dot(path.flat(to).LookVector), -1, 1))
+		end
+
+		local function addPiece(from: number, to: number)
+			if to - from > GUARD_MIN_PIECE and turnOf(from, to) > GUARD_MAX_TURN then
+				local cut = (from + to) / 2
+				addPiece(from, cut)
+				addPiece(cut, to)
+				return
+			end
+			if spanFrom then
+				local straight = path.flat(spanFrom).LookVector:Dot(path.flat(to).LookVector) > GUARD_STRAIGHT
+				-- Зигзаг может вернуться к прежнему курсу со сдвигом вбок: такое не прямая.
+				local aside = math.abs(path.flat(spanFrom):PointToObjectSpace(path.flat(to).Position).X)
+				if straight and aside < 0.3 and to - spanFrom <= GUARD_MAX_SPAN then
+					spanTo = to
+					return
+				end
+				flush()
+			end
+			spanFrom, spanTo = from, to
+		end
+
+		pieces(path, 0, length, CURVE_CHUNK * 2, function(mid: number, size: number)
+			addPiece(mid - size / 2, mid + size / 2)
 		end)
+		flush()
 	end
 
 	-- Разметка дорожек на прямых: ребёнку нужно видеть, что дорожек ровно три.
@@ -2069,7 +2137,8 @@ end
 	Расстановка детерминирована сидом забега — как и всё остальное в нём.
 ]]
 local SCENERY = { "tree_round", "tree_pine", "bush_round", "tree_round", "rock_small", "tree_pine" }
-local SCENERY_STEP = 44
+-- Шаг деревьев в долине. Было 44: на длинном забеге лес давал четыре сотни деталей.
+local SCENERY_STEP = 62
 
 local function buildScenery(model: Model, path, length: number, seed: number)
 	local random = Random.new(seed + 3571)

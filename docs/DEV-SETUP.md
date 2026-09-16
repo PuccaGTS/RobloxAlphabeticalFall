@@ -76,6 +76,15 @@ rojo build test.project.json -o build/test.rbxl
 run-in-roblox --place build/test.rbxl --script tools/TestRunner.server.luau
 ```
 
+**Стенки туннеля** — после правок трассы (TrackShape, TunnelService.buildCorridor):
+
+```bash
+rojo build default.project.json -o build/game.rbxl
+run-in-roblox --place build/game.rbxl --script tools/TunnelGuardCheck.server.luau
+```
+
+В выводе у каждого сида должно быть `gaps 0 intrusions 0`.
+
 **Если `run-in-roblox` пишет «Timeout reached while waiting for Roblox Studio»
 или «Не удаётся найти указанный файл»:** скорее всего Studio обновилась, а путь
 к ней в реестре (`HKCU\Software\Roblox\RobloxStudio\ContentFolder`) остался

@@ -37,7 +37,8 @@
       "$className": "Workspace",
       "$properties": {
         "StreamingEnabled": true,
-        "StreamingIntegrityMode": "PauseOutsideLoadedArea"
+        "StreamingIntegrityMode": "PauseOutsideLoadedArea",
+        "StreamingTargetRadius": 512
       }
     },
 
