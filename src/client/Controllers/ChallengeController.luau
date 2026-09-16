@@ -26,6 +26,7 @@ local BubblesController = require(script.Parent.BubblesController)
 local MirrorController = require(script.Parent.MirrorController)
 local ScalesController = require(script.Parent.ScalesController)
 local BerryController = require(script.Parent.BerryController)
+local PetController = require(script.Parent.PetController)
 local HUD = require(script.Parent.Parent.UI.HUD)
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
@@ -558,6 +559,10 @@ end
 
 local function onFeedback(feedback: any)
 	feedbackSound(feedback.correct == true)
+	-- Буквята радуются верному ответу хозяина: прыжок с оборотом и искры.
+	if feedback.correct then
+		PetController.cheer()
+	end
 
 	if activeChallengeId == "alphabet_ladder" then
 		-- букву-цель для следующей ступени выставит сама лестница
