@@ -25,6 +25,7 @@ local TrackShape = require(Shared.Logic.TrackShape)
 local ChallengeService = require(script.Parent.ChallengeService)
 local ProgressService = require(script.Parent.ProgressService)
 local DecorService = require(script.Parent.DecorService)
+local Teleport = require(script.Parent.Parent.World.Teleport)
 
 local TunnelService = {}
 
@@ -1980,6 +1981,7 @@ local function buildCheckpoint(model: Model, origin: CFrame, checkpoint: any, pl
 			return
 		end
 		run.checkpointZ = checkpoint.z
+		Teleport.setSafe(player, run.origin * CFrame.new(0, 4, -checkpoint.z))
 		flag.Color = CHECKPOINT_LIT
 		flag.Material = Enum.Material.Neon
 		-- Флаг взлетает на верх флагштока: точка записана.
@@ -2035,7 +2037,7 @@ local function buildSoftBottom(model: Model, path, length: number, player: Playe
 		]]
 		RemoteDefs.event("PlaySfx"):FireClient(player, "fall")
 
-		character:PivotTo(run.origin * CFrame.new(0, 4, -run.checkpointZ))
+		Teleport.to(player, run.origin * CFrame.new(0, 4, -run.checkpointZ))
 	end
 
 	--[[
@@ -2347,7 +2349,7 @@ function TunnelService.spawn(player: Player, spec: any)
 	buildZoneDecor(model, origin, player)
 
 	if character then
-		character:PivotTo(origin * CFrame.new(0, 4, -math.max(startZ, 4)))
+		Teleport.to(player, origin * CFrame.new(0, 4, -math.max(startZ, 4)))
 	end
 
 	local humanoid = humanoidOf(player)
@@ -2422,7 +2424,7 @@ function TunnelService.despawn(player: Player)
 
 	local character = player.Character
 	if character and run.returnCFrame then
-		character:PivotTo(run.returnCFrame)
+		Teleport.to(player, run.returnCFrame)
 	end
 
 	local humanoid = humanoidOf(player)

@@ -629,6 +629,25 @@ function ChallengeService.start()
 	Players.PlayerRemoving:Connect(function(player: Player)
 		active[player] = nil
 	end)
+
+	--[[
+		Новый персонаж — старое занятие закончено.
+
+		Если ребёнок всё-таки упал и появился заново на площади, занятие у сервера
+		продолжало числиться идущим: следующий пад и портал молча не запускались
+		(«идущее испытание не перезапускаем»), и казалось, что сломано всё сразу.
+	]]
+	local function watch(player: Player)
+		player.CharacterAdded:Connect(function()
+			if active[player] then
+				finish(player, "aborted")
+			end
+		end)
+	end
+	Players.PlayerAdded:Connect(watch)
+	for _, player in Players:GetPlayers() do
+		watch(player)
+	end
 end
 
 function ChallengeService.abort(player: Player)

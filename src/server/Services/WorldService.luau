@@ -38,6 +38,7 @@ local ProfileService = require(script.Parent.ProfileService)
 local ProgressService = require(script.Parent.ProgressService)
 local ChallengeService = require(script.Parent.ChallengeService)
 local DecorService = require(script.Parent.DecorService)
+local Teleport = require(script.Parent.Parent.World.Teleport)
 local DailyLetterService = require(script.Parent.DailyLetterService)
 
 local WorldService = {}
@@ -910,7 +911,7 @@ function WorldService.start()
 		task.defer(function()
 			local character = player.Character
 			if character then
-				character:PivotTo(exit)
+				Teleport.to(player, exit)
 			end
 		end)
 	end)

@@ -35,6 +35,7 @@ local ChallengeService = require(script.Parent.ChallengeService)
 local ProgressService = require(script.Parent.ProgressService)
 local RateLimiter = require(script.Parent.RateLimiter)
 local DecorService = require(script.Parent.DecorService)
+local Teleport = require(script.Parent.Parent.World.Teleport)
 
 local BaseService = {}
 
@@ -1181,7 +1182,7 @@ function BaseService.sendHome(player: Player)
 	local home = BaseService.homeCFrame(player)
 	local character = player.Character
 	if home and character then
-		character:PivotTo(home)
+		Teleport.to(player, home)
 	end
 end
 

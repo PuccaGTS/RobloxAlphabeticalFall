@@ -34,6 +34,7 @@ local PetService = require(Services.PetService)
 local DailyLetterService = require(Services.DailyLetterService)
 local SafetyService = require(Services.SafetyService)
 local ChestService = require(Services.ChestService)
+local Teleport = require(script:WaitForChild("World").Teleport)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
 RemoteDefs.init()
@@ -71,6 +72,7 @@ end
 reportContentState()
 
 SafetyService.start() -- первым: чат выключается раньше, чем кто-то успеет зайти
+Teleport.start() -- страж падения: смерти в игре нет нигде
 EconomyService.start()
 ProgressService.start()
 ChallengeService.start()

@@ -24,6 +24,7 @@ local Venues = require(Shared.Config.Venues)
 
 local ChallengeService = require(script.Parent.ChallengeService)
 local DecorService = require(script.Parent.DecorService)
+local Teleport = require(script.Parent.Parent.World.Teleport)
 
 local VenueService = {}
 
@@ -183,7 +184,7 @@ local function returnHome(player: Player)
 	returnOf[player] = nil
 	local character = player.Character
 	if back and character then
-		character:PivotTo(back)
+		Teleport.to(player, back)
 	end
 end
 
@@ -201,14 +202,14 @@ function VenueService.start()
 			return
 		end
 
-		returnOf[player] = character:GetPivot()
-		character:PivotTo(Venues.entry(venue.id))
-
 		--[[
 			Точка сцены уходит в самом задании: хук вызывается ДО отправки
 			задания клиенту, поэтому дописать её сюда можно и нужно.
 		]]
 		spec.params.stage = Venues.stage(venue.id)
+
+		returnOf[player] = character:GetPivot()
+		Teleport.to(player, Venues.entry(venue.id))
 	end)
 
 	ChallengeService.onFinished(function(player: Player, spec: any)
