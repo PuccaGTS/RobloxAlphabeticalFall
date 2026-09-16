@@ -38,6 +38,23 @@ export type TrailVisual = {
 }
 
 --[[
+	Эффект редкой вещи: частицы за ребёнком и, если задана, светящаяся лента.
+	Редкое должно быть видно издалека — кепку не разглядишь с другого конца
+	площади, а шлейф из звёзд видно сразу.
+
+	particles — встроенная текстура Roblox (Config/Shop.PARTICLE_TEXTURES):
+	чужие ассеты из каталога могут пропасть, встроенные — нет.
+]]
+export type ItemEffect = {
+	particles: string, -- "sparkle" | "fire" | "smoke"
+	color: ColorSequence,
+	rate: number, -- частиц в секунду: для планшета держим до 20
+	size: number,
+	lightEmission: number?,
+	trail: TrailVisual?, -- лента сзади, как у предметов-следов
+}
+
+--[[
 	Скин буквёнка: во что одето его тело. Буква над головой остаётся цвета буквы —
 	скин не должен мешать узнавать, чей это буквёнок (docs/04-ECONOMY.md § 4).
 	rainbow — цвет тела плавно идёт по радуге: его крутит клиент, PetController.
@@ -61,6 +78,7 @@ export type ShopItem = {
 	visual: Visual?,
 	trail: TrailVisual?,
 	skin: PetSkin?,
+	effect: ItemEffect?, -- шлейф редкой вещи, надевается вместе с ней
 	-- Аксессуар каталога Roblox: надевается через HumanoidDescription (CosmeticsService).
 	accessory: number?,
 	icon: string, -- пока эмодзи, потом rbxassetid
@@ -1094,9 +1112,94 @@ local Items: { [string]: ShopItem } = {
 	face_aviators = worn("face_aviators", "face", "Очки лётчика", 30, 0, "🕶", 376526673),
 }
 
+--[[
+	Редкие вещи со шлейфом. Каждой — свой: корона сыплет звёздами, ракета
+	дымит огнём, ледяная корона метёт снегом, крылья ангела оставляют
+	радужную ленту. У «Радуги» из следов теперь все семь цветов и искры.
+]]
+local RAINBOW = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
+	ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 160, 60)),
+	ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 230, 80)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 220, 110)),
+	ColorSequenceKeypoint.new(0.67, Color3.fromRGB(80, 190, 255)),
+	ColorSequenceKeypoint.new(0.83, Color3.fromRGB(90, 110, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 100, 255)),
+})
+
+local EFFECTS: { [string]: ItemEffect } = {
+	hat_starcrown = {
+		particles = "sparkle",
+		color = ColorSequence.new(GOLD, Color3.fromRGB(255, 170, 60)),
+		rate = 14,
+		size = 0.7,
+		lightEmission = 1,
+		trail = {
+			color = ColorSequence.new(Color3.fromRGB(255, 230, 140), Color3.fromRGB(180, 120, 255)),
+			lifetime = 0.8,
+			width = 1.2,
+		},
+	},
+	hat_ice_crown = {
+		particles = "sparkle",
+		color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(150, 210, 255)),
+		rate = 16,
+		size = 0.5,
+		lightEmission = 0.6,
+	},
+	hat_sun = {
+		particles = "sparkle",
+		color = ColorSequence.new(Color3.fromRGB(255, 240, 150), Color3.fromRGB(255, 190, 70)),
+		rate = 10,
+		size = 0.6,
+		lightEmission = 1,
+	},
+	back_rocket = {
+		particles = "fire",
+		color = ColorSequence.new(Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 110, 50)),
+		rate = 18,
+		size = 0.8,
+		lightEmission = 0.8,
+		trail = {
+			color = ColorSequence.new(Color3.fromRGB(255, 190, 90), Color3.fromRGB(200, 200, 210)),
+			lifetime = 0.9,
+			width = 1.4,
+		},
+	},
+	back_angel = {
+		particles = "sparkle",
+		color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 235, 180)),
+		rate = 10,
+		size = 0.6,
+		lightEmission = 1,
+		trail = { color = RAINBOW, lifetime = 1.6, width = 2.4 },
+	},
+	trail_rainbow = {
+		particles = "sparkle",
+		color = RAINBOW,
+		rate = 12,
+		size = 0.6,
+		lightEmission = 1,
+	},
+}
+
+for id, effect in EFFECTS do
+	local item = Items[id]
+	assert(item, `Shop: эффект у неизвестного предмета "{id}"`)
+	item.effect = effect
+end
+Items.trail_rainbow.trail = { color = RAINBOW, lifetime = 1.6, width = 2.6 }
+
 local Module = {}
 
 local STREAK_PREFIX = "daily_streak:"
+
+-- Текстуры частиц встроены в клиент Roblox: грузить и одобрять их не нужно.
+Module.PARTICLE_TEXTURES = {
+	sparkle = "rbxasset://textures/particles/sparkles_main.dds",
+	fire = "rbxasset://textures/particles/fire_main.dds",
+	smoke = "rbxasset://textures/particles/smoke_main.dds",
+}
 
 Module.all = Items
 Module.CATEGORIES = { "hat", "back", "face", "trail", "petskin" }

@@ -55,6 +55,23 @@ local function makeCard(item): Frame
 	icon.TextScaled = true
 	icon.Parent = card
 
+	-- Редкая вещь со шлейфом: ребёнок не читает, поэтому метка — искры, а не слово.
+	if item.effect then
+		local glow = Instance.new("UIStroke")
+		glow.Color = Color3.fromRGB(255, 214, 102)
+		glow.Thickness = 3
+		glow.Parent = card
+
+		local badge = Instance.new("TextLabel")
+		badge.Name = "EffectBadge"
+		badge.Size = UDim2.fromOffset(40, 40)
+		badge.Position = UDim2.new(1, -44, 0, 4)
+		badge.BackgroundTransparency = 1
+		badge.Text = "✨"
+		badge.TextScaled = true
+		badge.Parent = card
+	end
+
 	local title = Instance.new("TextLabel")
 	title.Size = UDim2.fromScale(1, 0.16)
 	title.Position = UDim2.fromScale(0, 0.42)

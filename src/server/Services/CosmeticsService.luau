@@ -24,6 +24,7 @@ local ProfileService = require(script.Parent.ProfileService)
 local CosmeticsService = {}
 
 local FOLDER_NAME = "Cosmetics"
+local EFFECT_PREFIX = "AFEffect_"
 
 -- R6 и R15 называют части по-разному, поэтому ищем по обоим вариантам.
 local ATTACH_POINTS: { [string]: { string } } = {
@@ -67,6 +68,11 @@ local function clearCosmetics(character: Model)
 			local leftover = root:FindFirstChild(name)
 			if leftover then
 				leftover:Destroy()
+			end
+		end
+		for _, child in root:GetChildren() do
+			if string.sub(child.Name, 1, #EFFECT_PREFIX) == EFFECT_PREFIX then
+				child:Destroy()
 			end
 		end
 	end
@@ -206,6 +212,71 @@ local function applyAccessories(character: Model, worn: { any }): boolean
 end
 
 --[[
+	Шлейф редкой вещи: частицы из-за спины и светящаяся лента. Висит на корне,
+	как след: у аксессуаров каталога своих деталей у нас нет, а у корня есть всегда.
+]]
+local function attachEffect(character: Model, item)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	local effect = item.effect
+	if not root or not effect then
+		return
+	end
+
+	local emitterAt = Instance.new("Attachment")
+	emitterAt.Name = `{EFFECT_PREFIX}{item.id}_Emitter`
+	emitterAt.Position = if item.category == "hat" then Vector3.new(0, 2.2, 0.4) else Vector3.new(0, 0.3, 0.9)
+	emitterAt.Parent = root
+
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Name = `{EFFECT_PREFIX}{item.id}_Particles`
+	emitter.Texture = Shop.PARTICLE_TEXTURES[effect.particles] or Shop.PARTICLE_TEXTURES.sparkle
+	emitter.Color = effect.color
+	emitter.Rate = effect.rate
+	emitter.Lifetime = NumberRange.new(0.8, 1.4)
+	emitter.Speed = NumberRange.new(0.5, 2)
+	emitter.SpreadAngle = Vector2.new(35, 35)
+	emitter.Acceleration = if effect.particles == "sparkle"
+		then Vector3.new(0, -2, 0)
+		else Vector3.new(0, 3, 0)
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, effect.size),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	emitter.LightEmission = effect.lightEmission or 0.5
+	emitter.EmissionDirection = Enum.NormalId.Back
+	-- Шлейф остаётся в мире, а не летит за ребёнком: так и получается след.
+	emitter.LockedToPart = false
+	emitter.Parent = emitterAt
+
+	if effect.trail then
+		local top = Instance.new("Attachment")
+		top.Name = `{EFFECT_PREFIX}{item.id}_Top`
+		top.Position = Vector3.new(0, 0.6, 0.6)
+		top.Parent = root
+		local bottom = Instance.new("Attachment")
+		bottom.Name = `{EFFECT_PREFIX}{item.id}_Bottom`
+		bottom.Position = Vector3.new(0, -0.6, 0.6)
+		bottom.Parent = root
+
+		local ribbon = Instance.new("Trail")
+		ribbon.Name = `{EFFECT_PREFIX}{item.id}_Trail`
+		ribbon.Attachment0 = top
+		ribbon.Attachment1 = bottom
+		ribbon.Color = effect.trail.color
+		ribbon.Lifetime = effect.trail.lifetime
+		ribbon.WidthScale = NumberSequence.new(effect.trail.width)
+		ribbon.Transparency = NumberSequence.new(0.2, 1)
+		ribbon.LightEmission = 0.8
+		ribbon.FaceCamera = true
+		ribbon.Parent = root
+	end
+end
+
+--[[
 	Надевает всё, что у игрока экипировано. Вызывается при появлении персонажа
 	и после каждой смены экипировки.
 ]]
@@ -232,6 +303,7 @@ function CosmeticsService.apply(player: Player)
 		if itemId then
 			local item = Shop.get(itemId)
 			if item then
+				attachEffect(character, item)
 				if item.trail then
 					attachTrail(character, item)
 				elseif item.accessory then
