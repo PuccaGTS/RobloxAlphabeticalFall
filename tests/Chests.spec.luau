@@ -65,7 +65,19 @@ return function()
 			function()
 				for index, chest in Chests.all do
 					local position = Chests.position(chest)
-					local clear, why = Decor.isClear(position.X, position.Z, 3)
+					-- Своя зона у сундука в Decor есть специально — декор её обходит,
+					-- поэтому проверяем все зоны, кроме неё.
+					local clear, why = true, nil
+					for _, zone in Decor.zones do
+						if zone.why ~= `сундук {chest.id}` then
+							if
+								(Vector2.new(position.X, position.Z) - zone.center).Magnitude
+								< zone.radius + 3
+							then
+								clear, why = false, zone.why
+							end
+						end
+					end
 					if not clear then
 						warn(`[Tests] сундук {chest.id} стоит в зоне «{why}»`)
 					end

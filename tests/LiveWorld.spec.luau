@@ -32,7 +32,8 @@ return function()
 						trees += 1
 					end
 				end
-				expect(#LiveWorld.butterflyHomes()).to.equal(beds)
+				-- Бабочки только у ближайших к площади клумб: иначе не уложиться в бюджет кадра.
+				expect(#LiveWorld.butterflyHomes()).to.equal(math.min(beds, LiveWorld.MAX_BUTTERFLY_BEDS))
 				expect(#LiveWorld.leafSources()).to.equal(trees)
 				for _, source in LiveWorld.leafSources() do
 					expect(source.height > 2).to.equal(true)

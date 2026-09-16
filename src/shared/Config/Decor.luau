@@ -22,6 +22,7 @@
 ]]
 
 local Base = require(script.Parent.Base)
+local Chests = require(script.Parent.Chests)
 
 local Decor = {}
 
@@ -207,6 +208,34 @@ for index = 1, 4 do
 	})
 end
 
+--[[
+	Дорожки к домам по всей длине, а не только у площади: парк стал гуще,
+	и дерево на середине дорожки — тот же вопрос «а туда можно?».
+]]
+local PATH_HALF_WIDTH = 5
+for index = 1, 4 do
+	local angle = (index - 1) / 4 * math.pi * 2
+	local distance = Base.PLAZA_RADIUS
+	while distance < Base.RING_RADIUS do
+		table.insert(ZONES, {
+			center = Vector2.new(math.cos(angle) * distance, math.sin(angle) * distance),
+			radius = PATH_HALF_WIDTH,
+			why = `дорожка к домам {index}`,
+		})
+		distance += 8
+	end
+end
+
+-- Сундуки: к ним подходят вплотную, и открыть сундук за кустом нельзя.
+for _, chest in Chests.all do
+	local position = Chests.position(chest)
+	table.insert(ZONES, {
+		center = Vector2.new(position.X, position.Z),
+		radius = 7,
+		why = `сундук {chest.id}`,
+	})
+end
+
 Decor.zones = ZONES
 
 --[[
@@ -338,6 +367,94 @@ for index = 1, RING_COUNT do
 		math.sin(angle) * radius,
 		math.deg(-angle)
 	)
+end
+
+--[[
+	Парк между площадью и домами.
+
+	На первой проверке мир назвали пустым: от края площади до участков лежало
+	полторы сотни студов голой травы, и дома стояли вплотную друг к другу.
+	Дома разнесены (Config/Base.PLOT_GAP), а трава между ними теперь парк:
+	фонари вдоль дорожек, рощи и полянки между дорожками, опушка перед домами.
+
+	Всё ставится той же функцией add и подчиняется тем же запретам: ничего
+	на дорожках, на сундуках и на чужих участках.
+]]
+
+-- Фонари вдоль каждой дорожки к домам, с обеих сторон, вразбежку.
+local PATH_LAMP_STEP = 28
+for index = 1, 4 do
+	local angle = (index - 1) / 4 * math.pi * 2
+	local along = Vector2.new(math.cos(angle), math.sin(angle))
+	local across = Vector2.new(-along.Y, along.X)
+	local distance = Base.PLAZA_RADIUS + 22
+	local side = 1
+	while distance < Decor.MAX_RADIUS - 6 do
+		local spot = along * distance + across * (PATH_HALF_WIDTH + 3) * side
+		add("lamp", spot.X, spot.Y, math.deg(-angle))
+		distance += PATH_LAMP_STEP
+		side = -side
+	end
+end
+
+--[[
+	Рощи и полянки — по одной на каждую четверть между дорожками. Роща ближе
+	к площади, полянка с клумбами и лавочкой — ближе к домам: по дороге домой
+	есть где присесть.
+]]
+local GROVE = { "tree_round", "tree_pine", "tree_round", "tree_pine", "bush_round", "bush_round" }
+for quarter = 1, 4 do
+	local angle = ((quarter - 1) / 4 + 1 / 8) * math.pi * 2
+	local center = Vector2.new(math.cos(angle), math.sin(angle)) * 105
+	for index, id in GROVE do
+		local around = index / #GROVE * math.pi * 2 + quarter
+		local radius = if index <= 4 then 12 else 20
+		local spot = center + Vector2.new(math.cos(around), math.sin(around)) * radius
+		add(id, spot.X, spot.Y, index * 47, if id == "bush_round" then nil else 1.2)
+	end
+	add("tree_round", center.X, center.Y, quarter * 30, 1.5)
+
+	local meadow = Vector2.new(math.cos(angle + 0.25), math.sin(angle + 0.25)) * 160
+	add("flower_bed", meadow.X, meadow.Y, quarter * 20)
+	add("flower_bed", meadow.X + 9, meadow.Y - 6, quarter * 50)
+	add("bench", meadow.X - 8, meadow.Y + 6, quarter * 90)
+	add("rock_small", meadow.X + 4, meadow.Y + 12, quarter * 15)
+
+	local meadow2 = Vector2.new(math.cos(angle - 0.3), math.sin(angle - 0.3)) * 140
+	add("flower_bed", meadow2.X, meadow2.Y, quarter * 35)
+	add("bush_round", meadow2.X - 10, meadow2.Y, 0)
+end
+
+--[[
+	Опушка перед домами: кольцо деревьев у края парка. Дома за ней читаются
+	как отдельный посёлок, а не как продолжение площади.
+]]
+local EDGE_COUNT = 44
+local EDGE_KINDS = { "tree_pine", "tree_round", "tree_pine", "bush_round" }
+for index = 1, EDGE_COUNT do
+	local angle = (index - 0.5) / EDGE_COUNT * math.pi * 2
+	local radius = Decor.MAX_RADIUS - 8
+	add(
+		EDGE_KINDS[(index - 1) % #EDGE_KINDS + 1],
+		math.cos(angle) * radius,
+		math.sin(angle) * radius,
+		index * 23,
+		1.1
+	)
+end
+
+--[[
+	Россыпь: деревья, кусты и камни по свободным местам. Случайность
+	с постоянным сидом — расстановка одинаковая у всех и каждый запуск,
+	а тест проверяет её так же, как ручную.
+]]
+local SCATTER = { "tree_round", "tree_pine", "bush_round", "rock_small", "flower_bed", "bush_round" }
+local scatter = Random.new(2026)
+for _ = 1, 140 do
+	local angle = scatter:NextNumber() * math.pi * 2
+	local radius = Base.PLAZA_RADIUS + 25 + scatter:NextNumber() * (Decor.MAX_RADIUS - Base.PLAZA_RADIUS - 40)
+	local id = SCATTER[scatter:NextInteger(1, #SCATTER)]
+	add(id, math.cos(angle) * radius, math.sin(angle) * radius, scatter:NextNumber() * 360)
 end
 
 Decor.placements = PLACEMENTS

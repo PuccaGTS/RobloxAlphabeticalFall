@@ -145,11 +145,44 @@ return function()
 		it("площадь не осталась пустой", function()
 			expect(#Decor.placements >= 20).to.equal(true)
 			expect(countOf("fountain")).to.equal(1)
-			expect(countOf("bench")).to.equal(2)
-			expect(countOf("lamp")).to.equal(2)
+			expect(countOf("bench") >= 2).to.equal(true)
+			expect(countOf("lamp") >= 2).to.equal(true)
 
 			local trees = countOf("tree_pine") + countOf("tree_round")
 			expect(trees >= 8).to.equal(true)
+		end)
+	end)
+
+	--[[
+		Мир назвали пустым: между площадью и домами лежала голая трава. Тест держит,
+		что парк есть и что он не сбился в одну кучу: в каждой четверти своё.
+	]]
+	describe("Config: парк между площадью и домами", function()
+		it("в парке много всего и в каждой четверти", function()
+			local quarters = { 0, 0, 0, 0 }
+			local park = 0
+			for _, placement in Decor.placements do
+				local distance = math.sqrt(placement.x ^ 2 + placement.z ^ 2)
+				if distance > Base.PLAZA_RADIUS + 15 then
+					park += 1
+					local angle = math.atan2(placement.z, placement.x) % (math.pi * 2)
+					local quarter = math.floor(angle / (math.pi / 2)) + 1
+					quarters[math.min(quarter, 4)] += 1
+				end
+			end
+			expect(park >= 80).to.equal(true)
+			for _, count in quarters do
+				expect(count >= 15).to.equal(true)
+			end
+		end)
+
+		it("вдоль дорожек к домам стоят фонари", function()
+			expect(countOf("lamp") >= 16).to.equal(true)
+		end)
+
+		it("дома не стоят вплотную: между участками сад", function()
+			local gap = (Base.plotPosition(1) - Base.plotPosition(2)).Magnitude - Base.PLOT_SIZE
+			expect(gap >= 30).to.equal(true)
 		end)
 	end)
 

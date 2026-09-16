@@ -24,6 +24,12 @@ local LiveWorld = {}
 LiveWorld.MAX_MOVING = 40
 
 LiveWorld.BUTTERFLIES_PER_BED = 2
+--[[
+	Бабочки живут не у всех клумб, а у ближайших к площади. Клумб в парке стало
+	много, и бабочки у каждой съели бы весь бюджет кадра: здесь ребёнок бывает
+	чаще всего, здесь им и летать.
+]]
+LiveWorld.MAX_BUTTERFLY_BEDS = 14
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
@@ -57,6 +63,12 @@ function LiveWorld.butterflyHomes(): { Vector3 }
 				Vector3.new(placement.x, Decor.groundY(placement.x, placement.z), placement.z)
 			)
 		end
+	end
+	table.sort(homes, function(a: Vector3, b: Vector3): boolean
+		return a.Magnitude < b.Magnitude
+	end)
+	while #homes > LiveWorld.MAX_BUTTERFLY_BEDS do
+		table.remove(homes)
 	end
 	return homes
 end

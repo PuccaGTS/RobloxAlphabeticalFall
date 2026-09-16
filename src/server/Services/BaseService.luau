@@ -34,6 +34,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local ChallengeService = require(script.Parent.ChallengeService)
 local ProgressService = require(script.Parent.ProgressService)
 local RateLimiter = require(script.Parent.RateLimiter)
+local DecorShapes = require(script.Parent.Parent.World.DecorShapes)
 
 local BaseService = {}
 
@@ -947,9 +948,49 @@ local function ensureContainer(): Folder
 	return folder
 end
 
+--[[
+	Сады между участками. Дома раздвинуты (Config/Base.PLOT_GAP), и промежуток
+	не должен быть пустырём: в каждом — куст у дорожки, дерево посередине
+	и ещё дерево у дальнего края. С дорожки соседние дворы читаются отдельно,
+	как дома на улице, а не как ряд одинаковых площадок.
+]]
+local GARDEN = { "bush_round", "tree_round", "tree_pine" }
+
+local function buildGardens(folder: Instance)
+	local gardens = Instance.new("Folder")
+	gardens.Name = "Gardens"
+	gardens.Parent = folder
+
+	for index = 1, Base.PLOT_COUNT do
+		local angle = (index - 0.5) / Base.PLOT_COUNT * math.pi * 2
+		local outward = Vector3.new(math.cos(angle), 0, math.sin(angle))
+		for slot, id in GARDEN do
+			local model = DecorShapes.build({ id = id })
+			if model then
+				local distance = Base.RING_RADIUS + (slot - 2) * (Base.PLOT_SIZE / 2.5)
+				local spot = outward * distance
+				model.Name = `Garden_{index}_{slot}`
+				model.Parent = gardens
+				if id ~= "bush_round" then
+					model:ScaleTo(1.3)
+				end
+				model:PivotTo(CFrame.new(spot) * CFrame.Angles(0, angle + slot, 0))
+				local box, size = model:GetBoundingBox()
+				model:PivotTo(model:GetPivot() + Vector3.new(0, 1 - (box.Position.Y - size.Y / 2), 0))
+				for _, descendant in model:GetDescendants() do
+					if descendant:IsA("BasePart") then
+						descendant.Anchored = true
+					end
+				end
+			end
+		end
+	end
+end
+
 function BaseService.build()
 	local folder = ensureContainer()
 	table.clear(plots)
+	buildGardens(folder)
 
 	for index = 1, Base.PLOT_COUNT do
 		local model = Instance.new("Model")
