@@ -21,8 +21,12 @@ local Venues = {}
 
 Venues.ORIGIN = Vector3.new(-2600, 250, 0)
 Venues.SPACING = 260 -- между центрами соседних полян: втрое больше самой поляны
-Venues.SIZE = 90 -- сторона поляны
-Venues.WALL_HEIGHT = 20 -- задник: небо видно, а пустоту вокруг — нет
+--[[
+	Сторона поляны. Было 90, и лестница на восемь ступеней с вершиной уходила
+	в задник. 120 вмещает любую сцену с запасом, и по краю остаётся место
+	для оформления поляны (World/VenueThemes).
+]]
+Venues.SIZE = 120
 Venues.FLOOR_THICKNESS = 2
 
 --[[
@@ -113,6 +117,13 @@ function Venues.expect(id: string): Venue
 	local venue = byId[id]
 	assert(venue, `Venues: неизвестная локация "{id}"`)
 	return venue
+end
+
+-- Порядковый номер поляны: из него считаются место и сид оформления.
+function Venues.order(id: string): number
+	local index = orderOf[id]
+	assert(index, `Venues: неизвестная локация "{id}"`)
+	return index
 end
 
 function Venues.count(): number

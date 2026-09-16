@@ -24,6 +24,7 @@ local Venues = require(Shared.Config.Venues)
 
 local ChallengeService = require(script.Parent.ChallengeService)
 local DecorService = require(script.Parent.DecorService)
+local VenueThemes = require(script.Parent.Parent.World.VenueThemes)
 local Teleport = require(script.Parent.Parent.World.Teleport)
 
 local VenueService = {}
@@ -78,7 +79,7 @@ end
 	поэтому весь декор жмётся к бордюру.
 ]]
 local function buildDecor(parent: Instance, center: Vector3, venue)
-	local radius = Venues.SIZE / 2 - 6
+	local radius = Venues.SIZE / 2 - 5
 	for slot = 1, 8 do
 		local id = venue.decor[(slot - 1) % #venue.decor + 1]
 		local model = DecorService.modelFor(id)
@@ -124,36 +125,14 @@ local function buildVenue(parent: Instance, venue)
 	floor.Material = Enum.Material.Grass
 
 	--[[
-		Задник с трёх сторон и бортик спереди. Ребёнок стоит спиной к выходу
-		и видит только своё задание; упасть с поляны нельзя ни с одной стороны —
+		Вместо цветных стен — оформление по теме поляны и невидимая ограда
+		по краю (World/VenueThemes): упасть с поляны нельзя ни с одной стороны,
 		падений и смертей в этой игре нет нигде.
 	]]
-	for _, side in { { 0, -1 }, { -1, 0 }, { 1, 0 } } do
-		local along = Vector3.new(
-			if side[1] == 0 then Venues.SIZE else 2,
-			Venues.WALL_HEIGHT,
-			if side[1] == 0 then 2 else Venues.SIZE
-		)
-		local wall = part(
-			`Wall_{side[1]}_{side[2]}`,
-			along,
-			CFrame.new(center + Vector3.new(side[1] * half, Venues.WALL_HEIGHT / 2, side[2] * half)),
-			venue.accent,
-			model
-		)
-		wall.Transparency = 0.15
-	end
+	VenueThemes.build(model, center, venue, Venues.order(venue.id) * 7919)
 
-	local rail = part(
-		"Rail",
-		Vector3.new(Venues.SIZE, 3, 2),
-		CFrame.new(center + Vector3.new(0, 1.5, half)),
-		venue.accent,
-		model
-	)
-	rail.Transparency = 0.3
-
-	sign(model, CFrame.new(center + Vector3.new(0, 12, -half + 2)), venue.title, venue.accent)
+	-- Табличка сбоку от задника: посередине она закрывала вершину Горы Алфавита.
+	sign(model, CFrame.new(center + Vector3.new(-(half - 14), 16, -(half - 4))), venue.title, venue.accent)
 	buildDecor(model, center, venue)
 
 	return model
