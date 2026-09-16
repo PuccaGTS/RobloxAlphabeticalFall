@@ -452,6 +452,20 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		буквы; неверная — голос называет букву под ногами, и только. Как и подбор
 		букв на дорожке, в статистику освоения это не идёт.
 	]]
+	--[[
+		Кучка на весах особого участка мира математики: верная — звёздочка
+		и число голосом («три»), неверная — число той кучки, что выбрал.
+	]]
+	if result.balance then
+		RemoteDefs.event("PlaySfx"):FireClient(player, if result.correct then "correct" else "miss")
+		if result.correct then
+			ProgressService.awardCollect(player, "balance")
+		end
+		playVO(player, `num_{if result.correct then result.value else result.tappedValue}`)
+		fire(answerHooks, player, state.spec, result)
+		return
+	end
+
 	if result.stair then
 		if result.correct then
 			ProgressService.awardCollect(player, result.letterId)

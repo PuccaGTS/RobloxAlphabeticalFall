@@ -101,6 +101,16 @@ Tunnel.STAIR_LEAD = 8 -- ровный пол перед первой ступе�
 Tunnel.STAIR_RAMP = 10 -- горка вниз после верхней ступени
 Tunnel.STAIR_PAD = Vector3.new(5, 0.5, 4)
 Tunnel.STAIR_MISS_SECONDS = 1.2
+--[[
+	Весы особого участка мира математики (docs/16-MATH.md § 3.3): два раунда подряд,
+	каждый — кучки на полу и преграда с весами над ней. Камней не больше шести:
+	на бегу их считают взглядом, а не пальцем.
+]]
+Tunnel.BALANCE_ROUNDS = 2
+Tunnel.BALANCE_LEAD = 12 -- от начала участка до первой преграды: здесь кучки первого раунда
+Tunnel.BALANCE_PITCH = 16
+Tunnel.BALANCE_MAX_STONES = 6
+
 Tunnel.SPECIAL_PITCH = Tunnel.STAIR_LEAD + Tunnel.STAIR_STEPS * Tunnel.STAIR_DEPTH + Tunnel.STAIR_RAMP + 4
 
 -- Куда ставится туннель игрока. У каждого он свой, поэтому разносим по оси X.

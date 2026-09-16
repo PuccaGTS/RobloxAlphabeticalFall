@@ -31,6 +31,8 @@ local TrackShape = require(Shared.Logic.TrackShape)
 
 -- Свой генератор у формы трассы: ворота и препятствия по старому сиду не сдвигаются.
 local TRACK_SEED_SALT = 15485863
+local SPECIAL_SEED_SALT = 32452843
+local Scales = require(script.Parent.Scales)
 
 local MathGates = {}
 
@@ -90,6 +92,34 @@ local function buildOpenings(task, random: Random)
 end
 
 --[[
+	Весы особого участка: два раунда «положи столько же». Камней не больше, чем
+	позволяет ступень (Scales.topicFor) и чем считается взглядом на бегу.
+	Неверные кучки — соседние количества, как у занятия «Весы».
+]]
+local function buildBalance(special, stage: number, choiceCount: number, random: Random)
+	local _, cap = Scales.topicFor(stage)
+	local maxStones = math.min(cap, Tunnel.BALANCE_MAX_STONES)
+	local rounds = {}
+	local previous = 0
+	for index = 1, Tunnel.BALANCE_ROUNDS do
+		local left = random:NextInteger(1, maxStones)
+		if left == previous then
+			left = left % maxStones + 1
+		end
+		previous = left
+
+		local counts = Scales.choicesFor(left, math.max(2, choiceCount), maxStones, random)
+		local lanes = CourseLayout.lanes(random)
+		local choices = {}
+		for slot, count in counts do
+			table.insert(choices, { count = count, lane = lanes[slot] })
+		end
+		table.insert(rounds, { index = index, left = left, choices = choices })
+	end
+	return { segment = special.segment, z = special.z, rounds = rounds }
+end
+
+--[[
 	Собирает забег по рецепту: ступень, сложность и сид.
 
 	Как и в буквенном туннеле, функция обязана быть детерминированной — на этом
@@ -121,10 +151,19 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 
 	local random = Random.new(seed)
 
-	local gates, obstacles, checkpoints, length, _rows, _secret, runs = CourseLayout.layout(random, {
+	--[[
+		Особый участок пути математики — весы перед воротами одного из средних
+		отрезков, как лестница у мира букв. Свой генератор: ворота и препятствия
+		уже сохранённых забегов от него не сдвигаются.
+	]]
+	local specialRandom = if gateCount >= 3 then Random.new(seed + SPECIAL_SEED_SALT) else nil
+	local specialSegment = if specialRandom then specialRandom:NextInteger(2, gateCount - 1) else nil
+
+	local gates, obstacles, checkpoints, length, _rows, _secret, runs, special = CourseLayout.layout(random, {
 		gateCount = gateCount,
 		obstacleCount = obstacleCount,
 		obstacleTier = obstacleTier,
+		specialSegment = specialSegment,
 		makeGate = function(_index: number, gateRandom: Random)
 			local task = MathConfig.generate(stage, gateRandom, choiceCount)
 			return {
@@ -170,6 +209,9 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 			length = length,
 			-- Та же форма трассы, что у мира букв: горки и виражи на пробежках.
 			track = TrackShape.plan(runs, seed + TRACK_SEED_SALT),
+			balance = if special and specialRandom
+				then buildBalance(special, stage, math.min(choiceCount, Tunnel.LANE_COUNT), specialRandom)
+				else nil,
 			slowSeconds = slowSeconds,
 			slowFactor = slowFactor,
 		},
@@ -218,6 +260,53 @@ function MathGates.Validate(state, action)
 
 	if action.kind == "finish" then
 		return { handled = true, correct = false, silent = true, finished = true }
+	end
+
+	--[[
+		Кучка на весах особого участка. Раунды по порядку, ошибка стоит короткой
+		паузы; путь не закрывается — сервис туннеля подсвечивает верную кучку.
+		В статистику освоения не идёт: считать учат ворота и занятие «Весы».
+	]]
+	if action.kind == "balance" then
+		local balance = state.spec.params.balance
+		if
+			not balance
+			or balance.segment <= (state.spec.params.resumeFrom or 0)
+			or typeof(action.round) ~= "number"
+			or typeof(action.slot) ~= "number"
+		then
+			return { handled = false }
+		end
+		local expected = (state.balanceRound or 0) + 1
+		local round = balance.rounds[expected]
+		if action.round ~= expected or not round then
+			return { handled = false }
+		end
+		local choice = round.choices[action.slot]
+		if not choice then
+			return { handled = false }
+		end
+		local now = os.clock()
+		if state.balanceBlockedUntil and now < state.balanceBlockedUntil then
+			return { handled = false }
+		end
+
+		local correct = choice.count == round.left
+		if correct then
+			state.balanceRound = expected
+		else
+			state.balanceBlockedUntil = now + Tunnel.STAIR_MISS_SECONDS
+		end
+		return {
+			handled = true,
+			balance = true,
+			correct = correct,
+			round = expected,
+			slot = action.slot,
+			value = round.left,
+			tappedValue = choice.count,
+			cooldown = if correct then 0 else Tunnel.STAIR_MISS_SECONDS,
+		}
 	end
 
 	if action.kind ~= "gate" or typeof(action.gateIndex) ~= "number" then

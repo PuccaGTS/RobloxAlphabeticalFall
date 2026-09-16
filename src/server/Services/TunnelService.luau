@@ -849,6 +849,225 @@ local function swing(part: BasePart, to: CFrame, seconds: number)
 end
 
 --[[
+	Весы особого участка мира математики (docs/16-MATH.md § 3.3, план — params.balance).
+
+	Над трассой перед прозрачной преградой висят большие весы: на левой чаше камни,
+	правая пустая, коромысло наклонено. На полу по дорожкам кучки камней разного цвета.
+	Встал на кучку, где камней столько же, — они ложатся на правую чашу, весы
+	выравниваются, преграда исчезает. Ошибка — весы качнулись и вернулись, короткое
+	замедление, верная кучка светится. Цифр нигде нет.
+]]
+local BALANCE_COLORS = {
+	Color3.fromRGB(240, 150, 150),
+	Color3.fromRGB(150, 205, 140),
+	Color3.fromRGB(245, 200, 110),
+}
+local BALANCE_STONE = 1.1
+local BALANCE_ARM = 7
+local BALANCE_HEIGHT = 11
+local BALANCE_TILT = math.rad(14)
+
+local function balanceStones(
+	anchor: BasePart,
+	count: number,
+	color: Color3,
+	name: string,
+	top: number,
+	parent: Instance
+)
+	local perRow = 3
+	local rows = math.ceil(count / perRow)
+	for index = 1, count do
+		local row = math.floor((index - 1) / perRow)
+		local inRow = math.min(perRow, count - row * perRow)
+		local column = (index - 1) % perRow
+		local stone = build(
+			`{name}_{index}`,
+			Vector3.one * BALANCE_STONE,
+			anchor.CFrame
+				* CFrame.new(
+					(column - (inRow - 1) / 2) * BALANCE_STONE * 1.2,
+					top + BALANCE_STONE / 2,
+					(row - (rows - 1) / 2) * BALANCE_STONE * 1.2
+				),
+			color,
+			parent
+		)
+		stone.Shape = Enum.PartType.Ball
+		stone.Material = Enum.Material.Pebble
+		stone.CanCollide = false
+		weldTo(anchor, stone)
+	end
+end
+
+local function balanceBarrierZ(balance, index: number): number
+	return balance.z + Tunnel.BALANCE_LEAD + (index - 1) * Tunnel.BALANCE_PITCH
+end
+
+local function buildBalance(model: Model, origin: CFrame, balance: any, player: Player, resumeFrom: number)
+	if not balance or #balance.rounds == 0 or balance.segment <= resumeFrom then
+		return
+	end
+
+	for index, round in balance.rounds do
+		local z = balanceBarrierZ(balance, index)
+
+		local barrier = build(
+			`BalanceBarrier_{index}`,
+			Vector3.new(Tunnel.WIDTH, 12, 0.6),
+			origin * CFrame.new(0, 6, -z),
+			Color3.fromRGB(255, 235, 190),
+			model
+		)
+		barrier.Material = Enum.Material.ForceField
+		barrier.Transparency = 0.2
+
+		-- Весы над преградой: столбы по краям, коромысло посередине.
+		for _, side in { -1, 1 } do
+			local post = build(
+				`BalancePost_{index}_{side}`,
+				Vector3.new(1, BALANCE_HEIGHT + 3, 1),
+				origin * CFrame.new(side * (Tunnel.WIDTH / 2 - 0.5), (BALANCE_HEIGHT + 3) / 2, -z),
+				Color3.fromRGB(170, 120, 75),
+				model
+			)
+			post.Material = Enum.Material.WoodPlanks
+		end
+		local crossbar = build(
+			`BalanceCrossbar_{index}`,
+			Vector3.new(Tunnel.WIDTH, 1, 1),
+			origin * CFrame.new(0, BALANCE_HEIGHT + 3, -z),
+			Color3.fromRGB(170, 120, 75),
+			model
+		)
+		crossbar.Material = Enum.Material.WoodPlanks
+
+		local level = origin * CFrame.new(0, BALANCE_HEIGHT, -(z + 1.5))
+		local beam = build(
+			`BalanceBeam_{index}`,
+			Vector3.new(BALANCE_ARM * 2 + 1, 0.5, 0.6),
+			level * CFrame.Angles(0, 0, BALANCE_TILT),
+			Color3.fromRGB(215, 175, 90),
+			model
+		)
+		beam.Material = Enum.Material.Metal
+		beam:SetAttribute("Level", level)
+
+		for _, side in { -1, 1 } do
+			local pan = build(
+				`BalancePan_{index}_{side}`,
+				Vector3.new(3.6, 0.4, 3.6),
+				beam.CFrame * CFrame.new(side * BALANCE_ARM, -2.5, 0),
+				Color3.fromRGB(215, 175, 90),
+				model
+			)
+			pan.Material = Enum.Material.Metal
+			weldTo(beam, pan)
+			if side < 0 then
+				balanceStones(
+					pan,
+					round.left,
+					Color3.fromRGB(130, 170, 215),
+					`BalanceGiven_{index}`,
+					0.2,
+					model
+				)
+			end
+		end
+
+		-- Кучки на полу перед преградой.
+		local padZ = z - Tunnel.BALANCE_PITCH / 2 + 1.5
+		for slot, choice in round.choices do
+			local color = BALANCE_COLORS[(slot - 1) % #BALANCE_COLORS + 1]
+			local pad = build(
+				`BalancePad_{index}_{slot}`,
+				Vector3.new(6, 0.5, 5),
+				origin * CFrame.new(Tunnel.laneOffset(choice.lane), 0.25, -padZ),
+				Color3.fromRGB(170, 120, 75),
+				model
+			)
+			pad.Material = Enum.Material.WoodPlanks
+			pad:SetAttribute("PileColor", color)
+			balanceStones(pad, choice.count, color, `BalancePile_{index}_{slot}`, 0.25, model)
+
+			local last = 0
+			pad.Touched:Connect(function(hit: BasePart)
+				local character = hit.Parent
+				if not character or Players:GetPlayerFromCharacter(character) ~= player then
+					return
+				end
+				local now = os.clock()
+				if now - last < 1 then
+					return
+				end
+				last = now
+				ChallengeService.submitAction(player, { kind = "balance", round = index, slot = slot })
+			end)
+		end
+	end
+end
+
+local function onBalanceAnswer(player: Player, result: any)
+	local run = runs[player]
+	if not run then
+		return
+	end
+	local balance = run.spec.params.balance
+	local round = balance and balance.rounds[result.round]
+	local beam = run.model:FindFirstChild(`BalanceBeam_{result.round}`)
+	if not round or not beam or not beam:IsA("BasePart") then
+		return
+	end
+	local level = beam:GetAttribute("Level")
+	if typeof(level) ~= "CFrame" then
+		return
+	end
+
+	if result.correct then
+		local pan = run.model:FindFirstChild(`BalancePan_{result.round}_1`)
+		local pad = run.model:FindFirstChild(`BalancePad_{result.round}_{result.slot}`)
+		local color = if pad then pad:GetAttribute("PileColor") else nil
+		if pan and pan:IsA("BasePart") then
+			balanceStones(
+				pan,
+				round.left,
+				if typeof(color) == "Color3" then color else Color3.fromRGB(240, 150, 150),
+				`BalanceChosen_{result.round}`,
+				0.2,
+				run.model
+			)
+		end
+		TweenService:Create(beam, TweenInfo.new(0.6, Enum.EasingStyle.Back), { CFrame = level }):Play()
+		local barrier = run.model:FindFirstChild(`BalanceBarrier_{result.round}`)
+		if barrier then
+			barrier:Destroy()
+		end
+		return
+	end
+
+	-- Весы качнулись к пустой чаше и вернулись: кучка оказалась не той.
+	local tilted = beam.CFrame
+	local swingInfo = TweenInfo.new(0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 1, true)
+	TweenService:Create(beam, swingInfo, { CFrame = level * CFrame.Angles(0, 0, -BALANCE_TILT) }):Play()
+	task.delay(0.8, function()
+		if beam.Parent then
+			beam.CFrame = tilted
+		end
+	end)
+
+	TunnelService.slow(player, result.cooldown or Tunnel.STAIR_MISS_SECONDS, 0.5)
+	for slot, choice in round.choices do
+		if choice.count == round.left then
+			local pad = run.model:FindFirstChild(`BalancePad_{result.round}_{slot}`)
+			if pad and pad:IsA("BasePart") then
+				pad.Material = Enum.Material.Neon
+				pad.Color = Color3.fromRGB(255, 225, 140)
+			end
+		end
+	end
+end
+
+--[[
 	Элементы полосы препятствий. Каталог — Config/Obstacles, раскладку по пути
 	считает Challenges/RunCourse, здесь только геометрия.
 
@@ -1750,6 +1969,7 @@ function TunnelService.spawn(player: Player, spec: any)
 	buildRows(model, origin, spec.params.rows or {}, player, spec.params.resumeFrom or 0)
 	buildSecret(model, origin, spec.params.secret, player, spec.params.resumeFrom or 0)
 	buildStairs(model, origin, spec.params.stairs, player, spec.params.resumeFrom or 0)
+	buildBalance(model, origin, spec.params.balance, player, spec.params.resumeFrom or 0)
 	buildFinish(model, origin, length, player)
 
 	local character = player.Character
@@ -1932,6 +2152,11 @@ function TunnelService.start()
 
 		if result.stair then
 			onStairAnswer(player, result)
+			return
+		end
+
+		if result.balance then
+			onBalanceAnswer(player, result)
 			return
 		end
 

@@ -339,4 +339,126 @@ return function()
 			expect(MathGates.Finish(state).stars).to.equal(1)
 		end)
 	end)
+
+	--[[
+		Весы особого участка: «положи столько же» перед воротами среднего отрезка.
+	]]
+	describe("MathGates — весы особого участка", function()
+		local MathLevels = require(ReplicatedStorage.Shared.Config.MathLevels)
+
+		local function slotOf(round, correct)
+			for slot, choice in round.choices do
+				if (choice.count == round.left) == correct then
+					return slot
+				end
+			end
+			return nil
+		end
+
+		it(
+			"на каждом уровне весы на среднем отрезке, раундов два",
+			function()
+				for _, level in MathLevels.all do
+					local spec = build(level.index)
+					local balance = spec.params.balance
+					expect(balance).to.be.ok()
+					expect(balance.segment > 1).to.equal(true)
+					expect(balance.segment < level.gates).to.equal(true)
+					expect(#balance.rounds).to.equal(Tunnel.BALANCE_ROUNDS)
+				end
+			end
+		)
+
+		it(
+			"верная кучка ровно одна, камней не больше шести, кучки по разным дорожкам",
+			function()
+				for _, level in MathLevels.all do
+					for difficulty = 1, 5 do
+						local balance = build(level.index, difficulty).params.balance
+						for _, round in balance.rounds do
+							local correct, lanes = 0, {}
+							expect(round.left >= 1 and round.left <= Tunnel.BALANCE_MAX_STONES).to.equal(true)
+							for _, choice in round.choices do
+								expect(choice.count >= 1 and choice.count <= Tunnel.BALANCE_MAX_STONES).to.equal(
+									true
+								)
+								if choice.count == round.left then
+									correct += 1
+								end
+								expect(lanes[choice.lane]).to.equal(nil)
+								lanes[choice.lane] = true
+							end
+							expect(correct).to.equal(1)
+							expect(#round.choices >= 2).to.equal(true)
+						end
+					end
+				end
+			end
+		)
+
+		it("весы стоят перед воротами своего отрезка", function()
+			for _, level in MathLevels.all do
+				local spec = build(level.index)
+				local balance = spec.params.balance
+				local gate = spec.params.gates[balance.segment]
+				expect(balance.z > spec.params.gates[balance.segment - 1].z).to.equal(true)
+				expect(balance.z + Tunnel.SPECIAL_PITCH + Tunnel.CLEARANCE_BEFORE_GATE <= gate.z + 0.01).to.equal(
+					true
+				)
+				local lastBarrier = Tunnel.BALANCE_LEAD + (Tunnel.BALANCE_ROUNDS - 1) * Tunnel.BALANCE_PITCH
+				expect(lastBarrier < Tunnel.SPECIAL_PITCH).to.equal(true)
+			end
+		end)
+
+		it(
+			"раунды по порядку, ошибка — пауза, ворот весы не трогают",
+			function()
+				local spec = build(3)
+				local state = stateFor(spec)
+				local rounds = spec.params.balance.rounds
+
+				local early =
+					MathGates.Validate(state, { kind = "balance", round = 2, slot = slotOf(rounds[2], true) })
+				expect(early.handled).to.equal(false)
+
+				local wrong = MathGates.Validate(
+					state,
+					{ kind = "balance", round = 1, slot = slotOf(rounds[1], false) }
+				)
+				expect(wrong.handled).to.equal(true)
+				expect(wrong.balance).to.equal(true)
+				expect(wrong.correct).to.equal(false)
+				expect(wrong.tappedValue ~= rounds[1].left).to.equal(true)
+
+				local blocked =
+					MathGates.Validate(state, { kind = "balance", round = 1, slot = slotOf(rounds[1], true) })
+				expect(blocked.handled).to.equal(false)
+
+				state.balanceBlockedUntil = 0
+				for index, round in rounds do
+					local result = MathGates.Validate(
+						state,
+						{ kind = "balance", round = index, slot = slotOf(round, true) }
+					)
+					expect(result.correct).to.equal(true)
+					expect(result.value).to.equal(round.left)
+				end
+				expect(state.caught).to.equal(0)
+			end
+		)
+
+		it("по тому же рецепту — те же весы", function()
+			local spec = build(4)
+			local again = MathGates.Rebuild({
+				stage = 4,
+				difficulty = spec.difficulty,
+				seed = spec.seed,
+				checkpoint = 0,
+			})
+			expect(again.params.balance.z).to.equal(spec.params.balance.z)
+			for index, round in spec.params.balance.rounds do
+				expect(again.params.balance.rounds[index].left).to.equal(round.left)
+			end
+		end)
+	end)
 end
