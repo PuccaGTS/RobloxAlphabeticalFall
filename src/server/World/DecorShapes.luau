@@ -23,6 +23,9 @@
 	    шариков эту цель убивает быстрее, чем украшает мир.
 ]]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Letters = require(ReplicatedStorage:WaitForChild("Shared").Config.Letters)
+
 local DecorShapes = {}
 
 local BARK = Color3.fromRGB(120, 85, 60)
@@ -394,6 +397,91 @@ end
 	Собирает эскиз предмета. Возвращает nil, если эскиза нет — тогда DecorService
 	поставит простую коробку по габариту каталога.
 ]]
+--[[
+	Кубики с буквами и цифрами — детские, из кубиков складывают первые слова.
+	Два кубика внизу, третий сверху, на каждой грани крупный знак цвета буквы.
+	Это единственный декор, который прямо про игру: азбука стоит на площади
+	и на полянах, а не только в заданиях.
+
+	Знаки идут по кругу: каждая следующая стопка берёт следующие три буквы
+	алфавита, так что по всему миру встречаются все тридцать три.
+]]
+local CUBE = 2.3
+local nextLetter = 0
+local nextNumber = 0
+
+local function cubeFaces(part: BasePart, glyph: string, color: Color3)
+	for _, face in Enum.NormalId:GetEnumItems() do
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = face
+		gui.CanvasSize = Vector2.new(100, 100)
+		gui.LightInfluence = 0.3
+		gui.Parent = part
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Text = glyph
+		label.TextColor3 = color
+		label.TextStrokeColor3 = Color3.fromRGB(40, 35, 60)
+		label.TextStrokeTransparency = 0.3
+		label.TextScaled = true
+		label.Font = Enum.Font.FredokaOne
+		label.Parent = gui
+	end
+end
+
+local function cubeStack(model: Model, glyphs: { { glyph: string, color: Color3 } })
+	local spots = {
+		at(-CUBE / 2 - 0.1, CUBE / 2, 0) * CFrame.Angles(0, math.rad(-8), 0),
+		at(CUBE / 2 + 0.1, CUBE / 2, 0.2) * CFrame.Angles(0, math.rad(12), 0),
+		at(0, CUBE * 1.5, 0.1) * CFrame.Angles(0, math.rad(20), 0),
+	}
+	for index, spot in spots do
+		local mark = glyphs[index]
+		local cube = piece(
+			model,
+			`Cube_{index}`,
+			Enum.PartType.Block,
+			Vector3.one * CUBE,
+			spot,
+			Color3.fromRGB(252, 248, 238),
+			Enum.Material.WoodPlanks
+		)
+		cubeFaces(cube, mark.glyph, mark.color)
+	end
+end
+
+BUILDERS.letter_cubes = function(model: Model)
+	local ordered = Letters.ordered()
+	local glyphs = {}
+	for _ = 1, 3 do
+		nextLetter = nextLetter % #ordered + 1
+		local letter = Letters.expect(ordered[nextLetter])
+		table.insert(glyphs, { glyph = letter.glyph, color = letter.color })
+	end
+	cubeStack(model, glyphs)
+end
+
+local NUMBER_COLORS = {
+	Color3.fromRGB(230, 90, 90),
+	Color3.fromRGB(90, 150, 230),
+	Color3.fromRGB(90, 180, 110),
+	Color3.fromRGB(240, 170, 60),
+	Color3.fromRGB(170, 110, 220),
+}
+
+BUILDERS.number_cubes = function(model: Model)
+	local glyphs = {}
+	for _ = 1, 3 do
+		nextNumber = nextNumber % 10 + 1
+		table.insert(
+			glyphs,
+			{ glyph = tostring(nextNumber), color = NUMBER_COLORS[(nextNumber - 1) % #NUMBER_COLORS + 1] }
+		)
+	end
+	cubeStack(model, glyphs)
+end
+
 function DecorShapes.build(item): Model?
 	local builder = BUILDERS[item.id]
 	if not builder then

@@ -176,6 +176,30 @@ return function()
 			end
 		end)
 
+		it(
+			"кубики с буквами и цифрами стоят на площади и в парке",
+			function()
+				local plazaLetters, plazaNumbers, park = 0, 0, 0
+				for _, placement in Decor.placements do
+					local distance = math.sqrt(placement.x ^ 2 + placement.z ^ 2)
+					if placement.id == "letter_cubes" or placement.id == "number_cubes" then
+						if distance <= Base.PLAZA_RADIUS then
+							if placement.id == "letter_cubes" then
+								plazaLetters += 1
+							else
+								plazaNumbers += 1
+							end
+						else
+							park += 1
+						end
+					end
+				end
+				expect(plazaLetters >= 1).to.equal(true)
+				expect(plazaNumbers >= 1).to.equal(true)
+				expect(park >= 4).to.equal(true)
+			end
+		)
+
 		it("вдоль дорожек к домам стоят фонари", function()
 			expect(countOf("lamp") >= 16).to.equal(true)
 		end)

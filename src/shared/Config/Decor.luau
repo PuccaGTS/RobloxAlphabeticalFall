@@ -123,6 +123,26 @@ local ITEMS: { Item } = {
 		color = Color3.fromRGB(240, 220, 150),
 		collide = true,
 	},
+	--[[
+		Кубики с буквами и с цифрами: стопка из трёх. Моделей у них нет и не нужно —
+		знаки на гранях рисует эскиз, и у каждой стопки свои буквы.
+	]]
+	{
+		id = "letter_cubes",
+		title = "Кубики с буквами",
+		kind = "sign",
+		size = Vector3.new(5.6, 4.8, 3.6),
+		color = Color3.fromRGB(252, 248, 238),
+		collide = true,
+	},
+	{
+		id = "number_cubes",
+		title = "Кубики с цифрами",
+		kind = "sign",
+		size = Vector3.new(5.6, 4.8, 3.6),
+		color = Color3.fromRGB(252, 248, 238),
+		collide = true,
+	},
 	{
 		id = "fountain",
 		assetId = 5477511653,
@@ -354,6 +374,11 @@ add("rock_small", 34, -32, 25)
 add("rock_small", -34, -32, -40)
 add("bush_round", 44, -8, 0)
 add("bush_round", -44, -8, 0)
+-- Кубики у своих порталов: с буквами у мира букв, с цифрами у мира математики.
+add("letter_cubes", -37, -10, 25)
+add("number_cubes", 37, -10, -25)
+add("letter_cubes", -30, -30, -15)
+add("number_cubes", 30, -30, 15)
 
 -- Клумбы у выходов на дорожки к домам: они показывают, куда идти, и не мешают идти.
 for index = 1, 4 do
@@ -462,7 +487,16 @@ end
 	с постоянным сидом — расстановка одинаковая у всех и каждый запуск,
 	а тест проверяет её так же, как ручную.
 ]]
-local SCATTER = { "tree_round", "tree_pine", "bush_round", "rock_small", "flower_bed", "bush_round" }
+local SCATTER = {
+	"tree_round",
+	"tree_pine",
+	"bush_round",
+	"rock_small",
+	"flower_bed",
+	"bush_round",
+	"letter_cubes",
+	"number_cubes",
+}
 local scatter = Random.new(2026)
 for _ = 1, 140 do
 	local angle = scatter:NextNumber() * math.pi * 2
