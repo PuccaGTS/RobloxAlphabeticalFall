@@ -34,6 +34,7 @@ local PetService = require(Services.PetService)
 local DailyLetterService = require(Services.DailyLetterService)
 local SafetyService = require(Services.SafetyService)
 local ChestService = require(Services.ChestService)
+local DevService = require(Services.DevService)
 local Teleport = require(script:WaitForChild("World").Teleport)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
@@ -84,6 +85,7 @@ WorldService.start()
 BaseService.start() -- после мира: участки встают вокруг уже построенной площади
 ChestService.start() -- сундуки в парке между площадью и участками
 ParentService.start()
+DevService.start() -- полёт и звёзды для проверки: только Studio и владелец места
 TutorialService.start() -- подписывается на хуки испытаний и магазина
 PlayLimitService.start() -- сторож старта испытаний: время на сегодня
 PetService.start() -- подписывается на смену статусов букв

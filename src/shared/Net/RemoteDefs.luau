@@ -54,6 +54,8 @@ local EVENTS: { string } = {
 	"DailyLetter",
 	-- S→C  сундук в парке: { state = "opened" | "already", itemId }
 	"ChestOpened",
+	-- C→S  инструменты разработчика: { kind = "stars" | "teleport", ... }. Только Studio и владелец места.
+	"DevCommand",
 }
 
 local FUNCTIONS: { string } = {
@@ -70,6 +72,7 @@ local RATE_LIMITS: { [string]: number } = {
 	BuildUpgrade = 4,
 	EquipPet = 2,
 	GoHome = 1,
+	DevCommand = 4,
 	-- Родительский режим: вызовы редкие, лимит против перебора PIN скриптом.
 	-- Настоящая защита от перебора — пауза после пяти ошибок (Logic/ParentGate).
 	ParentAuth = 2,

@@ -22,6 +22,7 @@ local PetController = require(Controllers.PetController)
 local DailyLetterController = require(Controllers.DailyLetterController)
 local ChestController = require(Controllers.ChestController)
 local LiveWorldController = require(Controllers.LiveWorldController)
+local DevController = require(Controllers.DevController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -50,6 +51,7 @@ TowerController.init()
 TutorialController.init()
 PetController.init()
 LiveWorldController.init()
+DevController.init() -- панель появится только в Studio и у владельца места
 
 ShopUI.build({
 	onBuy = function(itemId: string)
