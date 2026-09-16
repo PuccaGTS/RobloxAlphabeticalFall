@@ -23,7 +23,7 @@ LetterRain.id = "letter_rain"
 LetterRain.trains = { "recognize" }
 LetterRain.minLetters = 2
 
-local FALL_HEIGHT = 30 -- studs, с какой высоты падают буквы
+local FALL_HEIGHT = 24 -- studs, с какой высоты падают буквы: из облака над полем
 local LANES = 5
 -- Запас по времени на сетевую задержку: клиентский тап может прийти чуть позже,
 -- чем буква «долетела» по расчётам сервера.
@@ -54,6 +54,7 @@ function LetterRain.Build(_player: Player, letters: { string }, difficulty: numb
 	local spawnInterval = DifficultyCurve.pick(meta.params.spawnInterval, difficulty)
 	local hintAfterSec = DifficultyCurve.pick(meta.params.hintAfterSec, difficulty)
 	local missCooldown = DifficultyCurve.pick(meta.params.missCooldown, difficulty)
+	local restTime = DifficultyCurve.pick(meta.params.restTime, difficulty)
 
 	local targetId = letters[1]
 	local distractorPool: { string } = {}
@@ -124,6 +125,13 @@ function LetterRain.Build(_player: Player, letters: { string }, difficulty: numb
 			hintAfterSec = hintAfterSec,
 			missCooldown = missCooldown,
 			flightTime = FALL_HEIGHT / fallSpeed,
+			--[[
+				Сколько буква лежит на траве после приземления. Ловят её теперь
+				не щелчком в воздухе, а ногами: ребёнок видит тень, бежит к месту
+				и подхватывает букву у земли. Без этой паузы до дальней буквы
+				было бы не добежать.
+			]]
+			restTime = restTime,
 		},
 	}
 end
@@ -156,7 +164,7 @@ function LetterRain.Validate(state, action)
 	local elapsed = now - state.startedAt
 	local flightTime = state.spec.params.flightTime
 	local appearedAt = item.spawnAt
-	local goneAt = item.spawnAt + flightTime
+	local goneAt = item.spawnAt + flightTime + (state.spec.params.restTime or 0)
 
 	if elapsed < appearedAt - TAP_GRACE_BEFORE or elapsed > goneAt + TAP_GRACE_AFTER then
 		-- буква ещё не появилась или уже упала: тап устарел, но это не ошибка ребёнка
@@ -216,7 +224,7 @@ end
 function LetterRain.duration(spec): number
 	local items = spec.params.items
 	local last = items[#items]
-	return last.spawnAt + spec.params.flightTime + 2
+	return last.spawnAt + spec.params.flightTime + (spec.params.restTime or 0) + 2
 end
 
 return LetterRain

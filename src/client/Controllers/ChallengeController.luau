@@ -31,9 +31,30 @@ local Glyph = require(script.Parent.Parent.UI.Glyph)
 
 local ChallengeController = {}
 
-local LANE_WIDTH = 6
-local LETTER_SIZE = Vector3.new(5.5, 5.5, 1)
+--[[
+	Поле Буквопада. Раньше буквы падали в плоскости перед лицом, по ним надо было
+	щёлкать, а ребёнок стоял на месте, — на первой проверке это назвали скучным.
+
+	Теперь буквы-шарики падают из облака на поле в пять дорожек и три ряда.
+	Под каждой падающей буквой растёт тень: видно, куда она упадёт. Ребёнок бежит
+	туда и ловит свою букву телом, у самой травы, а чужие обегает. Щелчок
+	по букве по-прежнему работает — на планшете бегать умеют не все.
+]]
+local LANE_WIDTH = 7
+local ROW_DEPTH = 7
+local LETTER_SIZE = Vector3.new(4.6, 4.6, 4.6)
+local LETTER_REST = 2.4 -- высота центра буквы, лежащей на траве
+local CATCH_HEIGHT = 6 -- выше этого буква ещё в воздухе и ногами не ловится
+local CATCH_DISTANCE = 4.5
 local FOLDER_NAME = "AlphabetFall_Challenge"
+
+local FIELD_STRIPES = {
+	Color3.fromRGB(250, 205, 215),
+	Color3.fromRGB(255, 230, 170),
+	Color3.fromRGB(200, 235, 190),
+	Color3.fromRGB(190, 220, 250),
+	Color3.fromRGB(225, 205, 245),
+}
 
 local player = Players.LocalPlayer
 
@@ -42,6 +63,9 @@ local startedAt = 0
 local folder: Folder? = nil
 local parts: { [number]: BasePart } = {}
 local spawned: { [number]: boolean } = {}
+local shadows: { [number]: BasePart } = {}
+-- Буквы, по которым ход уже ушёл на сервер: второй раз не отправляем.
+local sent: { [number]: boolean } = {}
 local origin: CFrame = CFrame.new()
 local heartbeat: RBXScriptConnection? = nil
 -- Пока «сачок опущен» после промаха, тапы не уходят на сервер и буквы притушены.
@@ -65,6 +89,8 @@ local function cleanup()
 	end
 	parts = {}
 	spawned = {}
+	shadows = {}
+	sent = {}
 	spec = nil
 	blockedUntil = 0
 	wasBlocked = false
@@ -92,8 +118,8 @@ end
 local function resolveOrigin(from: any): CFrame
 	local stage = stageOf(from)
 	if stage then
-		-- Буквы падают перед ребёнком, лицом к нему их разворачивать не надо.
-		return stage * CFrame.new(0, 1, 0)
+		-- Поле в центре поляны, чуть ближе к ребёнку: до дальнего ряда недалеко бежать.
+		return stage * CFrame.new(0, 0, 4)
 	end
 
 	local area = workspace:FindFirstChild("ChallengeArea")
@@ -118,27 +144,72 @@ local function resolveOrigin(from: any): CFrame
 	return CFrame.new(0, 0, 0)
 end
 
--- Задник: без него буквы висят в пустоте и не читаются на фоне неба.
+-- Поле: полосы-дорожки, облако, из которого падают буквы, и большое табло с целью.
 local function buildBackdrop(parent: Instance, height: number)
-	local backdrop = Instance.new("Part")
-	backdrop.Name = "Backdrop"
-	backdrop.Size = Vector3.new(LANE_WIDTH * 6, height + 8, 1)
-	backdrop.CFrame = origin * CFrame.new(0, height / 2, 3)
-	backdrop.Color = Color3.fromRGB(74, 86, 130)
-	backdrop.Transparency = 0.25
-	backdrop.Anchored = true
-	backdrop.CanCollide = false
-	backdrop.CanQuery = false
-	backdrop.Material = Enum.Material.SmoothPlastic
-	backdrop.Parent = parent
+	local lanes = 5
 
-	local corner = Instance.new("SpecialMesh")
-	corner.MeshType = Enum.MeshType.Brick
-	corner.Parent = backdrop
+	for lane = 1, lanes do
+		local stripe = Instance.new("Part")
+		stripe.Name = `FieldStripe_{lane}`
+		stripe.Size = Vector3.new(LANE_WIDTH - 0.6, 0.2, ROW_DEPTH * 3 + 4)
+		stripe.CFrame = origin * CFrame.new((lane - (lanes + 1) / 2) * LANE_WIDTH, 0.1, 0)
+		stripe.Color = FIELD_STRIPES[(lane - 1) % #FIELD_STRIPES + 1]
+		stripe.Anchored = true
+		stripe.CanCollide = false
+		stripe.CanQuery = false
+		stripe.Material = Enum.Material.SmoothPlastic
+		stripe.Parent = parent
+	end
+
+	-- Облако: из него и сыплются буквы, поэтому оно над всем полем.
+	local random = Random.new(7)
+	for puff = 1, 14 do
+		local cloud = Instance.new("Part")
+		cloud.Name = `Cloud_{puff}`
+		cloud.Shape = Enum.PartType.Ball
+		local size = 7 + random:NextNumber() * 6
+		cloud.Size = Vector3.new(size, size, size)
+		cloud.CFrame = origin
+			* CFrame.new(
+				(random:NextNumber() - 0.5) * LANE_WIDTH * 5.5,
+				height + 3 + random:NextNumber() * 3,
+				(random:NextNumber() - 0.5) * ROW_DEPTH * 3.5
+			)
+		cloud.Color = Color3.fromRGB(250, 252, 255)
+		cloud.Transparency = 0.1
+		cloud.Anchored = true
+		cloud.CanCollide = false
+		cloud.CanQuery = false
+		cloud.Material = Enum.Material.SmoothPlastic
+		cloud.Parent = parent
+	end
+
+	--[[
+		Табло за полем: буква-цель крупно. Ребёнок бегает, смотрит под ноги
+		и забывает, что ловит, — табло напоминает, куда ни повернись.
+	]]
+	local board = Instance.new("Part")
+	board.Name = "TargetBoard"
+	board.Size = Vector3.new(12, 12, 1)
+	board.CFrame = origin * CFrame.new(0, 9, -(ROW_DEPTH * 1.5 + 9))
+	board.Color = Color3.fromRGB(255, 250, 235)
+	board.Anchored = true
+	board.CanCollide = false
+	board.CanQuery = false
+	board.Parent = parent
+	if spec then
+		local target = Letters.expect(spec.params.targetLetter)
+		Glyph.attach(board, target.glyph, 0.9, target.color)
+	end
 end
 
 local function laneOffset(lane: number, lanes: number): number
 	return (lane - (lanes + 1) / 2) * LANE_WIDTH
+end
+
+-- Ряд, в который падает буква: из номера, чтобы место было одинаковым у всех кадров.
+local function rowOffset(index: number): number
+	return ((index * 7) % 3 - 1) * ROW_DEPTH
 end
 
 local function makeLetterPart(item: any): BasePart
@@ -146,6 +217,7 @@ local function makeLetterPart(item: any): BasePart
 
 	local part = Instance.new("Part")
 	part.Name = `Letter_{item.index}`
+	part.Shape = Enum.PartType.Ball
 	part.Size = LETTER_SIZE
 	part.Anchored = true
 	part.CanCollide = false
@@ -164,7 +236,7 @@ local function makeLetterPart(item: any): BasePart
 	click.Parent = part
 
 	click.MouseClick:Connect(function()
-		if not spec then
+		if not spec or sent[item.index] then
 			return
 		end
 		-- Пока идёт пауза после промаха, тапы не отправляем: сервер их всё равно
@@ -172,10 +244,29 @@ local function makeLetterPart(item: any): BasePart
 		if os.clock() < blockedUntil then
 			return
 		end
+		sent[item.index] = true
 		RemoteDefs.event("ChallengeAction"):FireServer({ itemIndex = item.index })
 	end)
 
 	return part
+end
+
+-- Тень на траве: растёт и темнеет, пока буква приближается к земле.
+local function makeShadow(item: any, lanes: number): BasePart
+	local shadow = Instance.new("Part")
+	shadow.Name = `Shadow_{item.index}`
+	shadow.Shape = Enum.PartType.Cylinder
+	shadow.Size = Vector3.new(0.1, 1, 1)
+	shadow.CFrame = origin
+		* CFrame.new(laneOffset(item.lane, lanes), 0.25, -rowOffset(item.index))
+		* CFrame.Angles(0, 0, math.rad(90))
+	shadow.Color = Color3.fromRGB(40, 40, 60)
+	shadow.Transparency = 0.7
+	shadow.Anchored = true
+	shadow.CanCollide = false
+	shadow.CanQuery = false
+	shadow.Material = Enum.Material.SmoothPlastic
+	return shadow
 end
 
 local function popPart(part: BasePart, success: boolean)
@@ -189,6 +280,26 @@ local function popPart(part: BasePart, success: boolean)
 		part:Destroy()
 	end)
 	tween:Play()
+
+	if success then
+		local burst = Instance.new("ParticleEmitter")
+		burst.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		burst.Rate = 0
+		burst.Speed = NumberRange.new(8, 14)
+		burst.Lifetime = NumberRange.new(0.5, 0.9)
+		burst.SpreadAngle = Vector2.new(180, 180)
+		burst.Color = ColorSequence.new(part.Color)
+		burst.Parent = part
+		burst:Emit(24)
+	end
+end
+
+local function dropShadow(index: number)
+	local shadow = shadows[index]
+	if shadow then
+		shadows[index] = nil
+		shadow:Destroy()
+	end
 end
 
 local function onHeartbeat()
@@ -200,6 +311,7 @@ local function onHeartbeat()
 	local elapsed = now - startedAt
 	local params = spec.params
 	local blocked = now < blockedUntil
+	local restTime = params.restTime or 0
 
 	for _, item in params.items do
 		if not spawned[item.index] and elapsed >= item.spawnAt then
@@ -207,25 +319,74 @@ local function onHeartbeat()
 			local part = makeLetterPart(item)
 			part.Parent = folder
 			parts[item.index] = part
+			local shadow = makeShadow(item, params.lanes)
+			shadow.Parent = folder
+			shadows[item.index] = shadow
 		end
 	end
 
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+
 	for index, part in parts do
 		local item = params.items[index]
-		local fallen = (elapsed - item.spawnAt) * params.fallSpeed
+		local age = elapsed - item.spawnAt
+		local fallen = age * params.fallSpeed
 		local height = params.fallHeight - fallen
 
-		if height <= 0 then
-			part:Destroy()
+		if age > params.flightTime + restTime then
+			-- Никто не поймал: буква тает на траве, а не проваливается сквозь неё.
 			parts[index] = nil
+			dropShadow(index)
+			TweenService:Create(part, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+			task.delay(0.3, function()
+				part:Destroy()
+			end)
 		else
-			part.CFrame = origin
-				* CFrame.new(laneOffset(item.lane, params.lanes), height, 0)
-				* CFrame.Angles(0, 0, math.sin(elapsed * 2 + index) * 0.15)
+			local landed = height <= LETTER_REST
+			if landed then
+				-- На траве буква подпрыгивает: живая, её хочется поймать.
+				local since = age - params.flightTime
+				height = LETTER_REST + math.abs(math.sin(since * 5)) * 1.2 * math.max(0, 1 - since / 3)
+			end
+
+			local x = laneOffset(item.lane, params.lanes)
+			local z = -rowOffset(index)
+			part.CFrame = origin * CFrame.new(x, height, z) * CFrame.Angles(0, elapsed * 1.5 + index, 0)
+
+			local shadow = shadows[index]
+			if shadow then
+				local closeness = math.clamp(1 - (height - LETTER_REST) / params.fallHeight, 0.2, 1)
+				shadow.Size = Vector3.new(0.1, 4.6 * closeness, 4.6 * closeness)
+				shadow.Transparency = 0.85 - 0.35 * closeness
+			end
 
 			-- Пауза после промаха видна глазами: буквы притушены и не ловятся.
 			part.Transparency = if blocked then 0.65 else 0
 			Glyph.setTransparency(part, if blocked then 0.7 else 0)
+
+			--[[
+				Ловля телом: буква у земли, ребёнок рядом — ход отправлен.
+				Высоко в воздухе буква не ловится, иначе стоящего на месте
+				«ловило» бы всё, что падает ему на голову.
+			]]
+			if
+				root
+				and root:IsA("BasePart")
+				and not blocked
+				and not sent[index]
+				and height <= CATCH_HEIGHT
+				and (root.Position - part.Position).Magnitude <= CATCH_DISTANCE
+			then
+				sent[index] = true
+				RemoteDefs.event("ChallengeAction"):FireServer({ itemIndex = index })
+				-- Сервер мог не принять (пауза, опоздание): через секунду можно снова.
+				task.delay(1.2, function()
+					if parts[index] then
+						sent[index] = nil
+					end
+				end)
+			end
 		end
 	end
 
@@ -366,7 +527,7 @@ local function onSpec(newSpec: any)
 	HUD.showTarget(spec.params.targetGlyph, 0, spec.targetCount)
 	-- Пока нет озвучки, задание должно быть сказано хотя бы текстом,
 	-- иначе непонятно, что вообще происходит и что от тебя хотят.
-	HUD.toast(`Лови букву {spec.params.targetGlyph}`, 3)
+	HUD.toast(`Беги и лови букву {spec.params.targetGlyph}! Смотри на тени`, 4)
 
 	-- Звук буквы-цели: сначала ребёнок слышит, что ловить, и только потом видит текст.
 	task.delay(0.6, function()
@@ -450,6 +611,7 @@ local function onFeedback(feedback: any)
 	local part = parts[feedback.itemIndex]
 	if part then
 		parts[feedback.itemIndex] = nil
+		dropShadow(feedback.itemIndex)
 		popPart(part, feedback.correct)
 	end
 
