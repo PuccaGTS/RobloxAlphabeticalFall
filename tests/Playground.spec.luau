@@ -1,0 +1,98 @@
+--!nocheck
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage.Shared
+
+local Playground = require(Shared.Config.Playground)
+local Decor = require(Shared.Config.Decor)
+local Base = require(Shared.Config.Base)
+
+local function flat(spot)
+	local position = Playground.position(spot)
+	return Vector2.new(position.X, position.Z)
+end
+
+return function()
+	describe("Config: игровые места парка", function()
+		it("мест не меньше шести и все разные", function()
+			local seen = {}
+			for _, spot in Playground.spots do
+				expect(seen[spot.id]).to.equal(nil)
+				seen[spot.id] = true
+			end
+			expect(#Playground.spots >= 6).to.equal(true)
+		end)
+
+		it("стоят в парке: не на площади и не на участках", function()
+			for _, spot in Playground.spots do
+				local distance = flat(spot).Magnitude
+				expect(distance - spot.radius >= Base.PLAZA_RADIUS + 8).to.equal(true)
+				expect(distance + spot.radius <= Decor.MAX_RADIUS).to.equal(true)
+			end
+		end)
+
+		it("не налезают друг на друга", function()
+			for i, a in Playground.spots do
+				for j, b in Playground.spots do
+					if i < j then
+						expect((flat(a) - flat(b)).Magnitude >= a.radius + b.radius).to.equal(true)
+					end
+				end
+			end
+		end)
+
+		it("не стоят на дорожках, сундуках и падах", function()
+			for _, spot in Playground.spots do
+				for _, zone in Decor.zones do
+					local own = string.find(zone.why, "игровое место", 1, true) ~= nil
+					if not own then
+						local distance = (flat(spot) - zone.center).Magnitude
+						if distance < spot.radius + zone.radius then
+							error(`{spot.id} налезает на зону «{zone.why}»`)
+						end
+					end
+				end
+			end
+		end)
+
+		it("декор обходит игровые места", function()
+			for _, placement in Decor.placements do
+				for _, spot in Playground.spots do
+					local distance = (Vector2.new(placement.x, placement.z) - flat(spot)).Magnitude
+					expect(distance >= spot.radius).to.equal(true)
+				end
+			end
+		end)
+
+		it("в лабиринте до флажка можно дойти от входа", function()
+			local rows = Playground.MAZE
+			local height, width = #rows, #rows[1]
+			local function at(r, c)
+				return string.sub(rows[r], c, c)
+			end
+			local queue, seen = {}, {}
+			for c = 1, width do
+				if at(1, c) ~= "#" then
+					table.insert(queue, { 1, c })
+				end
+			end
+			local found = false
+			while #queue > 0 do
+				local cell = table.remove(queue, 1)
+				local key = cell[1] * 100 + cell[2]
+				if not seen[key] then
+					seen[key] = true
+					if at(cell[1], cell[2]) == "*" then
+						found = true
+					end
+					for _, d in { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } } do
+						local r, c = cell[1] + d[1], cell[2] + d[2]
+						if r >= 1 and r <= height and c >= 1 and c <= width and at(r, c) ~= "#" then
+							table.insert(queue, { r, c })
+						end
+					end
+				end
+			end
+			expect(found).to.equal(true)
+		end)
+	end)
+end

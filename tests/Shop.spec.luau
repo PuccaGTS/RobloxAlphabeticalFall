@@ -293,20 +293,23 @@ return function()
 			expect(starItems).to.equal(all)
 		end)
 
-		it("шлейф есть только у редких вещей и собран из встроенных частиц", function()
-			local withEffect = 0
-			for _, id in Shop.ids() do
-				local item = Shop.expect(id)
-				local effect = item.effect
-				if effect then
-					withEffect += 1
-					expect(item.tier >= 2).to.equal(true)
-					expect(Shop.PARTICLE_TEXTURES[effect.particles] ~= nil).to.equal(true)
-					-- Планшет: частиц немного, иначе на площади с десятком детей просядет кадр.
-					expect(effect.rate <= 20).to.equal(true)
+		it(
+			"шлейф есть только у редких вещей и собран из встроенных частиц",
+			function()
+				local withEffect = 0
+				for _, id in Shop.ids() do
+					local item = Shop.expect(id)
+					local effect = item.effect
+					if effect then
+						withEffect += 1
+						expect(item.tier >= 2).to.equal(true)
+						expect(Shop.PARTICLE_TEXTURES[effect.particles] ~= nil).to.equal(true)
+						-- Планшет: частиц немного, иначе на площади с десятком детей просядет кадр.
+						expect(effect.rate <= 20).to.equal(true)
+					end
 				end
+				expect(withEffect >= 3).to.equal(true)
 			end
-			expect(withEffect >= 3).to.equal(true)
-		end)
+		)
 	end)
 end

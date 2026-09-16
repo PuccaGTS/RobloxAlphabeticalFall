@@ -23,6 +23,7 @@
 
 local Base = require(script.Parent.Base)
 local Chests = require(script.Parent.Chests)
+local Playground = require(script.Parent.Playground)
 
 local Decor = {}
 
@@ -270,6 +271,16 @@ for _, chest in Chests.all do
 	})
 end
 
+-- Игровые места парка: батут в ёлках не найти, а классики под кустом не попрыгать.
+for _, spot in Playground.spots do
+	local position = Playground.position(spot)
+	table.insert(ZONES, {
+		center = Vector2.new(position.X, position.Z),
+		radius = spot.radius,
+		why = `игровое место {spot.id}`,
+	})
+end
+
 Decor.zones = ZONES
 
 --[[
@@ -396,15 +407,20 @@ end
 	Так и задумано: дорожка важнее симметрии.
 ]]
 local RING_COUNT = 20
-local RING_KINDS = { "tree_pine", "tree_round", "bush_round" }
+local RING_KINDS =
+	{ "tree_pine", "tree_round", "bush_round", "tree_round", "tree_pine", "bush_round", "rock_small" }
+local ringRandom = Random.new(54)
 for index = 1, RING_COUNT do
-	local angle = (index - 1) / RING_COUNT * math.pi * 2
-	local radius = Base.PLAZA_RADIUS + 9
+	-- Опушка живая: деревья чуть вразброс по кругу и разного роста.
+	local angle = (index - 1 + ringRandom:NextNumber() * 0.5) / RING_COUNT * math.pi * 2
+	local radius = Base.PLAZA_RADIUS + 7 + ringRandom:NextNumber() * 5
+	local id = RING_KINDS[ringRandom:NextInteger(1, #RING_KINDS)]
 	add(
-		RING_KINDS[(index - 1) % #RING_KINDS + 1],
+		id,
 		math.cos(angle) * radius,
 		math.sin(angle) * radius,
-		math.deg(-angle)
+		ringRandom:NextNumber() * 360,
+		if id == "rock_small" then nil else 0.85 + ringRandom:NextNumber() * 0.4
 	)
 end
 
@@ -420,19 +436,44 @@ end
 	на дорожках, на сундуках и на чужих участках.
 ]]
 
--- Фонари вдоль каждой дорожки к домам, с обеих сторон, вразбежку.
-local PATH_LAMP_STEP = 28
+--[[
+	Фонари вдоль каждой дорожки к домам. Не через равный шаг и не строго
+	по очереди слева-справа: на первой прогулке ровный ритм «дерево, фонарь,
+	кубики» читался как забор. Шаг гуляет, сторона иногда повторяется,
+	а между фонарями встают то лавочка, то клумба, то камень — у каждой
+	дорожки свой набор.
+]]
+local pathRandom = Random.new(77)
+local PATH_EXTRAS = {
+	{ "bench", "flower_bed", "rock_small" },
+	{ "flower_bed", "bush_round", "bench" },
+	{ "rock_small", "bench", "flower_bed" },
+	{ "bush_round", "flower_bed", "rock_small" },
+}
 for index = 1, 4 do
 	local angle = (index - 1) / 4 * math.pi * 2
 	local along = Vector2.new(math.cos(angle), math.sin(angle))
 	local across = Vector2.new(-along.Y, along.X)
-	local distance = Base.PLAZA_RADIUS + 22
-	local side = 1
+	local distance = Base.PLAZA_RADIUS + 18 + pathRandom:NextNumber() * 8
+	local side = if index % 2 == 0 then 1 else -1
+	local extra = 1
 	while distance < Decor.MAX_RADIUS - 6 do
 		local spot = along * distance + across * (PATH_HALF_WIDTH + 3) * side
-		add("lamp", spot.X, spot.Y, math.deg(-angle))
-		distance += PATH_LAMP_STEP
-		side = -side
+		add("lamp", spot.X, spot.Y, math.deg(-angle) + pathRandom:NextNumber() * 20)
+
+		-- Между фонарями — что-то своё, на другой стороне и чуть дальше от дорожки.
+		local between = distance + 11 + pathRandom:NextNumber() * 4
+		local kinds = PATH_EXTRAS[index]
+		local id = kinds[(extra - 1) % #kinds + 1]
+		local offset = PATH_HALF_WIDTH + 5 + pathRandom:NextNumber() * 4
+		local other = along * between - across * offset * side
+		add(id, other.X, other.Y, pathRandom:NextNumber() * 360)
+		extra += 1
+
+		distance += 22 + pathRandom:NextNumber() * 12
+		if pathRandom:NextNumber() < 0.7 then
+			side = -side
+		end
 	end
 end
 
@@ -441,17 +482,32 @@ end
 	к площади, полянка с клумбами и лавочкой — ближе к домам: по дороге домой
 	есть где присесть.
 ]]
-local GROVE = { "tree_round", "tree_pine", "tree_round", "tree_pine", "bush_round", "bush_round" }
+-- У каждой рощи свой характер: ельник, лиственная, кустарник с камнями, смешанная.
+local GROVES = {
+	{ "tree_pine", "tree_pine", "tree_pine", "tree_round", "bush_round", "rock_small" },
+	{ "tree_round", "tree_round", "bush_round", "tree_round", "flower_bed", "bush_round" },
+	{ "bush_round", "rock_small", "tree_pine", "rock_small", "bush_round", "tree_round" },
+	{ "tree_round", "tree_pine", "tree_round", "tree_pine", "bush_round", "bush_round" },
+}
+local GROVE_HEART = { "tree_pine", "tree_round", "tree_pine", "tree_round" }
+local groveRandom = Random.new(105)
 for quarter = 1, 4 do
-	local angle = ((quarter - 1) / 4 + 1 / 8) * math.pi * 2
-	local center = Vector2.new(math.cos(angle), math.sin(angle)) * 105
-	for index, id in GROVE do
-		local around = index / #GROVE * math.pi * 2 + quarter
-		local radius = if index <= 4 then 12 else 20
+	local angle = ((quarter - 1) / 4 + 1 / 8 + (groveRandom:NextNumber() - 0.5) * 0.05) * math.pi * 2
+	local center = Vector2.new(math.cos(angle), math.sin(angle)) * (95 + groveRandom:NextNumber() * 20)
+	for index, id in GROVES[quarter] do
+		local around = index / #GROVES[quarter] * math.pi * 2 + quarter + groveRandom:NextNumber() * 0.6
+		local radius = (if index <= 4 then 11 else 19) + groveRandom:NextNumber() * 4
 		local spot = center + Vector2.new(math.cos(around), math.sin(around)) * radius
-		add(id, spot.X, spot.Y, index * 47, if id == "bush_round" then nil else 1.2)
+		local tall = id == "tree_pine" or id == "tree_round"
+		add(
+			id,
+			spot.X,
+			spot.Y,
+			groveRandom:NextNumber() * 360,
+			if tall then 0.9 + groveRandom:NextNumber() * 0.5 else nil
+		)
 	end
-	add("tree_round", center.X, center.Y, quarter * 30, 1.5)
+	add(GROVE_HEART[quarter], center.X, center.Y, quarter * 30, 1.4 + groveRandom:NextNumber() * 0.3)
 
 	local meadow = Vector2.new(math.cos(angle + 0.25), math.sin(angle + 0.25)) * 160
 	add("flower_bed", meadow.X, meadow.Y, quarter * 20)
@@ -470,15 +526,16 @@ end
 ]]
 local EDGE_COUNT = 44
 local EDGE_KINDS = { "tree_pine", "tree_round", "tree_pine", "bush_round" }
+local edgeRandom = Random.new(202)
 for index = 1, EDGE_COUNT do
-	local angle = (index - 0.5) / EDGE_COUNT * math.pi * 2
-	local radius = Decor.MAX_RADIUS - 8
+	local angle = (index - 0.5 + (edgeRandom:NextNumber() - 0.5) * 0.6) / EDGE_COUNT * math.pi * 2
+	local radius = Decor.MAX_RADIUS - 8 - edgeRandom:NextNumber() * 6
 	add(
-		EDGE_KINDS[(index - 1) % #EDGE_KINDS + 1],
+		EDGE_KINDS[edgeRandom:NextInteger(1, #EDGE_KINDS)],
 		math.cos(angle) * radius,
 		math.sin(angle) * radius,
-		index * 23,
-		1.1
+		edgeRandom:NextNumber() * 360,
+		0.9 + edgeRandom:NextNumber() * 0.4
 	)
 end
 
@@ -487,6 +544,7 @@ end
 	с постоянным сидом — расстановка одинаковая у всех и каждый запуск,
 	а тест проверяет её так же, как ручную.
 ]]
+-- Кубиков в россыпи мало: встреченные на каждом шагу, они и делали парк однообразным.
 local SCATTER = {
 	"tree_round",
 	"tree_pine",
@@ -494,6 +552,10 @@ local SCATTER = {
 	"rock_small",
 	"flower_bed",
 	"bush_round",
+	"tree_round",
+	"rock_small",
+	"tree_pine",
+	"flower_bed",
 	"letter_cubes",
 	"number_cubes",
 }

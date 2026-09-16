@@ -38,6 +38,7 @@ local ProfileService = require(script.Parent.ProfileService)
 local ProgressService = require(script.Parent.ProgressService)
 local ChallengeService = require(script.Parent.ChallengeService)
 local DecorService = require(script.Parent.DecorService)
+local PlaygroundService = require(script.Parent.PlaygroundService)
 local Teleport = require(script.Parent.Parent.World.Teleport)
 local DailyLetterService = require(script.Parent.DailyLetterService)
 
@@ -624,6 +625,8 @@ local function buildDecor(hub: Folder)
 		не понять. Буквы в мире теперь там, где с ними что-то делают.
 	]]
 	DecorService.build(hub)
+	-- Игровые места парка: батуты, музыкальная дорожка, классики и остальное (Config/Playground).
+	PlaygroundService.build(hub)
 end
 
 --[[
