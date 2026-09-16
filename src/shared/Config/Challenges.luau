@@ -185,6 +185,25 @@ local Challenges: { [string]: ChallengeMeta } = {
 			missCooldown = { 1.6, 1.4, 1.2, 1.1, 1 },
 		},
 	},
+
+	--[[
+		«Ягодная поляна» (docs/16-MATH.md § 3.2): собрать столько ягод, сколько
+		сказал голос, и отнести в корзинку. Лишние ягоды на кустах есть всегда —
+		иначе задание решалось бы «собери всё, что видишь».
+	]]
+	berries = {
+		id = "berries",
+		title = "Ягодная поляна",
+		voInstruction = "instr_berries",
+		trains = { "count" },
+		minLetters = 0,
+		maxSeconds = 150,
+		params = {
+			rounds = { 3, 3, 4, 4, 5 },
+			extra = { 2, 3, 3, 4, 5 }, -- сколько ягод на кустах сверх нужного
+			missCooldown = { 1.6, 1.4, 1.2, 1.1, 1 },
+		},
+	},
 }
 
 local Module = {}

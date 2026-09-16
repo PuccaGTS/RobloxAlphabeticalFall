@@ -51,10 +51,10 @@ Base.PLAZA_RADIUS = 54
 	в мир. Радиус и дуга подобраны так, чтобы между падами оставался проход:
 	с «Весами» дуга стала шире, и между падами 12 × 12 остаётся около 6,5 стада прохода.
 ]]
-Base.PAD_DISTANCE = 42
-Base.PAD_SLOTS = 7
-local PAD_ARC_FROM = 0.08
-local PAD_ARC_SPAN = 0.84
+Base.PAD_DISTANCE = 46
+Base.PAD_SLOTS = 8 -- семь занятий и магазин; с «Ягодами» полукруг стал шире и дальше
+local PAD_ARC_FROM = 0.05
+local PAD_ARC_SPAN = 0.9
 
 function Base.padPosition(slot: number): Vector3
 	local angle = math.pi * (PAD_ARC_FROM + PAD_ARC_SPAN * (slot - 1) / math.max(1, Base.PAD_SLOTS - 1))

@@ -28,6 +28,7 @@ local MathGates = require(script.Parent.Parent.Challenges.MathGates)
 local Bubbles = require(script.Parent.Parent.Challenges.Bubbles)
 local Mirror = require(script.Parent.Parent.Challenges.Mirror)
 local Scales = require(script.Parent.Parent.Challenges.Scales)
+local BerryCount = require(script.Parent.Parent.Challenges.BerryCount)
 
 local ChallengeService = {}
 
@@ -40,6 +41,7 @@ local MODULES = {
 	[Bubbles.id] = Bubbles,
 	[Mirror.id] = Mirror,
 	[Scales.id] = Scales,
+	[BerryCount.id] = BerryCount,
 }
 
 local active: { [Player]: any } = {}

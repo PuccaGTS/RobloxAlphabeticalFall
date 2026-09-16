@@ -236,15 +236,23 @@ end
 --[[
 	Прогресс по счёту устроен так же, как по буквам, и обслуживается тем же кодом:
 	MasteryRules и ReviewScheduler не знают, что именно осваивается (docs/16-MATH.md § 4).
-	Разница ровно одна, и она вынужденная — испытание у математики пока одно,
-	поэтому для перехода в «изученную» хватает успехов в одном типе.
 
-	«Весы» двойку ещё не возвращают: они засчитываются только ступеням до
-	«больше/меньше», а сложение, вычитание и остальные по-прежнему тренируют
-	одни ворота — с двойкой эти ступени стали бы неосваиваемыми. Вернуть,
-	когда у каждой ступени будет второе испытание (сбор предметов и т. п.).
+	Правило двух разных занятий действует и здесь — как у букв. У каждой ступени
+	от «узнавания количества» до «состава числа» теперь есть второе занятие:
+	ворота плюс «Ягодная поляна», а у первых четырёх ещё и «Весы».
+
+	Исключение — равные группы и умножение: их тренируют только ворота, и с двойкой
+	эти ступени стали бы неосваиваемыми. Они необязательные (docs/16-MATH.md § 2)
+	и ничего не блокируют, поэтому им хватает одного занятия.
 ]]
-local MATH_MIN_TYPES = 1
+local MATH_MIN_TYPES = 2
+local MATH_SINGLE_TYPE: { [string]: boolean } = { groups = true, mul = true }
+
+local function mathMinTypes(stageId: string): number
+	return if MATH_SINGLE_TYPE[stageId] then 1 else MATH_MIN_TYPES
+end
+
+ProgressService.mathMinTypes = mathMinTypes
 
 local function mathProgressFor(profile, stageId: string, now: number)
 	profile.math = if typeof(profile.math) == "table" then profile.math else {}
@@ -313,7 +321,8 @@ function ProgressService.applyMathAnswer(player: Player, answer): AnswerOutcome?
 
 	ProfileService.update(player, function(p)
 		local before = mathProgressFor(p, stage.id, now)
-		local updated, transition = MasteryRules.applyAnswer(before, answer, now, MATH_MIN_TYPES)
+		local updated, transition =
+			MasteryRules.applyAnswer(before, answer, now, mathMinTypes(answer.letterId))
 		updated = ReviewScheduler.schedule(updated, answer.correct, now)
 		p.math[stage.id] = updated
 

@@ -88,6 +88,13 @@ Venues.all = {
 		accent = Color3.fromRGB(170, 145, 105),
 		decor = { "rock_small", "bench", "tree_pine", "fountain" },
 	},
+	{
+		id = "berries",
+		title = "🍓 Ягодная поляна",
+		ground = Color3.fromRGB(165, 210, 130),
+		accent = Color3.fromRGB(200, 90, 110),
+		decor = { "tree_round", "flower_bed", "bench", "tree_pine" },
+	},
 } :: { Venue }
 
 local byId: { [string]: Venue } = {}

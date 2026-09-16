@@ -440,6 +440,10 @@ local PHRASES: { [string]: string } = {
 	mop_plus = "плюс",
 	mop_minus = "минус",
 	mop_by = "по", -- «два по три»: равные группы и умножение
+	-- «Ягодная поляна»: сбор предметов по счёту (Challenges/BerryCount).
+	mtask_collect = "Собери ягод:", -- + число
+	mtask_collect_that = "Собери столько ягод и отнеси в корзинку.", -- после примера
+	mtask_fill = "Доложи ягод, чтобы в корзинке стало", -- + число
 }
 
 Module.PHRASES = PHRASES

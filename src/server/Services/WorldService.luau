@@ -131,6 +131,13 @@ local PADS = {
 		action = "Взвешивать",
 		color = Color3.fromRGB(235, 185, 120),
 	},
+	-- Счёт действием: собрать столько ягод, сколько сказал голос (docs/16-MATH.md § 3.2).
+	{
+		challengeId = "berries",
+		caption = "🍓 Ягоды",
+		action = "Собирать",
+		color = Color3.fromRGB(230, 120, 140),
+	},
 }
 
 local lastTouch: { [Player]: number } = {}

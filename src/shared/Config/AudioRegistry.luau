@@ -46,6 +46,7 @@ local ids: { [string]: string } = {
 	instr_mirror = "",
 	instr_math_gates = "",
 	instr_scales = "",
+	instr_berries = "",
 
 	-- === Сюжет и навигация ===
 	story_intro = "",
