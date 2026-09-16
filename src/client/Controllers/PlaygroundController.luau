@@ -30,8 +30,8 @@ local AudioController = require(script.Parent.AudioController)
 local PlaygroundController = {}
 
 local NOTE_SOUND = "rbxasset://sounds/electronicpingshort.wav"
-local BOUNCE_SOUND = "rbxasset://sounds/bass.wav"
-local POP_SOUND = "rbxasset://sounds/snap.wav"
+local BOUNCE_SOUND = "rbxasset://sounds/action_jump.mp3"
+local POP_SOUND = "rbxasset://sounds/paintball.wav"
 local CHEER_SOUND = "rbxasset://sounds/victory.wav"
 local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
 
@@ -110,7 +110,7 @@ HANDLERS.AF_Trampoline = function(top: BasePart)
 		local velocity = root.AssemblyLinearVelocity
 		local power = top:GetAttribute("Power") or 70
 		root.AssemblyLinearVelocity = Vector3.new(velocity.X, power, velocity.Z)
-		playSound(BOUNCE_SOUND, 1.6 + power / 100, 0.4, top)
+		playSound(BOUNCE_SOUND, 0.8 + power / 200, 0.5, top)
 
 		-- Сетка проседает и пружинит обратно.
 		top.CFrame = home * CFrame.new(0, -0.35, 0)
@@ -177,7 +177,7 @@ HANDLERS.AF_Balloon = function(balloon: BasePart)
 			return
 		end
 		popped = true
-		playSound(POP_SOUND, 1.4, 0.5, balloon)
+		playSound(POP_SOUND, 1.3, 0.45, balloon)
 		burst(balloon, balloon.Color, 25)
 		balloon.Transparency = 1
 		if rope then

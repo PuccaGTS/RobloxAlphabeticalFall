@@ -50,6 +50,7 @@ function SfxController.play(key: string): boolean
 	sound.Name = `Sfx_{key}`
 	sound.SoundId = effect.id
 	sound.Volume = effect.volume
+	sound.PlaybackSpeed = effect.speed or 1
 	sound.SoundGroup = AudioController.group("SFX")
 	sound.Parent = SoundService
 	sound:Play()

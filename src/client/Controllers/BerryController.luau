@@ -22,6 +22,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local HUD = require(script.Parent.Parent.UI.HUD)
+local SfxController = require(script.Parent.SfxController)
 
 local BerryController = {}
 
@@ -273,6 +274,7 @@ local function onHeartbeat()
 			table.insert(carried, index)
 			RemoteDefs.event("ChallengeAction")
 				:FireServer({ kind = "pick", round = currentRound, berry = index })
+			SfxController.play("pick")
 			refreshHud()
 		end
 	end
@@ -326,6 +328,9 @@ function BerryController.feedback(fb: any)
 				):Play()
 			end
 		end
+		task.delay(0.35, function()
+			SfxController.play("basket")
+		end)
 		local sparkles = Instance.new("ParticleEmitter")
 		sparkles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 		sparkles.Rate = 0

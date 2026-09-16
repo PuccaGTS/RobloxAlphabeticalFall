@@ -426,6 +426,28 @@ end
 	и через полсекунды она уходит. Это не украшение: резкая смена кадра —
 	то, на чём дошкольник теряет нить происходящего.
 ]]
+-- Искры вокруг ребёнка, когда он появился на новом месте.
+local function arrivalSparkles()
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return
+	end
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	emitter.Color = ColorSequence.new(Color3.fromRGB(255, 230, 140), Color3.fromRGB(180, 140, 255))
+	emitter.Rate = 0
+	emitter.Speed = NumberRange.new(4, 9)
+	emitter.Lifetime = NumberRange.new(0.6, 1.1)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.LightEmission = 1
+	emitter.Parent = root
+	emitter:Emit(35)
+	task.delay(1.5, function()
+		emitter:Destroy()
+	end)
+end
+
 local function fadeThrough()
 	local parent = player:FindFirstChildOfClass("PlayerGui")
 	if not parent then
@@ -446,9 +468,35 @@ local function fadeThrough()
 	veil.BorderSizePixel = 0
 	veil.Parent = gui
 
+	-- Звёздочки на затемнении: переход читается как «волшебно перенёсся», а не как мигание.
+	for index = 1, 12 do
+		local star = Instance.new("TextLabel")
+		star.BackgroundTransparency = 1
+		star.Text = if index % 3 == 0 then "✨" else "⭐"
+		star.TextScaled = true
+		star.TextTransparency = 1
+		star.AnchorPoint = Vector2.new(0.5, 0.5)
+		star.Size = UDim2.fromScale(0.05, 0.08)
+		local angle = index / 12 * math.pi * 2
+		star.Position = UDim2.fromScale(0.5, 0.5)
+		star.Parent = veil
+		TweenService:Create(star, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {
+			Position = UDim2.fromScale(0.5 + math.cos(angle) * 0.32, 0.5 + math.sin(angle) * 0.36),
+			TextTransparency = 0,
+			Rotation = 90,
+		}):Play()
+	end
+	SfxController.play("whoosh")
+
 	TweenService:Create(veil, TweenInfo.new(0.25), { BackgroundTransparency = 0 }):Play()
 	task.delay(0.45, function()
 		TweenService:Create(veil, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
+		for _, star in veil:GetChildren() do
+			if star:IsA("TextLabel") then
+				TweenService:Create(star, TweenInfo.new(0.35), { TextTransparency = 1 }):Play()
+			end
+		end
+		arrivalSparkles()
 		task.delay(0.4, function()
 			gui:Destroy()
 		end)
@@ -654,6 +702,8 @@ local function onFeedback(feedback: any)
 end
 
 local function onEnd(result: any)
+	-- Обратно на площадь тоже переносит сервер: тот же переход, что и туда.
+	fadeThrough()
 	cleanup()
 	stopControllers()
 	activeChallengeId = nil

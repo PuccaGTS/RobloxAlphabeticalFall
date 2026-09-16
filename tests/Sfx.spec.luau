@@ -104,6 +104,8 @@ return function()
 				end
 
 				-- Длина в каталоге не для красоты: по ней тест на потолок и считает.
+				-- Ускоренный звук и звучит короче: сравниваем то, что слышно.
+				length /= effect.speed or 1
 				if math.abs(length - effect.seconds) > 0.2 then
 					error(
 						`«{key}»: в каталоге {effect.seconds} с, а на деле {math.floor(

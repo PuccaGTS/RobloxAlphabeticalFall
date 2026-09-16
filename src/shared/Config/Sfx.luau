@@ -27,7 +27,12 @@ local Sfx = {}
 export type Effect = {
 	id: string, -- путь к звуку в клиенте
 	volume: number,
-	seconds: number, -- измеренная длина: по ней видно, не перекроет ли эффект голос
+	seconds: number, -- сколько звучит с учётом speed: по ней видно, не перекроет ли эффект голос
+	--[[
+		Во сколько раз быстрее играть. Звуков в клиенте немного, и один и тот же
+		пинг выше и короче — это уже другой эффект, а не повтор «верно».
+	]]
+	speed: number?,
 }
 
 local EFFECTS: { [string]: Effect } = {
@@ -67,6 +72,18 @@ local EFFECTS: { [string]: Effect } = {
 
 	-- Нажатие в интерфейсе: подтверждение, что тап дошёл.
 	tap = { id = "rbxasset://sounds/clickfast.wav", volume = 0.3, seconds = 0.29 },
+
+	-- Ягода сорвана: тот же пинг, что «верно», но выше, короче и тише — это ещё не ответ.
+	pick = { id = "rbxasset://sounds/electronicpingshort.wav", volume = 0.3, seconds = 0.45, speed = 1.6 },
+
+	-- Ягоды легли в корзинку: мягкий деревянный стук.
+	basket = { id = "rbxasset://sounds/button.wav", volume = 0.4, seconds = 0.58 },
+
+	--[[
+		Перенос на поляну, в туннель и обратно: протяжный «вжух». Звучит под
+		затемнением экрана, чтобы переход слышался, а не только был виден.
+	]]
+	whoosh = { id = "rbxasset://sounds/unsheath.wav", volume = 0.3, seconds = 1.04, speed = 0.7 },
 }
 
 --[[
