@@ -1150,6 +1150,96 @@ local OBSTACLE_BUILDERS: { [string]: (Model, CFrame, any, number) -> () } = {
 	end,
 
 	--[[
+		Горка во всю ширину: клин вверх и клин вниз. Клин у Roblox высокий сзади,
+		поэтому подъём развёрнут на пол-оборота, а спуск стоит как есть.
+	]]
+	hump = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local up = Instance.new("WedgePart")
+		up.Name = `HumpUp_{index}`
+		up.Size = Vector3.new(Tunnel.WIDTH, Tunnel.HUMP_HEIGHT, Tunnel.HUMP_RUN)
+		up.CFrame = origin
+			* CFrame.new(0, Tunnel.HUMP_HEIGHT / 2, -(obstacle.z + Tunnel.HUMP_RUN / 2))
+			* CFrame.Angles(0, math.pi, 0)
+		up.Color = Color3.fromRGB(150, 205, 140)
+		up.Material = Enum.Material.Grass
+		up.Anchored = true
+		up.Parent = model
+
+		local down = Instance.new("WedgePart")
+		down.Name = `HumpDown_{index}`
+		down.Size = Vector3.new(Tunnel.WIDTH, Tunnel.HUMP_HEIGHT, Tunnel.HUMP_RUN)
+		down.CFrame = origin * CFrame.new(0, Tunnel.HUMP_HEIGHT / 2, -(obstacle.z + Tunnel.HUMP_RUN * 1.5))
+		down.Color = Color3.fromRGB(150, 205, 140)
+		down.Material = Enum.Material.Grass
+		down.Anchored = true
+		down.Parent = model
+
+		-- Флажок на макушке: горку видно издалека, и на неё хочется забежать.
+		local pole = build(
+			`HumpPole_{index}`,
+			Vector3.new(0.25, 3, 0.25),
+			origin
+				* CFrame.new(
+					-Tunnel.WIDTH / 2 + 1.5,
+					Tunnel.HUMP_HEIGHT + 1.5,
+					-(obstacle.z + Tunnel.HUMP_RUN)
+				),
+			Color3.fromRGB(245, 245, 250),
+			model
+		)
+		pole.CanCollide = false
+		local flag = build(
+			`HumpFlag_{index}`,
+			Vector3.new(1.6, 1, 0.15),
+			origin
+				* CFrame.new(
+					-Tunnel.WIDTH / 2 + 2.35,
+					Tunnel.HUMP_HEIGHT + 2.5,
+					-(obstacle.z + Tunnel.HUMP_RUN)
+				),
+			Color3.fromRGB(245, 120, 90),
+			model
+		)
+		flag.CanCollide = false
+	end,
+
+	-- Слалом: конусы змейкой, мягкие — сталкиваются, но не сбивают.
+	cones = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		for cone = 1, Tunnel.CONE_COUNT do
+			local side = if cone % 2 == 0 then 1 else -1
+			local at = origin * CFrame.new(x + side * 2, 0, -(obstacle.z + (cone - 0.5) * Tunnel.CONE_STEP))
+			local base = build(
+				`ConeBase_{index}_{cone}`,
+				Vector3.new(Tunnel.CONE_SIZE + 0.6, 0.3, Tunnel.CONE_SIZE + 0.6),
+				at * CFrame.new(0, 0.15, 0),
+				Color3.fromRGB(245, 120, 60),
+				model
+			)
+			base.CanCollide = false
+			local body = build(
+				`Cone_{index}_{cone}`,
+				Vector3.new(Tunnel.CONE_SIZE, 2.2, Tunnel.CONE_SIZE),
+				at * CFrame.new(0, 1.1, 0),
+				Color3.fromRGB(250, 140, 70),
+				model
+			)
+			body.Shape = Enum.PartType.Cylinder
+			body.Size = Vector3.new(2.2, Tunnel.CONE_SIZE, Tunnel.CONE_SIZE)
+			body.CFrame = at * CFrame.new(0, 1.1, 0) * CFrame.Angles(0, 0, math.rad(90))
+			local stripe = build(
+				`ConeStripe_{index}_{cone}`,
+				Vector3.new(0.4, Tunnel.CONE_SIZE + 0.05, Tunnel.CONE_SIZE + 0.05),
+				at * CFrame.new(0, 1.4, 0) * CFrame.Angles(0, 0, math.rad(90)),
+				Color3.fromRGB(250, 250, 245),
+				model
+			)
+			stripe.Shape = Enum.PartType.Cylinder
+			stripe.CanCollide = false
+		end
+	end,
+
+	--[[
 		Средний ряд (docs/19-OBSTACLES.md § 3.2). Общее для всех пяти:
 		соседняя дорожка свободна, ждать можно сколько угодно, и ни один
 		не движется быстрее ребёнка.

@@ -190,6 +190,15 @@ Tunnel.STEP_HEIGHT = 2.5
 Tunnel.STEP_RUN = 4
 Tunnel.STEP_COUNT = 2 -- столько ступеней вверх, потом столько же вниз
 
+-- Горка: пологий клин вверх и такой же вниз. Уклон меньше двадцати градусов.
+Tunnel.HUMP_HEIGHT = 2.2
+Tunnel.HUMP_RUN = 6 -- длина одного склона
+
+-- Слалом: конусы змейкой по дорожке, между соседними — шаг ребёнка с запасом.
+Tunnel.CONE_COUNT = 4
+Tunnel.CONE_STEP = 3.5
+Tunnel.CONE_SIZE = 1.4
+
 --[[
 	Средний ряд элементов (docs/19-OBSTACLES.md § 3.2).
 
@@ -340,6 +349,8 @@ local SECONDS: { [string]: number } = {
 	roller = 1.5,
 	pistons = 3,
 	comb = 2,
+	hump = 1, -- двенадцать студов вверх и вниз: на подъёме бег замедляется
+	cones = 2, -- петлять между конусами дольше, чем бежать прямо
 	carousel = 2.5, -- пропустить перекладину
 	lift = 5, -- дождаться площадки, подняться, пройти мостик и спрыгнуть
 	spiral = 3,
@@ -415,6 +426,8 @@ local LENGTHS: { [string]: number } = {
 	roller = Tunnel.ROLLER_DIAMETER,
 	pistons = Tunnel.PISTON_DEPTH,
 	comb = Tunnel.COMB_THICKNESS,
+	hump = Tunnel.HUMP_RUN * 2,
+	cones = Tunnel.CONE_COUNT * Tunnel.CONE_STEP,
 	carousel = Tunnel.CAROUSEL_SPAN,
 	lift = Tunnel.LIFT_SPAN,
 	spiral = Tunnel.SPIRAL_SPAN,

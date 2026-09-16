@@ -211,6 +211,23 @@ return function()
 			которого игра не выполняет, поэтому тест держит обе половины:
 			элемент есть в каталоге, и у него есть длина, по которой его ставят.
 		]]
+		--[[
+			Первые уровни состоят из базовых элементов, а их на отрезке шесть-девять.
+			Пяти видов было мало — отрезок читался как «опять барьер».
+		]]
+		it(
+			"базовых видов не меньше семи: горка и слалом заведены",
+			function()
+				expect(#Obstacles.upToTier(1) >= 7).to.equal(true)
+				for _, id in { "hump", "cones" } do
+					local obstacle = Obstacles.expect(id)
+					expect(obstacle.tier).to.equal(1)
+					expect(obstacle.moving).to.equal(false)
+					expect(Tunnel.obstacleLength(obstacle.kind)).to.be.ok()
+				end
+			end
+		)
+
 		it("карусель, подъёмник и спираль построены", function()
 			for _, id in { "carousel", "lift", "spiral" } do
 				local obstacle = Obstacles.expect(id)
