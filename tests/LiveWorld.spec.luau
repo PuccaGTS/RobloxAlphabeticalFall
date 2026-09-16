@@ -42,6 +42,38 @@ return function()
 			end
 		)
 
+		it(
+			"зайчики живут в парке: не на дорожках, не в игровых местах и не у домов",
+			function()
+				for index = 1, #LiveWorld.BUNNY_HOMES do
+					local home = LiveWorld.bunnyHome(index)
+					local clear, why = Decor.isClear(home.X, home.Z, LiveWorld.BUNNY_RADIUS)
+					if not clear then
+						error(`зайчик {index} мешает: {why}`)
+					end
+					expect(Vector2.new(home.X, home.Z).Magnitude + LiveWorld.BUNNY_RADIUS <= Decor.MAX_RADIUS).to.equal(
+						true
+					)
+				end
+			end
+		)
+
+		it("утки ходят по площади и не заходят в порталы", function()
+			local loop = LiveWorld.DUCK_LOOP
+			for step = 0, 15 do
+				local angle = step / 16 * math.pi * 2
+				local point = loop.center + Vector2.new(math.cos(angle), math.sin(angle)) * loop.radius
+				for _, zone in Decor.zones do
+					if
+						string.find(zone.why, "портал", 1, true)
+						or string.find(zone.why, "появления", 1, true)
+					then
+						expect((point - zone.center).Magnitude >= zone.radius).to.equal(true)
+					end
+				end
+			end
+		end)
+
 		it("бабочки летают низко и недалеко от клумбы", function()
 			expect(LiveWorld.BUTTERFLY_HEIGHT[1] < LiveWorld.BUTTERFLY_HEIGHT[2]).to.equal(true)
 			expect(LiveWorld.BUTTERFLY_HEIGHT[2] <= 8).to.equal(true)

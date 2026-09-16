@@ -29,7 +29,7 @@ LiveWorld.BUTTERFLIES_PER_BED = 2
 	много, и бабочки у каждой съели бы весь бюджет кадра: здесь ребёнок бывает
 	чаще всего, здесь им и летать.
 ]]
-LiveWorld.MAX_BUTTERFLY_BEDS = 14
+LiveWorld.MAX_BUTTERFLY_BEDS = 10 -- было 14: часть бюджета отдана уткам и зайчикам
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
@@ -52,6 +52,34 @@ LiveWorld.LEAF_COLORS = {
 	Color3.fromRGB(215, 110, 50),
 	Color3.fromRGB(190, 160, 70),
 }
+
+--[[
+	Зверьки в парке. Бабочки и листья — фон, а на зверька хочется посмотреть:
+	утиная семья ходит гуськом вокруг фонтана, а зайчики пасутся на полянках
+	и отпрыгивают, когда к ним подбегают. Трогать их можно, поймать — нет:
+	это тоже фон, только живой.
+]]
+LiveWorld.DUCK_COUNT = 4 -- мама и три утёнка
+LiveWorld.DUCK_LOOP = { center = Vector2.new(0, -34), radius = 11 } -- вокруг фонтана
+LiveWorld.DUCK_LAP_SECONDS = 40
+LiveWorld.DUCK_GAP = 0.28 -- на сколько радиан утёнок отстаёт от впереди идущего
+
+-- Полянки зайчиков: угол от центра площади в градусах и расстояние.
+LiveWorld.BUNNY_HOMES = {
+	{ angle = 22, distance = 122 },
+	{ angle = 97, distance = 176 },
+	{ angle = 243, distance = 168 },
+	{ angle = 318, distance = 112 },
+}
+LiveWorld.BUNNY_RADIUS = 9 -- как далеко от своей полянки гуляет
+LiveWorld.BUNNY_SCARE_DISTANCE = 10 -- ближе этого ребёнок — зайчик отпрыгивает
+
+function LiveWorld.bunnyHome(index: number): Vector3
+	local home = LiveWorld.BUNNY_HOMES[index]
+	local angle = math.rad(home.angle)
+	local x, z = math.cos(angle) * home.distance, math.sin(angle) * home.distance
+	return Vector3.new(x, Decor.groundY(x, z), z)
+end
 
 -- Клумбы, у которых кружат бабочки: точки на земле.
 function LiveWorld.butterflyHomes(): { Vector3 }
@@ -98,7 +126,10 @@ end
 
 -- Сколько всего живого может двигаться одновременно.
 function LiveWorld.movingBudget(): number
-	return LiveWorld.butterflyCount() + LiveWorld.LEAVES_AT_ONCE
+	return LiveWorld.butterflyCount()
+		+ LiveWorld.LEAVES_AT_ONCE
+		+ LiveWorld.DUCK_COUNT
+		+ #LiveWorld.BUNNY_HOMES
 end
 
 return LiveWorld

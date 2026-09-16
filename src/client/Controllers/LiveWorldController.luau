@@ -1,6 +1,7 @@
 --!nonstrict
 --[[
-	Бабочки у клумб и листья с деревьев. Места, количество и бюджет — Config/LiveWorld.
+	Бабочки у клумб, листья с деревьев, утки у фонтана и зайчики на полянках.
+	Места, количество и бюджет — Config/LiveWorld.
 
 	Всё движется твинами (TweenService) по закреплённым деталям, без физики —
 	docs/18-CONTENT-BACKLOG.md § 7 и docs/07-TECH-ARCH.md § 8. Ни одна бабочка
@@ -12,11 +13,14 @@
 	значениям. Так одна бабочка стоит два твина, а не твин на каждую деталь.
 ]]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local LiveWorld = require(Shared.Config.LiveWorld)
+local Decor = require(Shared.Config.Decor)
 
 local LiveWorldController = {}
 
@@ -172,6 +176,190 @@ local function dropLeaf(sources: { LiveWorld.LeafSource })
 	end)
 end
 
+-- ===== Зверьки ===================================================================
+
+--[[
+	Зверёк — набор деталей со смещениями от «корня». Каждый кадр корень
+	считается заново, и детали ставятся по нему: восемь зверьков — это
+	несколько десятков присвоений CFrame, дешевле любого твина.
+]]
+type Piece = { part: BasePart, offset: CFrame }
+type Critter = { model: Model, pieces: { Piece } }
+
+local function critter(name: string, recipe: { any }, scale: number): Critter
+	local model = Instance.new("Model")
+	model.Name = name
+	local pieces = {}
+	for _, item in recipe do
+		local part = ghostPart(item[1], item[2] * scale, item[4])
+		part.Shape = item[5] or Enum.PartType.Ball
+		part.Parent = model
+		local offset = item[3]
+		table.insert(pieces, { part = part, offset = offset.Rotation + offset.Position * scale })
+	end
+	model.Parent = container()
+	return { model = model, pieces = pieces }
+end
+
+local function place(animal: Critter, root: CFrame)
+	for _, piece in animal.pieces do
+		piece.part.CFrame = root * piece.offset
+	end
+end
+
+local EYE = Color3.fromRGB(30, 30, 40)
+
+local function duckRecipe(body: Color3): { any }
+	return {
+		{ "Body", Vector3.new(1.4, 1.1, 1.9), CFrame.new(0, 0.55, 0), body },
+		{ "Tail", Vector3.new(0.6, 0.5, 0.6), CFrame.new(0, 0.8, 0.9), body },
+		{ "Head", Vector3.new(0.85, 0.85, 0.85), CFrame.new(0, 1.35, -0.75), body },
+		{
+			"Beak",
+			Vector3.new(0.45, 0.16, 0.45),
+			CFrame.new(0, 1.25, -1.25),
+			Color3.fromRGB(250, 160, 50),
+			Enum.PartType.Block,
+		},
+		{ "EyeL", Vector3.one * 0.14, CFrame.new(-0.3, 1.45, -1.05), EYE },
+		{ "EyeR", Vector3.one * 0.14, CFrame.new(0.3, 1.45, -1.05), EYE },
+	}
+end
+
+local BUNNY_COATS = {
+	Color3.fromRGB(245, 245, 245),
+	Color3.fromRGB(190, 160, 130),
+	Color3.fromRGB(170, 170, 180),
+	Color3.fromRGB(225, 200, 170),
+}
+
+local function bunnyRecipe(coat: Color3): { any }
+	return {
+		{ "Body", Vector3.new(1.3, 1.2, 1.6), CFrame.new(0, 0.6, 0), coat },
+		{ "Head", Vector3.new(1, 1, 1), CFrame.new(0, 1.2, -0.75), coat },
+		{ "EarL", Vector3.new(0.25, 1, 0.15), CFrame.new(-0.22, 2, -0.65) * CFrame.Angles(0, 0, 0.12), coat },
+		{ "EarR", Vector3.new(0.25, 1, 0.15), CFrame.new(0.22, 2, -0.65) * CFrame.Angles(0, 0, -0.12), coat },
+		{ "Tail", Vector3.one * 0.45, CFrame.new(0, 0.7, 0.8), Color3.fromRGB(255, 255, 255) },
+		{ "Nose", Vector3.one * 0.14, CFrame.new(0, 1.15, -1.25), Color3.fromRGB(240, 140, 160) },
+		{ "EyeL", Vector3.one * 0.14, CFrame.new(-0.28, 1.35, -1.15), EYE },
+		{ "EyeR", Vector3.one * 0.14, CFrame.new(0.28, 1.35, -1.15), EYE },
+	}
+end
+
+local function localRoot(): BasePart?
+	local player = Players.LocalPlayer
+	local character = player and player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+-- Утиная семья ходит гуськом вокруг фонтана; подбежал близко — все подпрыгивают.
+local function startDucks(): (number) -> ()
+	local loop = LiveWorld.DUCK_LOOP
+	local ground = Decor.groundY(loop.center.X, loop.center.Y)
+	local ducks = {}
+	for index = 1, LiveWorld.DUCK_COUNT do
+		local mother = index == 1
+		table.insert(
+			ducks,
+			critter(
+				if mother then "Duck" else "Duckling",
+				duckRecipe(if mother then Color3.fromRGB(250, 250, 245) else Color3.fromRGB(255, 225, 90)),
+				if mother then 1 else 0.55
+			)
+		)
+	end
+
+	local startedAt = os.clock()
+	local flutterUntil = 0
+	return function(now: number)
+		local center = Vector3.new(loop.center.X, ground, loop.center.Y)
+		if not nearCamera(center) then
+			return
+		end
+		local root = localRoot()
+		if root and (root.Position - center).Magnitude < loop.radius + 4 and now > flutterUntil + 3 then
+			flutterUntil = now + 0.8
+		end
+		local lead = (now - startedAt) / LiveWorld.DUCK_LAP_SECONDS * math.pi * 2
+		for index, duck in ducks do
+			local angle = lead - (index - 1) * LiveWorld.DUCK_GAP
+			local at = center + Vector3.new(math.cos(angle), 0, math.sin(angle)) * loop.radius
+			local ahead = Vector3.new(-math.sin(angle), 0, math.cos(angle))
+			local waddle = math.sin(now * 9 + index) * 0.12
+			local hop = if now < flutterUntil then math.abs(math.sin((now + index * 0.2) * 12)) * 0.8 else 0
+			place(duck, CFrame.lookAt(at, at + ahead) * CFrame.new(0, hop, 0) * CFrame.Angles(0, 0, waddle))
+		end
+	end
+end
+
+-- Зайчик пасётся у своей полянки короткими прыжками; подбежал — отпрыгивает.
+local function startBunny(index: number): (number) -> ()
+	local home = LiveWorld.bunnyHome(index)
+	local animal = critter("Bunny", bunnyRecipe(BUNNY_COATS[(index - 1) % #BUNNY_COATS + 1]), 1)
+	local from = home
+	local to = home
+	local hopStart, hopSeconds = 0, 0.4
+	local facing = Vector3.new(0, 0, -1)
+	local restUntil = os.clock() + random:NextNumber(0.5, 3)
+	local hopsLeft = 0
+
+	local function clampToHome(point: Vector3): Vector3
+		local offset = Vector3.new(point.X - home.X, 0, point.Z - home.Z)
+		if offset.Magnitude > LiveWorld.BUNNY_RADIUS then
+			offset = offset.Unit * LiveWorld.BUNNY_RADIUS
+		end
+		return home + offset
+	end
+
+	local function hopToward(target: Vector3, now: number, seconds: number)
+		from = to
+		local step = Vector3.new(target.X - from.X, 0, target.Z - from.Z)
+		if step.Magnitude > 2.5 then
+			step = step.Unit * 2.5
+		end
+		to = clampToHome(from + step)
+		if step.Magnitude > 0.05 then
+			facing = step.Unit
+		end
+		hopStart, hopSeconds = now, seconds
+	end
+
+	local goal = home
+	return function(now: number)
+		if not nearCamera(home) then
+			return
+		end
+		local t = math.clamp((now - hopStart) / hopSeconds, 0, 1)
+		if t >= 1 then
+			local root = localRoot()
+			local scared = root ~= nil and (root.Position - to).Magnitude < LiveWorld.BUNNY_SCARE_DISTANCE
+			if scared then
+				local away = Vector3.new(to.X - root.Position.X, 0, to.Z - root.Position.Z)
+				if away.Magnitude < 0.1 then
+					away = Vector3.new(1, 0, 0)
+				end
+				hopToward(to + away.Unit * 3, now, 0.28)
+			elseif hopsLeft > 0 then
+				hopsLeft -= 1
+				hopToward(goal, now, 0.4)
+			elseif now > restUntil then
+				local angle = random:NextNumber(0, math.pi * 2)
+				goal = home
+					+ Vector3.new(math.cos(angle), 0, math.sin(angle))
+						* random:NextNumber(0, LiveWorld.BUNNY_RADIUS)
+				hopsLeft = random:NextInteger(2, 4)
+				restUntil = now + random:NextNumber(2, 5)
+			end
+			t = math.clamp((now - hopStart) / hopSeconds, 0, 1)
+		end
+		local position = from:Lerp(to, t) + Vector3.new(0, math.sin(t * math.pi) * 1.1, 0)
+		-- Ушами шевелит и в покое: видно, что живой.
+		local twitch = math.sin(now * 3 + index) * 0.03
+		place(animal, CFrame.lookAt(position, position + facing) * CFrame.Angles(twitch, 0, 0))
+	end
+end
+
 function LiveWorldController.init()
 	--[[
 		Ждём декор: расстановка общая, но деревья и клумбы приедут не сразу.
@@ -188,6 +376,18 @@ function LiveWorldController.init()
 				spawnButterfly(home, colors[(index - 1) % #colors + 1])
 			end
 		end
+
+		-- Зверьки: утки у фонтана и зайчики на полянках, один общий кадровый цикл.
+		local animators = { startDucks() }
+		for bunny = 1, #LiveWorld.BUNNY_HOMES do
+			table.insert(animators, startBunny(bunny))
+		end
+		RunService.Heartbeat:Connect(function()
+			local now = os.clock()
+			for _, animate in animators do
+				animate(now)
+			end
+		end)
 
 		local sources = LiveWorld.leafSources()
 		while true do

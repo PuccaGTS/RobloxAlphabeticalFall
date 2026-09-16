@@ -90,7 +90,7 @@ local function burst(part: BasePart, color: Color3, count: number)
 end
 
 local function rootOf(): BasePart?
-	local character = player.Character
+	local character = player and player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	return if root and root:IsA("BasePart") then root else nil
 end
