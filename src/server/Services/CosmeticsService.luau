@@ -3,10 +3,14 @@
 	Надевание косметики на персонажа.
 
 	Важно (docs/04-ECONOMY.md § 5): в Roblox нельзя программно подарить игроку предмет
-	из каталога Roblox, поэтому вся косметика — наши собственные детали, которые
-	привариваются к персонажу заново при каждом появлении (CharacterAdded).
+	из каталога Roblox. Поэтому косметика двух видов, и обе живут только внутри игры:
 
-	Пока арта нет, детали собираются из примитивов по рецепту из Config/Shop.
+	  · аксессуар каталога — бесплатная вещь Roblox, которую игра надевает
+	    через HumanoidDescription, как примерочная. В инвентарь Roblox она
+	    не попадает и за пределами игры на ребёнке не видна;
+	  · рецепт из деталей — наши примитивы, привариваются к телу.
+
+	Надевается при каждом появлении персонажа и после смены экипировки.
 ]]
 
 local Players = game:GetService("Players")
@@ -134,6 +138,74 @@ local function attachTrail(character: Model, item)
 end
 
 --[[
+	Поля HumanoidDescription, куда ложатся аксессуары наших категорий.
+	Слоты ребёнка вне игры не трогаются: убираются только номера наших вещей.
+]]
+local ACCESSORY_FIELDS: { [string]: string } = {
+	hat = "HatAccessory",
+	back = "BackAccessory",
+	face = "FaceAccessory",
+}
+
+local SHOP_ACCESSORIES: { [string]: boolean } = {}
+for _, item in Shop.all do
+	if item.accessory then
+		SHOP_ACCESSORIES[tostring(item.accessory)] = true
+	end
+end
+
+--[[
+	Надевает аксессуары каталога. Берём описание, которое уже на персонаже
+	(его собственная одежда и вещи), выбрасываем из него всё наше и кладём
+	то, что надето сейчас. Возвращает false, если Roblox вещь не выдал —
+	тогда вызывающий наденет запасной рецепт из деталей.
+]]
+local function applyAccessories(character: Model, worn: { any }): boolean
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return false
+	end
+
+	local ok, description = pcall(function()
+		return humanoid:GetAppliedDescription()
+	end)
+	if not ok or not description then
+		return false
+	end
+
+	local changed = false
+	for category, field in ACCESSORY_FIELDS do
+		local kept: { string } = {}
+		for id in string.gmatch(description[field], "[^,%s]+") do
+			if SHOP_ACCESSORIES[id] then
+				changed = true
+			else
+				table.insert(kept, id)
+			end
+		end
+		for _, item in worn do
+			if item.category == category then
+				table.insert(kept, tostring(item.accessory))
+				changed = true
+			end
+		end
+		description[field] = table.concat(kept, ",")
+	end
+
+	if not changed then
+		return true
+	end
+
+	local applied = pcall(function()
+		humanoid:ApplyDescription(description)
+	end)
+	if not applied then
+		warn(`[Cosmetics] аксессуары каталога не надеты у {character.Name}`)
+	end
+	return applied
+end
+
+--[[
 	Надевает всё, что у игрока экипировано. Вызывается при появлении персонажа
 	и после каждой смены экипировки.
 ]]
@@ -154,6 +226,7 @@ function CosmeticsService.apply(player: Player)
 	folder.Name = FOLDER_NAME
 	folder.Parent = character
 
+	local worn = {}
 	for _, category in Shop.CATEGORIES do
 		local itemId = profile.equipped[category]
 		if itemId then
@@ -161,10 +234,19 @@ function CosmeticsService.apply(player: Player)
 			if item then
 				if item.trail then
 					attachTrail(character, item)
+				elseif item.accessory then
+					table.insert(worn, item)
 				else
 					attachVisual(character, folder, item)
 				end
 			end
+		end
+	end
+
+	-- Снимать чужие наши вещи надо и тогда, когда ничего не надето: вызов нужен всегда.
+	if not applyAccessories(character, worn) then
+		for _, item in worn do
+			attachVisual(character, folder, item)
 		end
 	end
 end

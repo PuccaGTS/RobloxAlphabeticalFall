@@ -61,6 +61,8 @@ export type ShopItem = {
 	visual: Visual?,
 	trail: TrailVisual?,
 	skin: PetSkin?,
+	-- Аксессуар каталога Roblox: надевается через HumanoidDescription (CosmeticsService).
+	accessory: number?,
 	icon: string, -- пока эмодзи, потом rbxassetid
 }
 
@@ -100,15 +102,54 @@ local function hat(
 	}
 end
 
+--[[
+	Прежний предмет получает настоящий аксессуар, а рецепт из деталей остаётся
+	запасным: если вещь каталога не загрузилась, ребёнок всё равно в кепке.
+]]
+local function withAccessory(item: ShopItem, accessory: number): ShopItem
+	item.accessory = accessory
+	return item
+end
+
+-- Предмет-аксессуар каталога: вместо рецепта из деталей — номер вещи Roblox.
+local function worn(
+	id: string,
+	category: string,
+	title: string,
+	price: number,
+	tier: number,
+	icon: string,
+	accessory: number
+): ShopItem
+	return {
+		id = id,
+		category = category,
+		title = title,
+		price = price,
+		tier = tier,
+		unlockStage = 1,
+		icon = icon,
+		accessory = accessory,
+	}
+end
+
 local GOLD = Color3.fromRGB(255, 214, 102)
 
 local Items: { [string]: ShopItem } = {
 	-- === Головные уборы ===
 	-- Кепка = тулья + козырёк
-	hat_cap = hat("hat_cap", "Кепка", 10, 0, "🧢", {
-		piece("Block", Color3.fromRGB(220, 90, 80), Vector3.new(2.1, 0.7, 2.1), CFrame.new(0, 0.85, 0)),
-		piece("Block", Color3.fromRGB(190, 70, 62), Vector3.new(2.1, 0.2, 1.2), CFrame.new(0, 0.55, -1.4)),
-	}),
+	hat_cap = withAccessory(
+		hat("hat_cap", "Кепка", 10, 0, "🧢", {
+			piece("Block", Color3.fromRGB(220, 90, 80), Vector3.new(2.1, 0.7, 2.1), CFrame.new(0, 0.85, 0)),
+			piece(
+				"Block",
+				Color3.fromRGB(190, 70, 62),
+				Vector3.new(2.1, 0.2, 1.2),
+				CFrame.new(0, 0.55, -1.4)
+			),
+		}),
+		607702162
+	),
 	-- Бантик = две петли + узелок
 	hat_bow = hat("hat_bow", "Бантик", 15, 0, "🎀", {
 		piece(
@@ -972,6 +1013,85 @@ local Items: { [string]: ShopItem } = {
 			width = 2.6,
 		},
 	},
+
+	--[[
+		=== Настоящие аксессуары из каталога Roblox ===
+
+		Кубики на голове на первой проверке назвали прямо: «кепка — ужас».
+		Эти вещи — бесплатные аксессуары каталога Roblox. Они не покупаются
+		и не дарятся ребёнку в каталоге: игра только надевает их внутри себя
+		через HumanoidDescription, как примерочные в других играх, и снимает
+		при выходе. Детские, без брендов и без оружия — отобраны руками.
+
+		Если Roblox вещь не выдал (сняли с продажи, сбой сети), CosmeticsService
+		ничего не ломает, но и на голове ничего не появится. Поэтому в наборе
+		только бесплатные аксессуары с сотнями и тысячами добавлений в избранное:
+		такие не пропадают. Раз в релиз набор проверяется по сценарию
+		docs/HOW-TO-CHECK.md § 3.3.
+	]]
+	hat_birthday = worn(
+		"hat_birthday",
+		"hat",
+		"Праздничный колпак",
+		15,
+		0,
+		"🥳",
+		17104079938
+	),
+	hat_bunny_ears = worn("hat_bunny_ears", "hat", "Заячьи уши", 20, 0, "🐰", 15178958628),
+	hat_strawberry = worn(
+		"hat_strawberry",
+		"hat",
+		"Шляпа-клубничка",
+		35,
+		0,
+		"🍓",
+		140455402501289
+	),
+	hat_cat_headphones = worn(
+		"hat_cat_headphones",
+		"hat",
+		"Кошачьи наушники",
+		40,
+		0,
+		"🐱",
+		15109037058
+	),
+	hat_cowboy = worn("hat_cowboy", "hat", "Ковбойская шляпа", 45, 0, "🤠", 16154545741),
+	hat_whale = worn("hat_whale", "hat", "Шапка-кит", 60, 1, "🐳", 15109046743),
+	hat_halo = worn("hat_halo", "hat", "Нимб", 80, 1, "😇", 13947756131),
+	hat_helicopter = worn("hat_helicopter", "hat", "Шапка-вертолёт", 90, 1, "🚁", 14972111489),
+	hat_axolotl = worn("hat_axolotl", "hat", "Маска аксолотля", 120, 1, "🦎", 14751926555),
+	hat_penguin = worn("hat_penguin", "hat", "Пингвин на голове", 140, 1, "🐧", 15685894569),
+	hat_lion = worn("hat_lion", "hat", "Грива льва", 160, 1, "🦁", 15109042495),
+	hat_sloth = worn("hat_sloth", "hat", "Ленивец на голове", 190, 1, "🦥", 18617727385),
+	hat_robot = worn("hat_robot", "hat", "Голова робота", 250, 2, "🤖", 15050144871),
+	hat_ice_crown = worn("hat_ice_crown", "hat", "Ледяная корона", 350, 2, "❄", 14738277949),
+	back_leaf_umbrella = worn(
+		"back_leaf_umbrella",
+		"back",
+		"Зонтик-листик",
+		30,
+		0,
+		"🍃",
+		14624345249
+	),
+	back_dog = worn("back_dog", "back", "Рюкзак-собачка", 40, 0, "🐶", 98752422639730),
+	back_bunny = worn("back_bunny", "back", "Рюкзак-зайчик", 55, 1, "🐇", 14716529763),
+	back_shark = worn("back_shark", "back", "Рюкзак-акула", 75, 1, "🦈", 15109044342),
+	back_panda = worn("back_panda", "back", "Рюкзак-панда", 95, 1, "🐼", 18617852255),
+	back_butterfly = worn(
+		"back_butterfly",
+		"back",
+		"Крылья бабочки",
+		180,
+		1,
+		"🦋",
+		15109033959
+	),
+	back_angel = worn("back_angel", "back", "Крылья ангела", 300, 2, "🪽", 95651415246994),
+	face_daisy = worn("face_daisy", "face", "Очки-ромашки", 20, 0, "🌼", 14896027020),
+	face_aviators = worn("face_aviators", "face", "Очки лётчика", 30, 0, "🕶", 376526673),
 }
 
 local Module = {}

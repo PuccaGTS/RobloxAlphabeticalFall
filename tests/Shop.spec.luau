@@ -79,7 +79,9 @@ return function()
 			for _, id in Shop.ids() do
 				local item = Shop.expect(id)
 				expect(#item.icon > 0).to.equal(true)
-				expect(item.visual ~= nil or item.trail ~= nil or item.skin ~= nil).to.equal(true)
+				expect(item.visual ~= nil or item.trail ~= nil or item.skin ~= nil or item.accessory ~= nil).to.equal(
+					true
+				)
 			end
 		end)
 
@@ -135,6 +137,49 @@ return function()
 				expect(affordable >= 3).to.equal(true)
 			end
 		)
+	end)
+
+	--[[
+		Аксессуары каталога надеваются только на голову, спину и лицо: у следа
+		и скина буквят нет слота в HumanoidDescription. Номер — целое положительное.
+	]]
+	describe("Config: аксессуары каталога", function()
+		it("аксессуар только у шапок, рюкзаков и очков", function()
+			local worn = 0
+			for _, item in Shop.all do
+				if item.accessory then
+					worn += 1
+					expect(item.category == "hat" or item.category == "back" or item.category == "face").to.equal(
+						true
+					)
+					expect(item.accessory > 0 and item.accessory % 1 == 0).to.equal(true)
+				end
+			end
+			expect(worn >= 20).to.equal(true)
+		end)
+
+		it("один аксессуар — одна вещь магазина", function()
+			local seen = {}
+			for id, item in Shop.all do
+				if item.accessory then
+					expect(seen[item.accessory]).to.equal(nil)
+					seen[item.accessory] = id
+				end
+			end
+		end)
+
+		it(
+			"кепка теперь настоящая, но запасной рецепт остался",
+			function()
+				local cap = Shop.expect("hat_cap")
+				expect(cap.accessory).to.be.ok()
+				expect(cap.visual).to.be.ok()
+			end
+		)
+
+		it("в магазине не меньше шестидесяти вещей", function()
+			expect(Shop.count() >= 60).to.equal(true)
+		end)
 	end)
 
 	describe("Config: скины буквят", function()
