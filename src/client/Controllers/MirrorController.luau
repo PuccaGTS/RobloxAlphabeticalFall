@@ -38,7 +38,26 @@ local currentRound = 1
 local blockedUntil = 0
 local cards: { BasePart } = {}
 
-local function resolveOrigin(): CFrame
+--[[
+	Где разворачивать сцену. Сервер присылает точку своей поляны в самом задании
+	(Config/Venues): одно задание — одна локация, и сцена больше не растёт
+	посреди площади, где её закрывали порталы и чужие пады.
+
+	Если поляны нет (старое задание, забег), остаётся прежний путь — «перед
+	ребёнком там, где он стоит».
+]]
+local function stageOf(from: any): CFrame?
+	local stage = from and from.params and from.params.stage
+	return if typeof(stage) == "CFrame" then stage else nil
+end
+
+local function resolveOrigin(from: any): CFrame
+	local stage = stageOf(from)
+	if stage then
+		-- Таблички смотрят на ребёнка, поэтому сцена развёрнута к входу.
+		return stage * CFrame.new(0, 4.5, 0) * CFrame.Angles(0, math.pi, 0)
+	end
+
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
@@ -109,7 +128,7 @@ function MirrorController.start(newSpec: any)
 	spec = newSpec
 	currentRound = 1
 	blockedUntil = 0
-	origin = resolveOrigin()
+	origin = resolveOrigin(newSpec)
 
 	local container = Instance.new("Folder")
 	container.Name = FOLDER_NAME

@@ -38,7 +38,26 @@ local currentSection = 1
 local blockedUntil = 0
 local sectionParts: { BasePart } = {}
 
-local function resolveOrigin(): CFrame
+--[[
+	Где разворачивать сцену. Сервер присылает точку своей поляны в самом задании
+	(Config/Venues): одно задание — одна локация, и сцена больше не растёт
+	посреди площади, где её закрывали порталы и чужие пады.
+
+	Если поляны нет (старое задание, забег), остаётся прежний путь — «перед
+	ребёнком там, где он стоит».
+]]
+local function stageOf(from: any): CFrame?
+	local stage = from and from.params and from.params.stage
+	return if typeof(stage) == "CFrame" then stage else nil
+end
+
+local function resolveOrigin(from: any): CFrame
+	local stage = stageOf(from)
+	if stage then
+		-- Лестница уходит вперёд от ребёнка: разворачивать сцену не надо.
+		return stage * CFrame.new(0, 3, 0)
+	end
+
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
@@ -158,7 +177,7 @@ function LadderController.start(newSpec: any)
 	spec = newSpec
 	currentSection = 1
 	blockedUntil = 0
-	origin = resolveOrigin()
+	origin = resolveOrigin(newSpec)
 
 	local container = Instance.new("Folder")
 	container.Name = FOLDER_NAME

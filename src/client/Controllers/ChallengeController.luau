@@ -76,7 +76,26 @@ end
 	Откуда падают буквы. Если на уровне есть площадка ChallengeArea — берём её,
 	иначе строим область перед игроком, чтобы серый ящик работал на пустой карте.
 ]]
-local function resolveOrigin(): CFrame
+--[[
+	Где разворачивать сцену. Сервер присылает точку своей поляны в самом задании
+	(Config/Venues): одно задание — одна локация, и сцена больше не растёт
+	посреди площади, где её закрывали порталы и чужие пады.
+
+	Если поляны нет (старое задание, забег), остаётся прежний путь — «перед
+	ребёнком там, где он стоит».
+]]
+local function stageOf(from: any): CFrame?
+	local stage = from and from.params and from.params.stage
+	return if typeof(stage) == "CFrame" then stage else nil
+end
+
+local function resolveOrigin(from: any): CFrame
+	local stage = stageOf(from)
+	if stage then
+		-- Буквы падают перед ребёнком, лицом к нему их разворачивать не надо.
+		return stage * CFrame.new(0, 1, 0)
+	end
+
 	local area = workspace:FindFirstChild("ChallengeArea")
 	if area and area:IsA("BasePart") then
 		return area.CFrame
@@ -336,7 +355,7 @@ local function onSpec(newSpec: any)
 	activeChallengeId = newSpec.challengeId
 	spec = newSpec
 	startedAt = os.clock()
-	origin = resolveOrigin()
+	origin = resolveOrigin(newSpec)
 
 	local container = Instance.new("Folder")
 	container.Name = FOLDER_NAME
