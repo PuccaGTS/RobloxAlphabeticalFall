@@ -27,7 +27,13 @@ local out = {}
 local totalParts, totalGaps = 0, 0
 for seed = 1, 8 do
 	local ok, err = pcall(function()
-		local spec = TunnelRun.Rebuild({ letters = { "a", "b", "v" }, difficulty = 5, seed = seed * 7919, checkpoint = 0, level = 11 })
+		local spec = TunnelRun.Rebuild({
+			letters = { "a", "b", "v" },
+			difficulty = 5,
+			seed = seed * 7919,
+			checkpoint = 0,
+			level = 11,
+		})
 		TunnelService.spawn(fake, spec)
 		local model = workspace.Tunnels:FindFirstChildWhichIsA("Model")
 		local guards, parts = {}, 0
@@ -63,14 +69,36 @@ for seed = 1, 8 do
 						gaps += 1
 						if gaps <= 3 then
 							local zone = sampler.zoneAt(z)
-							table.insert(out, string.format("  gap seed %d z=%.0f side %d h %d zone %s", seed, z, side, h, zone and zone.kind or "-"))
+							table.insert(
+								out,
+								string.format(
+									"  gap seed %d z=%.0f side %d h %d zone %s",
+									seed,
+									z,
+									side,
+									h,
+									zone and zone.kind or "-"
+								)
+							)
 						end
 					end
 				end
 			end
 			z += 2
 		end
-		table.insert(out, string.format("seed %d parts %d guards %d gaps %d intrusions %d closest %.2f (half %.1f)", seed, parts, #guards, gaps, intrusions, worst, Tunnel.WIDTH / 2))
+		table.insert(
+			out,
+			string.format(
+				"seed %d parts %d guards %d gaps %d intrusions %d closest %.2f (half %.1f)",
+				seed,
+				parts,
+				#guards,
+				gaps,
+				intrusions,
+				worst,
+				Tunnel.WIDTH / 2
+			)
+		)
 		totalParts += parts
 		totalGaps += gaps
 		TunnelService.despawn(fake)

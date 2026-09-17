@@ -6,8 +6,8 @@ local Base = require(Shared.Config.Base)
 
 return function()
 	describe("Config: участок", function()
-		it("шесть категорий по четыре уровня", function()
-			expect(#Base.CATEGORIES).to.equal(6)
+		it("десять категорий по четыре уровня", function()
+			expect(#Base.CATEGORIES).to.equal(10)
 			for _, id in Base.ids() do
 				expect(Base.maxLevel(id)).to.equal(4)
 				expect(#Base.expect(id).levels).to.equal(4)
@@ -60,24 +60,146 @@ return function()
 
 		--[[
 			Пады улучшений стоят в один ряд у калитки, и ряд обязан влезть в участок:
-			категорий стало шесть, и пад, уехавший за забор, ребёнок просто
-			не найдёт. Раскладку делает BaseService, числа живут в конфиге.
+			пад, уехавший за забор, ребёнок просто не найдёт. У наборов пады стоят
+			у своих мест, в ряду остаются шесть. Раскладку делает BaseService,
+			числа живут в конфиге.
 		]]
 		it("ряд падов улучшений влезает в участок", function()
-			local row = (#Base.CATEGORIES - 1) * Base.PAD_STEP + Base.PAD_WIDTH
+			expect(#Base.rowIds()).to.equal(6)
+			local row = (#Base.rowIds() - 1) * Base.PAD_STEP + Base.PAD_WIDTH
 			expect(row <= Base.PLOT_SIZE).to.equal(true)
 			expect(Base.PAD_STEP > Base.PAD_WIDTH).to.equal(true)
 		end)
 
 		--[[
-			Полный участок стоит около 6000 ⭐ (docs/15-HOME-BASE.md § 6) — это
+			Полный участок стоит около 8500 ⭐ (docs/15-HOME-BASE.md § 6) — это
 			примерно вся игра целиком. Дешевле — дом достроится за неделю и перестанет
 			быть поводом возвращаться; дороже — станет недостижимым.
 		]]
-		it("весь участок стоит около шести тысяч", function()
-			local total = Base.totalPrice()
-			expect(total >= 5000).to.equal(true)
-			expect(total <= 7000).to.equal(true)
+		it(
+			"весь участок стоит около восьми с половиной тысяч",
+			function()
+				local total = Base.totalPrice()
+				expect(total >= 8000).to.equal(true)
+				expect(total <= 9000).to.equal(true)
+			end
+		)
+	end)
+
+	--[[
+		Участок тесный: дом, комнаты, Башня, флаги, шпили, мебель и декор уже
+		стоят на своих местах, и наборы вписаны между ними. Сдвинули одно число —
+		тыква встала в комнату букв, и заметит это ребёнок, а не мы.
+		Прямоугольники ниже — то, что строит BaseService помимо наборов,
+		в координатах участка (−Z к площади).
+	]]
+	describe("Config: места наборов на участке", function()
+		local HALF = Base.PLOT_SIZE / 2
+		local ROW_HALF = (#Base.rowIds() - 1) * Base.PAD_STEP / 2 + Base.PAD_WIDTH / 2
+		local PAD_HALF = Base.PAD_WIDTH / 2
+		local RESERVED = {
+			{ "дом и комнаты", -12, -8, 12, 15 },
+			{ "Башня и табличка", -18, 10, -8, 19.5 },
+			{ "дорожка и фонтан", -4, -HALF, 4, -8 },
+			{ "ряд падов", -ROW_HALF, -HALF + 5 - PAD_HALF, ROW_HALF, -HALF + 5 + PAD_HALF },
+			{ "мебель", 8, -13, 16, 7 },
+			{ "шарики и фонарики", -12, -13, -4, -1 },
+			{ "качели", -16, 5, -10, 7 },
+			{ "флаги уровней букв", HALF - 4.5, -12.5, HALF, 13.5 },
+			{ "флаги уровней математики", -HALF, -12.5, -HALF + 4.5, 13.5 },
+			{ "шпили", HALF - 9, HALF - 16.5, HALF - 5, HALF - 5.5 },
+			{ "кусты справа от калитки", 19, -HALF, HALF, -HALF + 4.5 },
+			{ "кусты слева от калитки", -HALF, -HALF, -19, -HALF + 4.5 },
+		}
+
+		local function circleHitsRect(x, z, r, rect)
+			local nx = math.clamp(x, rect[2], rect[4])
+			local nz = math.clamp(z, rect[3], rect[5])
+			return (x - nx) ^ 2 + (z - nz) ^ 2 < r * r
+		end
+
+		local function sets()
+			local list = {}
+			for _, category in Base.CATEGORIES do
+				if category.spots then
+					table.insert(list, category)
+				end
+			end
+			return list
+		end
+
+		it("у всех четырёх наборов есть места и пад", function()
+			expect(#sets()).to.equal(4)
+			for _, category in sets() do
+				expect(#category.spots).to.equal(#category.levels)
+				expect(category.pad).to.be.ok()
+			end
+		end)
+
+		it("места и пады внутри забора", function()
+			for _, category in sets() do
+				for _, spot in category.spots do
+					expect(math.abs(spot.x) + spot.r <= HALF - 1).to.equal(true)
+					expect(math.abs(spot.z) + spot.r <= HALF).to.equal(true)
+				end
+				expect(math.abs(category.pad.X) + PAD_HALF <= HALF - 1).to.equal(true)
+				expect(math.abs(category.pad.Y) + PAD_HALF <= HALF - 1).to.equal(true)
+			end
+		end)
+
+		it("места не задевают дом, Башню, флаги и декор", function()
+			for _, category in sets() do
+				for level, spot in category.spots do
+					for _, rect in RESERVED do
+						if circleHitsRect(spot.x, spot.z, spot.r, rect) then
+							error(`{category.id}[{level}] задевает «{rect[1]}»`)
+						end
+					end
+				end
+			end
+		end)
+
+		it("места наборов и пады не налезают друг на друга", function()
+			local circles = {}
+			local pads = {}
+			for _, category in sets() do
+				for level, spot in category.spots do
+					table.insert(circles, { `{category.id}[{level}]`, spot })
+				end
+				local pad = category.pad
+				table.insert(pads, {
+					`пад {category.id}`,
+					pad.X - PAD_HALF,
+					pad.Y - PAD_HALF,
+					pad.X + PAD_HALF,
+					pad.Y + PAD_HALF,
+				})
+			end
+			for i, a in circles do
+				for j = i + 1, #circles do
+					local b = circles[j]
+					local distance = math.sqrt((a[2].x - b[2].x) ^ 2 + (a[2].z - b[2].z) ^ 2)
+					if distance < a[2].r + b[2].r then
+						error(`{a[1]} налезает на {b[1]}`)
+					end
+				end
+				for _, pad in pads do
+					if circleHitsRect(a[2].x, a[2].z, a[2].r, pad) then
+						error(`{a[1]} стоит на «{pad[1]}»`)
+					end
+				end
+			end
+			for _, pad in pads do
+				for _, rect in RESERVED do
+					local overlap = pad[2] < rect[4]
+						and pad[4] > rect[2]
+						and pad[3] < rect[5]
+						and pad[5] > rect[3]
+					if overlap then
+						error(`{pad[1]} стоит на «{rect[1]}»`)
+					end
+				end
+			end
 		end)
 
 		it("на последнем уровне покупать больше нечего", function()

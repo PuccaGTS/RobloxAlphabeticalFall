@@ -17,6 +17,7 @@
 	в репозитории, чем в .rbxl, который не читается в диффе.
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -78,6 +79,39 @@ local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, 
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.Parent = parent
+	return p
+end
+
+-- Шар диаметром size: у Roblox шар берёт наименьшую сторону, поэтому стороны равны.
+local function ball(name: string, size: number, cframe: CFrame, color: Color3, parent: Instance): BasePart
+	local p = part(name, Vector3.new(size, size, size), cframe, color, parent)
+	p.Shape = Enum.PartType.Ball
+	return p
+end
+
+-- Стоячий цилиндр: у детали цилиндр лежит вдоль X, его ставят на торец.
+local function cylinder(
+	name: string,
+	height: number,
+	diameter: number,
+	cframe: CFrame,
+	color: Color3,
+	parent: Instance
+): BasePart
+	local p = part(
+		name,
+		Vector3.new(height, diameter, diameter),
+		cframe * CFrame.Angles(0, 0, math.pi / 2),
+		color,
+		parent
+	)
+	p.Shape = Enum.PartType.Cylinder
+	return p
+end
+
+-- Мелкая отделка, о которую ребёнок не должен спотыкаться.
+local function trim(p: BasePart): BasePart
+	p.CanCollide = false
 	return p
 end
 
@@ -256,34 +290,74 @@ local function buildYard(plot: Model, at: CFrame, level: number)
 	end
 
 	if level >= 3 then
-		for i = 1, 6 do
-			local angle = (i - 1) / 6 * math.pi * 2
-			local bush = part(
-				`Bush_{i}`,
-				Vector3.new(3, 2.4, 3),
-				at * CFrame.new(math.cos(angle) * 14, FLOOR + 1.2, math.sin(angle) * 14),
-				Color3.fromRGB(120, 185, 130),
-				plot
-			)
-			bush.Material = Enum.Material.Grass
+		--[[
+			Кусты вдоль переднего забора по обе стороны от калитки. Раньше они
+			стояли кольцом вокруг дома и влезали в мебель и комнаты; у забора
+			им ничего не мешает, и сад виден с дорожки.
+		]]
+		local index = 0
+		for _, side in { -1, 1 } do
+			for _, x in { 21, 25, 29 } do
+				index += 1
+				local bush = ball(
+					`Bush_{index}`,
+					3,
+					at * CFrame.new(side * x, FLOOR + 1.2, -Base.PLOT_SIZE / 2 + 2.5),
+					Color3.fromRGB(120, 185, 130),
+					plot
+				)
+				bush.Material = Enum.Material.Grass
+			end
 		end
 	end
 
 	if level >= 4 then
-		part(
+		-- Фонтан на дорожке перед домом: сзади его закрывали комнаты букв и цифр.
+		local spot = at * CFrame.new(0, 0, -18)
+		cylinder(
 			"FountainBowl",
-			Vector3.new(8, 1.6, 8),
-			at * CFrame.new(0, FLOOR + 0.8, 13),
+			1.6,
+			8,
+			spot * CFrame.new(0, FLOOR + 0.8, 0),
 			Color3.fromRGB(215, 220, 230),
 			plot
 		)
-		local water = part(
+		cylinder(
+			"FountainPillar",
+			2.6,
+			1.2,
+			spot * CFrame.new(0, FLOOR + 2.6, 0),
+			Color3.fromRGB(225, 228, 235),
+			plot
+		)
+		trim(
+			cylinder(
+				"FountainTop",
+				0.5,
+				3,
+				spot * CFrame.new(0, FLOOR + 3.9, 0),
+				Color3.fromRGB(215, 220, 230),
+				plot
+			)
+		)
+		local water = cylinder(
 			"FountainWater",
-			Vector3.new(6, 2.6, 6),
-			at * CFrame.new(0, FLOOR + 2, 13),
+			0.3,
+			7,
+			spot * CFrame.new(0, FLOOR + 1.5, 0),
 			Color3.fromRGB(140, 200, 240),
 			plot
 		)
+		trim(
+			ball(
+				"FountainSpray",
+				1.4,
+				spot * CFrame.new(0, FLOOR + 4.6, 0),
+				Color3.fromRGB(190, 230, 255),
+				plot
+			)
+		).Transparency =
+			0.3
 		water.Transparency = 0.35
 		water.Material = Enum.Material.Neon
 	end
@@ -537,6 +611,1062 @@ local function buildFence(plot: Model, at: CFrame, level: number)
 	end
 end
 
+-- ===== Наборы вокруг дома ========================================================
+--[[
+	Огород, площадка, живность и транспорт (Config/Base, docs/15-HOME-BASE.md § 3).
+	Набираются, как мебель: у вещи каждого уровня своё место, и купленная тыква
+	не выкидывает подсолнухи. Строитель получает точку на земле в центре места,
+	ось −Z смотрит на площадь.
+
+	Всё из деталей, пока нет моделей, но каждая вещь обязана узнаваться
+	издалека: морковка — оранжевая с хвостиком, пони — с гривой и хвостом.
+]]
+local WOOD = Color3.fromRGB(190, 145, 100)
+local DARK_WOOD = Color3.fromRGB(140, 100, 70)
+local LEAF = Color3.fromRGB(110, 180, 90)
+local WHITE = Color3.fromRGB(250, 250, 245)
+local BLACK = Color3.fromRGB(45, 45, 55)
+local ORANGE = Color3.fromRGB(245, 145, 50)
+
+local function tilted(cframe: CFrame, x: number, y: number, z: number): CFrame
+	return cframe * CFrame.Angles(math.rad(x), math.rad(y), math.rad(z))
+end
+
+-- Глазки-бусинки: два чёрных шарика на морде, смотрят туда, куда смотрит голова.
+local function eyes(plot: Model, head: CFrame, name: string, spread: number, size: number)
+	for _, side in { -1, 1 } do
+		trim(ball(`{name}Eye_{side}`, size, head * CFrame.new(side * spread, 0, 0), BLACK, plot))
+	end
+end
+
+local GARDEN = {
+	-- Грядка: тёмная земля в досках и два ряда морковок с зелёными хвостиками.
+	function(plot: Model, at: CFrame)
+		local soil = part(
+			"GardenBed",
+			Vector3.new(5, 0.6, 6),
+			at * CFrame.new(0, 0.3, 0),
+			Color3.fromRGB(115, 80, 55),
+			plot
+		)
+		soil.Material = Enum.Material.Ground
+		for _, side in { -1, 1 } do
+			local board = part(
+				`GardenBoard_{side}`,
+				Vector3.new(0.4, 0.9, 6.4),
+				at * CFrame.new(side * 2.7, 0.45, 0),
+				WOOD,
+				plot
+			)
+			board.Material = Enum.Material.WoodPlanks
+			part(
+				`GardenBoardEnd_{side}`,
+				Vector3.new(5.8, 0.9, 0.4),
+				at * CFrame.new(0, 0.45, side * 3),
+				WOOD,
+				plot
+			).Material =
+				Enum.Material.WoodPlanks
+		end
+		for row = -1, 1, 2 do
+			for step = 1, 4 do
+				local spot = at * CFrame.new(row * 1.2, 0.75, -2.7 + step * 1.1)
+				trim(cylinder(`Carrot_{row}_{step}`, 0.5, 0.55, spot, ORANGE, plot))
+				for leaf = -1, 1, 2 do
+					trim(
+						part(
+							`CarrotLeaf_{row}_{step}_{leaf}`,
+							Vector3.new(0.15, 1, 0.35),
+							tilted(spot * CFrame.new(leaf * 0.12, 0.7, 0), 0, 0, leaf * 18),
+							LEAF,
+							plot
+						)
+					)
+				end
+			end
+		end
+	end,
+
+	-- Подсолнухи: четыре разной высоты, головы смотрят на калитку.
+	function(plot: Model, at: CFrame)
+		for index = 1, 4 do
+			local height = 4 + (index % 3) * 0.8
+			local base = at * CFrame.new(-2.7 + index * 1.1, 0, (index % 2) * 0.8 - 0.4)
+			trim(
+				cylinder(
+					`SunflowerStem_{index}`,
+					height,
+					0.3,
+					base * CFrame.new(0, height / 2, 0),
+					Color3.fromRGB(95, 160, 80),
+					plot
+				)
+			)
+			for _, side in { -1, 1 } do
+				trim(
+					part(
+						`SunflowerLeaf_{index}_{side}`,
+						Vector3.new(1, 0.15, 0.6),
+						tilted(base * CFrame.new(side * 0.55, height * 0.45, 0), 0, 0, side * 25),
+						LEAF,
+						plot
+					)
+				)
+			end
+			local head = tilted(base * CFrame.new(0, height, -0.2), -15, 0, 0)
+			local petals = trim(
+				part(
+					`SunflowerPetals_{index}`,
+					Vector3.new(0.2, 2.3, 2.3),
+					head * CFrame.Angles(0, math.pi / 2, 0),
+					Color3.fromRGB(255, 205, 50),
+					plot
+				)
+			)
+			petals.Shape = Enum.PartType.Cylinder
+			local middle = trim(
+				part(
+					`SunflowerMiddle_{index}`,
+					Vector3.new(0.3, 1.2, 1.2),
+					head * CFrame.new(0, 0, -0.08) * CFrame.Angles(0, math.pi / 2, 0),
+					Color3.fromRGB(120, 80, 45),
+					plot
+				)
+			)
+			middle.Shape = Enum.PartType.Cylinder
+		end
+	end,
+
+	-- Тыквы: каждая из трёх шаров бок о бок — так она пузатая и с долями.
+	function(plot: Model, at: CFrame)
+		local layout = { { -1.1, -0.6, 2 }, { 1.2, 0.2, 1.5 }, { -0.2, 1.4, 1.1 } }
+		for index, spec in layout do
+			local size = spec[3]
+			local spot = at * CFrame.new(spec[1], size * 0.42, spec[2]) * CFrame.Angles(0, index, 0)
+			ball(`Pumpkin_{index}`, size, spot, ORANGE, plot)
+			for _, side in { -1, 1 } do
+				trim(
+					ball(
+						`PumpkinSide_{index}_{side}`,
+						size * 0.85,
+						spot * CFrame.new(side * size * 0.28, -size * 0.04, 0),
+						Color3.fromRGB(235, 130, 40),
+						plot
+					)
+				)
+			end
+			trim(
+				cylinder(
+					`PumpkinStem_{index}`,
+					0.5,
+					0.25,
+					spot * CFrame.new(0, size * 0.5, 0),
+					Color3.fromRGB(110, 130, 60),
+					plot
+				)
+			)
+			trim(
+				part(
+					`PumpkinLeaf_{index}`,
+					Vector3.new(0.9, 0.1, 0.6),
+					tilted(spot * CFrame.new(0.4, size * 0.45, 0), 0, 0, -20),
+					LEAF,
+					plot
+				)
+			)
+		end
+	end,
+
+	-- Яблоня: крона из трёх шаров, румяные яблоки на ней и два в траве.
+	function(plot: Model, at: CFrame)
+		cylinder("AppleTrunk", 5, 1.1, at * CFrame.new(0, 2.5, 0), Color3.fromRGB(135, 95, 65), plot).Material =
+			Enum.Material.Wood
+		local crown = at * CFrame.new(0, 6.5, 0)
+		for index, spec in { { 0, 0.6, 0, 5 }, { -1.6, -0.4, 0.4, 3.6 }, { 1.6, -0.3, -0.3, 3.8 } } do
+			local leaves = trim(
+				ball(
+					`AppleCrown_{index}`,
+					spec[4],
+					crown * CFrame.new(spec[1], spec[2], spec[3]),
+					Color3.fromRGB(95, 170, 85),
+					plot
+				)
+			)
+			leaves.Material = Enum.Material.Grass
+		end
+		for index = 1, 8 do
+			local angle = index / 8 * math.pi * 2
+			local lift = (index % 3) * 0.7 - 0.9
+			trim(
+				ball(
+					`Apple_{index}`,
+					0.7,
+					crown * CFrame.new(math.cos(angle) * 2.3, lift, math.sin(angle) * 2.3),
+					Color3.fromRGB(225, 50, 55),
+					plot
+				)
+			)
+		end
+		trim(ball("AppleFallen_1", 0.7, at * CFrame.new(1.4, 0.35, -1.2), Color3.fromRGB(225, 50, 55), plot))
+		trim(ball("AppleFallen_2", 0.7, at * CFrame.new(-1, 0.35, -1.6), Color3.fromRGB(240, 200, 60), plot))
+	end,
+}
+
+local PLAYGROUND = {
+	-- Песочница: песок в ярких досках, ведёрко, совок и башенка из песка.
+	function(plot: Model, at: CFrame)
+		local sand = part(
+			"Sand",
+			Vector3.new(5.4, 0.5, 5.4),
+			at * CFrame.new(0, 0.25, 0),
+			Color3.fromRGB(240, 215, 150),
+			plot
+		)
+		sand.Material = Enum.Material.Sand
+		local colors = {
+			Color3.fromRGB(240, 110, 110),
+			Color3.fromRGB(110, 170, 240),
+			Color3.fromRGB(250, 205, 80),
+			Color3.fromRGB(120, 200, 120),
+		}
+		for index = 1, 4 do
+			local angle = index / 4 * math.pi * 2
+			part(
+				`SandboxBoard_{index}`,
+				Vector3.new(6.2, 0.9, 0.5),
+				at * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0.45, 2.95),
+				colors[index],
+				plot
+			)
+		end
+		trim(
+			cylinder(
+				"SandBucket",
+				0.9,
+				0.9,
+				at * CFrame.new(1.4, 0.95, -1.2),
+				Color3.fromRGB(230, 60, 70),
+				plot
+			)
+		)
+		trim(
+			part(
+				"SandSpadeHandle",
+				Vector3.new(0.15, 1.4, 0.15),
+				tilted(at * CFrame.new(-1.5, 1.1, -1.2), 0, 0, 30),
+				Color3.fromRGB(70, 130, 220),
+				plot
+			)
+		)
+		trim(
+			part(
+				"SandSpadeBlade",
+				Vector3.new(0.6, 0.5, 0.1),
+				tilted(at * CFrame.new(-1.9, 0.6, -1.2), 0, 0, 30),
+				Color3.fromRGB(70, 130, 220),
+				plot
+			)
+		)
+		local castle = at * CFrame.new(0, 0.5, 1)
+		trim(
+			cylinder(
+				"SandCastle",
+				1,
+				1.8,
+				castle * CFrame.new(0, 0.5, 0),
+				Color3.fromRGB(225, 195, 130),
+				plot
+			)
+		)
+		trim(
+			cylinder(
+				"SandCastleTop",
+				0.8,
+				1,
+				castle * CFrame.new(0, 1.4, 0),
+				Color3.fromRGB(225, 195, 130),
+				plot
+			)
+		)
+		trim(
+			part(
+				"SandCastleFlag",
+				Vector3.new(0.6, 0.4, 0.05),
+				castle * CFrame.new(0.3, 2.2, 0),
+				Color3.fromRGB(240, 90, 90),
+				plot
+			)
+		)
+	end,
+
+	--[[
+		Горка: ступеньки слева, площадка с перилами, скат направо. Всё
+		проходимо: по ступенькам забираются, по скату съезжают бегом.
+	]]
+	function(plot: Model, at: CFrame)
+		for step = 1, 5 do
+			local x = -6.3 + step * 0.8
+			part(
+				`SlideStep_{step}`,
+				Vector3.new(0.8, step, 3),
+				at * CFrame.new(x, step / 2, 0),
+				Color3.fromRGB(250, 205, 80),
+				plot
+			)
+		end
+		local deck = part(
+			"SlideDeck",
+			Vector3.new(3, 0.5, 3),
+			at * CFrame.new(-0.9, 4.75, 0),
+			Color3.fromRGB(110, 170, 240),
+			plot
+		)
+		deck.Material = Enum.Material.WoodPlanks
+		-- Столбы по углам и перила по бокам, без крыши: ребёнку на площадке нужна голова.
+		for _, x in { -2.2, 0.4 } do
+			for _, z in { -1.45, 1.45 } do
+				part(
+					`SlidePost_{x}_{z}`,
+					Vector3.new(0.4, 6.4, 0.4),
+					at * CFrame.new(x, 3.2, z),
+					Color3.fromRGB(240, 110, 110),
+					plot
+				)
+				trim(
+					ball(
+						`SlidePostTop_{x}_{z}`,
+						0.7,
+						at * CFrame.new(x, 6.5, z),
+						Color3.fromRGB(120, 200, 120),
+						plot
+					)
+				)
+			end
+		end
+		for _, z in { -1.45, 1.45 } do
+			trim(
+				part(
+					`SlideRail_{z}`,
+					Vector3.new(2.6, 0.3, 0.3),
+					at * CFrame.new(-0.9, 6.1, z),
+					Color3.fromRGB(240, 110, 110),
+					plot
+				)
+			)
+		end
+		local from = Vector3.new(0.6, 5, 0)
+		local to = Vector3.new(6.3, 0.4, 0)
+		local length = (to - from).Magnitude
+		local angle = math.atan2(from.Y - to.Y, to.X - from.X)
+		local mid = (from + to) / 2
+		local slide = part(
+			"Slide",
+			Vector3.new(length, 0.3, 2.4),
+			at * CFrame.new(mid) * CFrame.Angles(0, 0, -angle),
+			Color3.fromRGB(110, 170, 240),
+			plot
+		)
+		slide.Material = Enum.Material.SmoothPlastic
+		for _, z in { -1.3, 1.3 } do
+			trim(
+				part(
+					`SlideSide_{z}`,
+					Vector3.new(length, 0.6, 0.2),
+					at * CFrame.new(mid + Vector3.new(0, 0.35, z)) * CFrame.Angles(0, 0, -angle),
+					Color3.fromRGB(250, 205, 80),
+					plot
+				)
+			)
+		end
+	end,
+
+	-- Батут: пружинит так же, как батуты в парке (метка AF_Trampoline).
+	function(plot: Model, at: CFrame)
+		cylinder(
+			"HomeTrampolineFrame",
+			1.4,
+			5.4,
+			at * CFrame.new(0, 0.7, 0),
+			Color3.fromRGB(70, 150, 220),
+			plot
+		)
+		for leg = 1, 4 do
+			local angle = leg / 4 * math.pi * 2 + math.pi / 4
+			trim(
+				part(
+					`HomeTrampolineLeg_{leg}`,
+					Vector3.new(0.4, 0.8, 0.4),
+					at * CFrame.new(math.cos(angle) * 2.4, 0.2, math.sin(angle) * 2.4),
+					BLACK,
+					plot
+				)
+			)
+		end
+		local top = cylinder(
+			"HomeTrampoline",
+			0.3,
+			4.4,
+			at * CFrame.new(0, 1.55, 0),
+			Color3.fromRGB(255, 120, 170),
+			plot
+		)
+		top.Material = Enum.Material.Fabric
+		top:SetAttribute("Power", 70)
+		CollectionService:AddTag(top, "AF_Trampoline")
+	end,
+
+	-- Карусель: круглый пол, столб, полосатый купол и четыре лошадки на шестах.
+	function(plot: Model, at: CFrame)
+		cylinder("CarouselFloor", 0.6, 7, at * CFrame.new(0, 0.3, 0), Color3.fromRGB(250, 235, 200), plot)
+		cylinder("CarouselPole", 6, 0.7, at * CFrame.new(0, 3.5, 0), Color3.fromRGB(250, 205, 80), plot)
+		trim(
+			cylinder(
+				"CarouselRoof",
+				0.6,
+				7.4,
+				at * CFrame.new(0, 6.6, 0),
+				Color3.fromRGB(240, 110, 110),
+				plot
+			)
+		)
+		trim(cylinder("CarouselRoofStripe", 0.7, 5, at * CFrame.new(0, 7, 0), WHITE, plot))
+		trim(
+			cylinder(
+				"CarouselRoofTop",
+				0.7,
+				2.6,
+				at * CFrame.new(0, 7.5, 0),
+				Color3.fromRGB(240, 110, 110),
+				plot
+			)
+		)
+		trim(ball("CarouselBall", 1, at * CFrame.new(0, 8.2, 0), Color3.fromRGB(250, 205, 80), plot)).Material =
+			Enum.Material.Neon
+		local colors = {
+			WHITE,
+			Color3.fromRGB(255, 190, 215),
+			Color3.fromRGB(190, 220, 255),
+			Color3.fromRGB(255, 230, 150),
+		}
+		for index = 1, 4 do
+			local angle = index / 4 * math.pi * 2
+			local spot = at * CFrame.Angles(0, angle, 0) * CFrame.new(0, 0, 2.6)
+			trim(
+				cylinder(
+					`CarouselHorsePole_{index}`,
+					6,
+					0.2,
+					spot * CFrame.new(0, 3.6, 0),
+					Color3.fromRGB(250, 205, 80),
+					plot
+				)
+			)
+			local lift = 1.9 + (index % 2) * 0.6
+			local color = colors[index]
+			part(
+				`CarouselHorse_{index}`,
+				Vector3.new(1.8, 0.8, 0.7),
+				spot * CFrame.new(0, lift, 0),
+				color,
+				plot
+			)
+			trim(
+				part(
+					`CarouselHorseHead_{index}`,
+					Vector3.new(0.6, 0.9, 0.5),
+					tilted(spot * CFrame.new(0.95, lift + 0.55, 0), 0, 0, -25),
+					color,
+					plot
+				)
+			)
+			trim(
+				part(
+					`CarouselHorseMane_{index}`,
+					Vector3.new(0.3, 0.8, 0.55),
+					tilted(spot * CFrame.new(0.65, lift + 0.6, 0), 0, 0, -25),
+					Color3.fromRGB(240, 110, 110),
+					plot
+				)
+			)
+			for _, legX in { -0.6, 0.6 } do
+				trim(
+					part(
+						`CarouselHorseLeg_{index}_{legX}`,
+						Vector3.new(0.2, 0.7, 0.5),
+						tilted(spot * CFrame.new(legX, lift - 0.6, 0), 0, 0, legX * 40),
+						color,
+						plot
+					)
+				)
+			end
+		end
+	end,
+}
+
+local PETS = {
+	-- Будка со щенком: щенок лежит у входа и смотрит на калитку.
+	function(plot: Model, at: CFrame)
+		local house = part(
+			"Doghouse",
+			Vector3.new(3, 2.4, 3),
+			at * CFrame.new(0, 1.2, 0.6),
+			Color3.fromRGB(215, 110, 80),
+			plot
+		)
+		house.Material = Enum.Material.WoodPlanks
+		for _, side in { -1, 1 } do
+			local roof = part(
+				`DoghouseRoof_{side}`,
+				Vector3.new(0.3, 2.3, 3.6),
+				tilted(at * CFrame.new(side * 0.85, 3, 0.6), 0, 0, side * 45),
+				Color3.fromRGB(120, 90, 160),
+				plot
+			)
+			roof.Material = Enum.Material.WoodPlanks
+		end
+		trim(part("DoghouseDoor", Vector3.new(1.4, 1.6, 0.1), at * CFrame.new(0, 0.8, -0.92), BLACK, plot))
+		trim(part("DoghouseSign", Vector3.new(1.2, 0.4, 0.1), at * CFrame.new(0, 2.05, -0.92), WHITE, plot))
+		local dog = at * CFrame.new(0.2, 0, -1.8)
+		local fur = Color3.fromRGB(225, 180, 120)
+		trim(ball("PuppyBody", 1.1, dog * CFrame.new(0, 0.5, 0.3), fur, plot))
+		trim(ball("PuppyBack", 1, dog * CFrame.new(0, 0.45, 0.9), fur, plot))
+		local head = dog * CFrame.new(0, 1, -0.35)
+		trim(ball("PuppyHead", 0.9, head, fur, plot))
+		trim(ball("PuppyNose", 0.25, head * CFrame.new(0, -0.1, -0.45), BLACK, plot))
+		eyes(plot, head * CFrame.new(0, 0.12, -0.38), "Puppy", 0.2, 0.14)
+		for _, side in { -1, 1 } do
+			trim(
+				part(
+					`PuppyEar_{side}`,
+					Vector3.new(0.25, 0.6, 0.4),
+					tilted(head * CFrame.new(side * 0.45, 0, 0), 0, 0, side * 15),
+					Color3.fromRGB(150, 100, 60),
+					plot
+				)
+			)
+			trim(ball(`PuppyPaw_{side}`, 0.35, dog * CFrame.new(side * 0.3, 0.17, -0.4), fur, plot))
+		end
+		trim(
+			part(
+				"PuppyTail",
+				Vector3.new(0.15, 0.7, 0.15),
+				tilted(dog * CFrame.new(0, 0.8, 1.4), -40, 0, 0),
+				fur,
+				plot
+			)
+		)
+		trim(
+			cylinder(
+				"PuppyBowl",
+				0.3,
+				0.8,
+				at * CFrame.new(-1.3, 0.15, -1.5),
+				Color3.fromRGB(230, 60, 70),
+				plot
+			)
+		)
+	end,
+
+	-- Курятник на ножках с лесенкой, три курочки и цыплята.
+	function(plot: Model, at: CFrame)
+		local coop = part(
+			"Coop",
+			Vector3.new(4, 2.4, 3),
+			at * CFrame.new(0, 2.4, 1),
+			Color3.fromRGB(250, 230, 180),
+			plot
+		)
+		coop.Material = Enum.Material.WoodPlanks
+		for _, x in { -1.8, 1.8 } do
+			for _, z in { -0.3, 2.3 } do
+				part(
+					`CoopLeg_{x}_{z}`,
+					Vector3.new(0.3, 1.2, 0.3),
+					at * CFrame.new(x, 0.6, z),
+					DARK_WOOD,
+					plot
+				)
+			end
+		end
+		for _, side in { -1, 1 } do
+			part(
+				`CoopRoof_{side}`,
+				Vector3.new(0.3, 2.7, 3.6),
+				tilted(at * CFrame.new(side * 1.05, 4.45, 1), 0, 0, side * 50),
+				Color3.fromRGB(215, 90, 70),
+				plot
+			)
+		end
+		trim(part("CoopDoor", Vector3.new(1, 1.2, 0.1), at * CFrame.new(0.8, 2.1, -0.52), DARK_WOOD, plot))
+		trim(
+			part(
+				"CoopRamp",
+				Vector3.new(0.9, 0.15, 2),
+				tilted(at * CFrame.new(0.8, 0.8, -1.2), -35, 0, 0),
+				WOOD,
+				plot
+			)
+		)
+		local hens = { { -1.8, -1.6, 0 }, { -0.4, -2.4, 40 }, { 2.3, -2, -30 } }
+		for index, spec in hens do
+			local hen = at * CFrame.new(spec[1], 0, spec[2]) * CFrame.Angles(0, math.rad(spec[3]), 0)
+			local color = if index == 2 then Color3.fromRGB(190, 120, 70) else WHITE
+			trim(ball(`HenBody_{index}`, 1, hen * CFrame.new(0, 0.6, 0.15), color, plot))
+			trim(
+				part(
+					`HenTail_{index}`,
+					Vector3.new(0.5, 0.6, 0.25),
+					tilted(hen * CFrame.new(0, 0.95, 0.6), 30, 0, 0),
+					color,
+					plot
+				)
+			)
+			local head = hen * CFrame.new(0, 1.2, -0.35)
+			trim(ball(`HenHead_{index}`, 0.55, head, color, plot))
+			trim(
+				part(
+					`HenComb_{index}`,
+					Vector3.new(0.12, 0.3, 0.35),
+					head * CFrame.new(0, 0.3, 0),
+					Color3.fromRGB(230, 50, 50),
+					plot
+				)
+			)
+			trim(
+				part(
+					`HenBeak_{index}`,
+					Vector3.new(0.15, 0.12, 0.3),
+					head * CFrame.new(0, -0.02, -0.33),
+					ORANGE,
+					plot
+				)
+			)
+			eyes(plot, head * CFrame.new(0, 0.08, -0.22), `Hen_{index}`, 0.16, 0.1)
+			for _, side in { -1, 1 } do
+				trim(
+					part(
+						`HenLeg_{index}_{side}`,
+						Vector3.new(0.08, 0.35, 0.08),
+						hen * CFrame.new(side * 0.2, 0.15, 0.15),
+						ORANGE,
+						plot
+					)
+				)
+			end
+		end
+		for index = 1, 3 do
+			local chick = at * CFrame.new(-2.6 + index * 0.55, 0, -3 + (index % 2) * 0.3)
+			trim(
+				ball(
+					`Chick_{index}`,
+					0.45,
+					chick * CFrame.new(0, 0.22, 0),
+					Color3.fromRGB(255, 225, 90),
+					plot
+				)
+			)
+			trim(
+				ball(
+					`ChickHead_{index}`,
+					0.3,
+					chick * CFrame.new(0, 0.52, -0.1),
+					Color3.fromRGB(255, 225, 90),
+					plot
+				)
+			)
+		end
+	end,
+
+	-- Пруд: камни по кругу, кувшинки, камыши и уточка с утёнком на воде.
+	function(plot: Model, at: CFrame)
+		local water = trim(
+			cylinder("PondWater", 0.2, 5.4, at * CFrame.new(0, 0.12, 0), Color3.fromRGB(100, 175, 230), plot)
+		)
+		water.Material = Enum.Material.Glass
+		water.Transparency = 0.15
+		for index = 1, 12 do
+			local angle = index / 12 * math.pi * 2
+			local size = 0.7 + (index % 3) * 0.2
+			ball(
+				`PondStone_{index}`,
+				size,
+				at * CFrame.new(math.cos(angle) * 2.9, size * 0.25, math.sin(angle) * 2.9),
+				Color3.fromRGB(165, 160, 155),
+				plot
+			)
+		end
+		for index, spec in { { 1.3, 0.9 }, { -1.5, 1.1 }, { 0.4, -1.6 } } do
+			local pad = trim(
+				cylinder(`LilyPad_{index}`, 0.08, 0.9, at * CFrame.new(spec[1], 0.26, spec[2]), LEAF, plot)
+			)
+			pad.Material = Enum.Material.Grass
+		end
+		trim(ball("LilyFlower", 0.35, at * CFrame.new(1.3, 0.4, 0.9), Color3.fromRGB(255, 170, 210), plot))
+		for index = 1, 4 do
+			local spot = at * CFrame.new(2 + index * 0.25, 0, 1.6 + (index % 2) * 0.4)
+			trim(
+				cylinder(
+					`Reed_{index}`,
+					2.2,
+					0.12,
+					spot * CFrame.new(0, 1.1, 0),
+					Color3.fromRGB(110, 150, 70),
+					plot
+				)
+			)
+			trim(
+				cylinder(
+					`ReedTop_{index}`,
+					0.5,
+					0.25,
+					spot * CFrame.new(0, 2.1, 0),
+					Color3.fromRGB(120, 85, 55),
+					plot
+				)
+			)
+		end
+		for index, spec in { { -0.6, -0.3, 1, 30 }, { 0.6, 0.5, 0.65, 50 } } do
+			local duck = at * CFrame.new(spec[1], 0.25, spec[2]) * CFrame.Angles(0, math.rad(spec[4]), 0)
+			local size = spec[3]
+			local color = if index == 1 then WHITE else Color3.fromRGB(255, 225, 90)
+			trim(ball(`PondDuck_{index}`, size, duck * CFrame.new(0, size * 0.3, 0), color, plot))
+			local head = duck * CFrame.new(0, size * 0.85, -size * 0.35)
+			trim(ball(`PondDuckHead_{index}`, size * 0.6, head, color, plot))
+			trim(
+				part(
+					`PondDuckBeak_{index}`,
+					Vector3.new(size * 0.25, size * 0.1, size * 0.35),
+					head * CFrame.new(0, -0.05, -size * 0.35),
+					ORANGE,
+					plot
+				)
+			)
+			eyes(plot, head * CFrame.new(0, size * 0.08, -size * 0.25), `PondDuck_{index}`, size * 0.15, 0.09)
+		end
+	end,
+
+	-- Пони: сиреневый, с розовой гривой, хвостом и стожком сена рядом.
+	function(plot: Model, at: CFrame)
+		local coat = Color3.fromRGB(215, 190, 240)
+		local mane = Color3.fromRGB(255, 140, 190)
+		local pony = at * CFrame.Angles(0, math.rad(-20), 0)
+		part("PonyBody", Vector3.new(2.8, 1.3, 1.3), pony * CFrame.new(0, 1.9, 0), coat, plot)
+		for _, x in { -1, 1 } do
+			for _, z in { -0.4, 0.4 } do
+				part(
+					`PonyLeg_{x}_{z}`,
+					Vector3.new(0.35, 1.3, 0.35),
+					pony * CFrame.new(x, 0.65, z),
+					coat,
+					plot
+				)
+				trim(
+					part(
+						`PonyHoof_{x}_{z}`,
+						Vector3.new(0.4, 0.25, 0.4),
+						pony * CFrame.new(x, 0.12, z),
+						Color3.fromRGB(120, 90, 110),
+						plot
+					)
+				)
+			end
+		end
+		trim(
+			part(
+				"PonyNeck",
+				Vector3.new(0.7, 1.4, 0.8),
+				tilted(pony * CFrame.new(-1.35, 2.7, 0), 0, 0, -30),
+				coat,
+				plot
+			)
+		)
+		local head = pony * CFrame.new(-1.9, 3.3, 0)
+		trim(part("PonyHead", Vector3.new(1.3, 0.8, 0.8), head, coat, plot))
+		trim(ball("PonyMuzzle", 0.7, head * CFrame.new(-0.6, -0.1, 0), Color3.fromRGB(245, 225, 250), plot))
+		for _, side in { -1, 1 } do
+			trim(ball(`PonyEye_{side}`, 0.18, head * CFrame.new(-0.15, 0.15, side * 0.4), BLACK, plot))
+			trim(
+				part(
+					`PonyEar_{side}`,
+					Vector3.new(0.2, 0.4, 0.2),
+					head * CFrame.new(0.3, 0.55, side * 0.25),
+					coat,
+					plot
+				)
+			)
+		end
+		trim(
+			part(
+				"PonyMane",
+				Vector3.new(1.3, 0.5, 0.3),
+				tilted(pony * CFrame.new(-1.2, 3.2, 0), 0, 0, -30),
+				mane,
+				plot
+			)
+		)
+		trim(
+			part(
+				"PonyTail",
+				Vector3.new(0.35, 1.5, 0.35),
+				tilted(pony * CFrame.new(1.6, 1.7, 0), 0, 0, 25),
+				mane,
+				plot
+			)
+		)
+		local hay = part(
+			"HayBale",
+			Vector3.new(1.6, 1, 1.1),
+			at * CFrame.new(0.5, 0.5, -1.7),
+			Color3.fromRGB(235, 205, 110),
+			plot
+		)
+		hay.Material = Enum.Material.Grass
+	end,
+}
+
+local TRANSPORT = {
+	-- Велосипед с корзинкой цветов на подножке, едет в сторону калитки.
+	function(plot: Model, at: CFrame)
+		local frame = Color3.fromRGB(80, 190, 170)
+		for _, z in { -1.2, 1.2 } do
+			local wheel = trim(
+				part(`BikeWheel_{z}`, Vector3.new(0.25, 1.8, 1.8), at * CFrame.new(0, 0.9, z), BLACK, plot)
+			)
+			wheel.Shape = Enum.PartType.Cylinder
+			local hub =
+				trim(part(`BikeHub_{z}`, Vector3.new(0.3, 1.1, 1.1), at * CFrame.new(0, 0.9, z), WHITE, plot))
+			hub.Shape = Enum.PartType.Cylinder
+		end
+		trim(
+			part(
+				"BikeFrame",
+				Vector3.new(0.2, 0.2, 2.1),
+				tilted(at * CFrame.new(0, 1.5, 0), -15, 0, 0),
+				frame,
+				plot
+			)
+		)
+		trim(
+			part(
+				"BikeFork",
+				Vector3.new(0.2, 1.3, 0.2),
+				tilted(at * CFrame.new(0, 1.5, -1), 20, 0, 0),
+				frame,
+				plot
+			)
+		)
+		trim(part("BikeSeatPost", Vector3.new(0.2, 1, 0.2), at * CFrame.new(0, 1.6, 0.7), frame, plot))
+		trim(part("BikeSeat", Vector3.new(0.4, 0.15, 0.7), at * CFrame.new(0, 2.15, 0.7), BLACK, plot))
+		trim(
+			part("BikeHandlebar", Vector3.new(1.2, 0.15, 0.15), at * CFrame.new(0, 2.15, -1.25), frame, plot)
+		)
+		trim(part("BikeBasket", Vector3.new(0.9, 0.6, 0.7), at * CFrame.new(0, 1.9, -1.75), WOOD, plot))
+		for index, color in { Color3.fromRGB(255, 120, 150), Color3.fromRGB(255, 220, 90), WHITE } do
+			trim(
+				ball(
+					`BikeFlower_{index}`,
+					0.35,
+					at * CFrame.new(-0.4 + index * 0.25, 2.3, -1.75),
+					color,
+					plot
+				)
+			)
+		end
+	end,
+
+	--[[
+		Машинка по размеру ребёнка. В неё можно сесть — это единственная вещь
+		во дворе, с которой можно что-то сделать, кроме как смотреть и лазать.
+		Встать с сиденья — прыжок, как везде в Roblox.
+	]]
+	function(plot: Model, at: CFrame)
+		local paint = Color3.fromRGB(235, 70, 80)
+		part("CarBody", Vector3.new(3.4, 1.4, 6), at * CFrame.new(0, 1.4, 0), paint, plot)
+		part("CarCabin", Vector3.new(3, 1.3, 2.8), at * CFrame.new(0, 2.75, 0.6), paint, plot)
+		local glass = trim(
+			part(
+				"CarWindshield",
+				Vector3.new(2.6, 1, 0.1),
+				at * CFrame.new(0, 2.75, -0.82),
+				Color3.fromRGB(180, 225, 250),
+				plot
+			)
+		)
+		glass.Material = Enum.Material.Glass
+		for _, side in { -1, 1 } do
+			local window = trim(
+				part(
+					`CarWindow_{side}`,
+					Vector3.new(0.1, 0.9, 2.2),
+					at * CFrame.new(side * 1.52, 2.75, 0.6),
+					Color3.fromRGB(180, 225, 250),
+					plot
+				)
+			)
+			window.Material = Enum.Material.Glass
+			for _, z in { -1.9, 1.9 } do
+				local wheel = part(
+					`CarWheel_{side}_{z}`,
+					Vector3.new(0.7, 1.6, 1.6),
+					at * CFrame.new(side * 1.55, 0.8, z),
+					BLACK,
+					plot
+				)
+				wheel.Shape = Enum.PartType.Cylinder
+				local cap = trim(
+					part(
+						`CarHubcap_{side}_{z}`,
+						Vector3.new(0.75, 0.7, 0.7),
+						at * CFrame.new(side * 1.56, 0.8, z),
+						Color3.fromRGB(220, 220, 225),
+						plot
+					)
+				)
+				cap.Shape = Enum.PartType.Cylinder
+			end
+			local light = trim(
+				ball(
+					`CarHeadlight_{side}`,
+					0.6,
+					at * CFrame.new(side * 1.1, 1.6, -3),
+					Color3.fromRGB(255, 240, 170),
+					plot
+				)
+			)
+			light.Material = Enum.Material.Neon
+		end
+		trim(
+			part(
+				"CarBumper",
+				Vector3.new(3.6, 0.35, 0.3),
+				at * CFrame.new(0, 0.85, -3.05),
+				Color3.fromRGB(220, 220, 225),
+				plot
+			)
+		)
+		local seat = Instance.new("Seat")
+		seat.Name = "CarSeat"
+		seat.Size = Vector3.new(2, 0.4, 1.4)
+		seat.CFrame = at * CFrame.new(0, 2.3, 1.2)
+		seat.Color = Color3.fromRGB(60, 60, 70)
+		seat.Anchored = true
+		seat.TopSurface = Enum.SurfaceType.Smooth
+		seat.BottomSurface = Enum.SurfaceType.Smooth
+		seat.Parent = plot
+	end,
+
+	-- Воздушный шар на привязи: корзина на земле, полосатый купол высоко над двором.
+	function(plot: Model, at: CFrame)
+		local basket = part(
+			"BalloonBasket",
+			Vector3.new(2.4, 1.8, 2.4),
+			at * CFrame.new(0, 0.9, 0),
+			Color3.fromRGB(175, 125, 75),
+			plot
+		)
+		basket.Material = Enum.Material.WoodPlanks
+		local lift = at * CFrame.new(0, 10, 0)
+		local envelope = trim(ball("BalloonEnvelope", 7, lift, Color3.fromRGB(250, 205, 80), plot))
+		envelope.Material = Enum.Material.SmoothPlastic
+		-- Полосы — тонкие диски чуть шире шара, поставленные на ребро.
+		for index, color in { Color3.fromRGB(240, 100, 110), Color3.fromRGB(100, 170, 240) } do
+			local band = trim(
+				part(
+					`BalloonBand_{index}`,
+					Vector3.new(0.9, 7.1, 7.1),
+					lift * CFrame.Angles(0, index * math.pi / 2, 0),
+					color,
+					plot
+				)
+			)
+			band.Shape = Enum.PartType.Cylinder
+		end
+		trim(
+			cylinder(
+				"BalloonNeck",
+				1.4,
+				2.4,
+				lift * CFrame.new(0, -3.6, 0),
+				Color3.fromRGB(240, 100, 110),
+				plot
+			)
+		)
+		local flame =
+			trim(ball("BalloonFlame", 0.8, at * CFrame.new(0, 3.2, 0), Color3.fromRGB(255, 160, 60), plot))
+		flame.Material = Enum.Material.Neon
+		for _, x in { -1, 1 } do
+			for _, z in { -1, 1 } do
+				local top = lift.Position
+					+ (at.RightVector * x + at.LookVector * -z) * 1.2
+					+ Vector3.new(0, -4.3, 0)
+				local bottom = (at * CFrame.new(x * 1.1, 1.8, z * 1.1)).Position
+				local rope = trim(
+					part(
+						`BalloonRope_{x}_{z}`,
+						Vector3.new(0.1, 0.1, (top - bottom).Magnitude),
+						CFrame.lookAt((top + bottom) / 2, top),
+						Color3.fromRGB(120, 90, 60),
+						plot
+					)
+				)
+				rope.Material = Enum.Material.Fabric
+			end
+		end
+	end,
+
+	-- Ракета на стартовом столе: белая, с красным носом, окошком и тремя крыльями.
+	function(plot: Model, at: CFrame)
+		local red = Color3.fromRGB(230, 60, 70)
+		cylinder("RocketPad", 0.5, 5, at * CFrame.new(0, 0.25, 0), Color3.fromRGB(150, 155, 165), plot)
+		cylinder("RocketBody", 6, 2.4, at * CFrame.new(0, 4, 0), WHITE, plot)
+		trim(cylinder("RocketBand", 0.5, 2.5, at * CFrame.new(0, 5.6, 0), red, plot))
+		for index, spec in { { 1.4, 2 }, { 1, 1.4 }, { 0.8, 0.8 } } do
+			trim(
+				cylinder(
+					`RocketNose_{index}`,
+					spec[1],
+					spec[2],
+					at * CFrame.new(0, 7 + (index - 1) * 1.1 + spec[1] / 2 - 0.2, 0),
+					red,
+					plot
+				)
+			)
+		end
+		trim(ball("RocketTip", 0.6, at * CFrame.new(0, 10.2, 0), red, plot))
+		local window = trim(
+			part(
+				"RocketWindow",
+				Vector3.new(0.2, 1.1, 1.1),
+				at * CFrame.new(0, 5, -1.15) * CFrame.Angles(0, math.pi / 2, 0),
+				Color3.fromRGB(120, 200, 250),
+				plot
+			)
+		)
+		window.Shape = Enum.PartType.Cylinder
+		window.Material = Enum.Material.Neon
+		for index = 1, 3 do
+			local angle = index / 3 * math.pi * 2
+			part(
+				`RocketFin_{index}`,
+				Vector3.new(0.3, 2.2, 1.4),
+				at * CFrame.Angles(0, angle, 0) * CFrame.new(0, 1.9, 1.5),
+				red,
+				plot
+			)
+		end
+		local flame =
+			trim(ball("RocketFlame", 1.2, at * CFrame.new(0, 0.9, 0), Color3.fromRGB(255, 170, 60), plot))
+		flame.Material = Enum.Material.Neon
+	end,
+}
+
+local SETS: { [string]: { (Model, CFrame) -> () } } = {
+	garden = GARDEN,
+	playground = PLAYGROUND,
+	pets = PETS,
+	transport = TRANSPORT,
+}
+
 -- ===== Заработанное учёбой =======================================================
 
 --[[
@@ -645,12 +1775,13 @@ local function buildMathFlags(plot: Model, at: CFrame, count: number)
 end
 
 --[[
-	Шпиль Счёта — у задней стены, между Башней и Шпилем Азбуки: две вершины
-	обучения стоят рядом, и с улицы видно обе. Голубой, чтобы не спутать с золотым.
+	Шпиль Счёта — перед Шпилем Азбуки, в правом углу: две вершины обучения
+	стоят рядом, и с улицы видно обе. Голубой, чтобы не спутать с золотым.
+	У задней стены, где он стоял раньше, теперь будка и курятник.
 ]]
 local function buildCountSpire(plot: Model, at: CFrame)
 	local blue = Color3.fromRGB(120, 200, 255)
-	local spot = at * CFrame.new(6, 0, Base.PLOT_SIZE / 2 - 4)
+	local spot = at * CFrame.new(Base.PLOT_SIZE / 2 - 7, 0, Base.PLOT_SIZE / 2 - 15)
 	local spire = part("CountSpire", Vector3.new(2, 13, 2), spot * CFrame.new(0, FLOOR + 6.5, 0), blue, plot)
 	spire.Material = Enum.Material.Neon
 	local top =
@@ -891,12 +2022,18 @@ local function buildUpgradePad(
 	level: number
 )
 	local category = Base.expect(categoryId)
-	local offset = (index - (#Base.CATEGORIES + 1) / 2) * Base.PAD_STEP
+	local spot = if category.pad
+		then CFrame.new(category.pad.X, FLOOR + 0.5, category.pad.Y)
+		else CFrame.new(
+			(index - (#Base.rowIds() + 1) / 2) * Base.PAD_STEP,
+			FLOOR + 0.5,
+			-Base.PLOT_SIZE / 2 + 5
+		)
 
 	local pad = part(
 		`Upgrade_{categoryId}`,
 		Vector3.new(Base.PAD_WIDTH, 1, Base.PAD_WIDTH),
-		at * CFrame.new(offset, FLOOR + 0.5, -Base.PLOT_SIZE / 2 + 5),
+		at * spot,
 		Color3.fromRGB(255, 235, 190),
 		plot
 	)
@@ -948,6 +2085,12 @@ local function renderBuildings(plot: Plot, base: { [string]: number })
 	buildFence(plot.model, at, base.fence)
 	buildFurniture(plot.model, at, base.furniture, base.house)
 	buildDecor(plot.model, at, base.decor)
+	for id, builders in SETS do
+		for level = 1, math.min(base[id], #builders) do
+			local spot = Base.expect(id).spots[level]
+			builders[level](plot.model, at * CFrame.new(spot.x, FLOOR, spot.z))
+		end
+	end
 end
 
 local function renderSign(plot: Plot, text: string)
@@ -980,8 +2123,13 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 	buildRoofFlags(plot.model, plot.cframe, earned, base.house, base.roof)
 	renderSign(plot, `Дом: {player.DisplayName}`)
 
-	for index, categoryId in Base.ids() do
+	for index, categoryId in Base.rowIds() do
 		buildUpgradePad(plot.model, plot.cframe, index, categoryId, player, base[categoryId])
+	end
+	for _, categoryId in Base.ids() do
+		if Base.expect(categoryId).pad then
+			buildUpgradePad(plot.model, plot.cframe, 0, categoryId, player, base[categoryId])
+		end
 	end
 end
 
@@ -1033,7 +2181,7 @@ end
 	и ещё дерево у дальнего края. С дорожки соседние дворы читаются отдельно,
 	как дома на улице, а не как ряд одинаковых площадок.
 ]]
-local GARDEN = { "bush_round", "tree_round", "tree_pine" }
+local GARDEN_TREES = { "bush_round", "tree_round", "tree_pine" }
 
 local function buildGardens(folder: Instance)
 	local gardens = Instance.new("Folder")
@@ -1043,7 +2191,7 @@ local function buildGardens(folder: Instance)
 	for index = 1, Base.PLOT_COUNT do
 		local angle = (index - 0.5) / Base.PLOT_COUNT * math.pi * 2
 		local outward = Vector3.new(math.cos(angle), 0, math.sin(angle))
-		for slot, id in GARDEN do
+		for slot, id in GARDEN_TREES do
 			local model = DecorService.modelFor(id)
 			if model then
 				local distance = Base.RING_RADIUS + (slot - 2) * (Base.PLOT_SIZE / 2.5)
