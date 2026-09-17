@@ -26,6 +26,33 @@ report.OnServerEvent:Connect(function(_, text)
 	note("CLIENT " .. tostring(text))
 end)
 
+-- Снимки экрана (ProbeShots.client): клиент ставит камеру, стенд снимает окно Studio.
+local HttpService = game:GetService("HttpService")
+local shotEvent = Instance.new("RemoteEvent")
+shotEvent.Name = "ZZ_Shot"
+shotEvent.Parent = ReplicatedStorage
+local shotDone = {}
+shotEvent.OnServerEvent:Connect(function(player, name, kind)
+	if kind == "ready" then
+		local port = workspace:GetAttribute("ZZ_ProbePort")
+		local ok, err = pcall(function()
+			HttpService:PostAsync(`http://127.0.0.1:{port}/capture`, name)
+		end)
+		note(if ok then "SHOT " .. name else "SHOT ERROR " .. name .. " " .. tostring(err))
+		shotEvent:FireClient(player, "release")
+		shotDone[name] = true
+	end
+end)
+-- Для сценариев: снять кадр и дождаться снимка.
+_G.ZZ_Shot = function(player, name, cframe, fov)
+	shotDone[name] = nil
+	shotEvent:FireClient(player, name, cframe, fov)
+	local deadline = os.clock() + 30
+	while not shotDone[name] and os.clock() < deadline do
+		task.wait(0.2)
+	end
+end
+
 local finished = false
 local function finish()
 	if finished then

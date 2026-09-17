@@ -29,6 +29,8 @@ def rel(p):
 project["tree"]["ServerScriptService"]["Server"]["ZZ_ProbeServer"] = {"$path": rel(root / "tools/playtest/ProbeServer.server.luau")}
 project["tree"]["ServerScriptService"]["Server"]["ZZ_Scenario"] = {"$path": rel(root / f"tools/playtest/scenarios/{scenario}.luau")}
 project["tree"]["StarterPlayer"]["StarterPlayerScripts"]["ZZ_ProbeClient"] = {"$path": rel(root / "tools/playtest/ProbeClient.client.luau")}
+project["tree"]["StarterPlayer"]["StarterPlayerScripts"]["ZZ_ProbeShots"] = {"$path": rel(root / "tools/playtest/ProbeShots.client.luau")}
+project["tree"]["HttpService"] = {"$className": "HttpService", "$properties": {"HttpEnabled": True}}
 for key in ("ReplicatedStorage",):
     for name, node in project["tree"][key].items():
         if isinstance(node, dict) and "$path" in node:
@@ -42,7 +44,9 @@ for name, node in project["tree"]["ServerScriptService"].items():
         node["$path"] = rel(root / node["$path"])
 node = project["tree"]["StarterPlayer"]["StarterPlayerScripts"]["Client"]
 node["$path"] = rel(root / node["$path"])
-project["tree"]["Workspace"].setdefault("$attributes", {})["ZZ_ProbePort"] = port
+attrs = project["tree"]["Workspace"].setdefault("$attributes", {})
+attrs["ZZ_ProbePort"] = port
+attrs["ZZ_Mode"] = "play"
 (build / "playtest.project.json").write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
 place = build / "playtest.rbxl"
 subprocess.run(["rojo", "build", str(build / "playtest.project.json"), "-o", str(place)], check=True)
@@ -53,11 +57,65 @@ plugin = plugins / "ZZ_AlphabetFallPlaytest.rbxm"
 (build / "plugin.project.json").write_text(json.dumps({"name": "ZZ_AlphabetFallPlaytest", "tree": {"$path": rel(root / "tools/playtest/Plugin.server.luau")}}), encoding="utf-8")
 subprocess.run(["rojo", "build", str(build / "plugin.project.json"), "-o", str(plugin)], check=True)
 
+shots = root / "build" / "shots"
+shots.mkdir(parents=True, exist_ok=True)
+
+def capture_window(name):
+    """Снимок окна Studio через PrintWindow: работает, даже если окно перекрыто."""
+    import ctypes
+    from ctypes import wintypes
+    from PIL import Image
+    user32 = ctypes.windll.user32
+    gdi32 = ctypes.windll.gdi32
+    best = [None, 0]
+    pid_wanted = studio.pid
+    EnumProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def each(hwnd, _):
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value == pid_wanted and user32.IsWindowVisible(hwnd):
+            rect = wintypes.RECT()
+            user32.GetWindowRect(hwnd, ctypes.byref(rect))
+            area = (rect.right - rect.left) * (rect.bottom - rect.top)
+            if area > best[1]:
+                best[0], best[1] = hwnd, area
+        return True
+    user32.EnumWindows(EnumProc(each), 0)
+    hwnd = best[0]
+    if not hwnd:
+        print("SHOT: окно Studio не найдено")
+        return
+    rect = wintypes.RECT()
+    user32.GetClientRect(hwnd, ctypes.byref(rect))
+    width, height = rect.right, rect.bottom
+    hdc = user32.GetDC(hwnd)
+    mem = gdi32.CreateCompatibleDC(hdc)
+    bitmap = gdi32.CreateCompatibleBitmap(hdc, width, height)
+    gdi32.SelectObject(mem, bitmap)
+    user32.PrintWindow(hwnd, mem, 3)  # PW_CLIENTONLY | PW_RENDERFULLCONTENT
+    class BITMAPINFOHEADER(ctypes.Structure):
+        _fields_ = [("biSize", wintypes.DWORD), ("biWidth", wintypes.LONG), ("biHeight", wintypes.LONG), ("biPlanes", wintypes.WORD), ("biBitCount", wintypes.WORD), ("biCompression", wintypes.DWORD), ("biSizeImage", wintypes.DWORD), ("biXPelsPerMeter", wintypes.LONG), ("biYPelsPerMeter", wintypes.LONG), ("biClrUsed", wintypes.DWORD), ("biClrImportant", wintypes.DWORD)]
+    header = BITMAPINFOHEADER(ctypes.sizeof(BITMAPINFOHEADER), width, -height, 1, 32, 0, 0, 0, 0, 0, 0)
+    buffer = ctypes.create_string_buffer(width * height * 4)
+    gdi32.GetDIBits(mem, bitmap, 0, height, buffer, ctypes.byref(header), 0)
+    image = Image.frombuffer("RGB", (width, height), buffer, "raw", "BGRX", 0, 1)
+    path = shots / f"{name}.png"
+    image.save(path)
+    gdi32.DeleteObject(bitmap)
+    gdi32.DeleteDC(mem)
+    user32.ReleaseDC(hwnd, hdc)
+    print(f"SHOT {path}")
+
 received = []
 done = threading.Event()
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8", "replace")
+        if self.path == "/capture":
+            capture_window(body)
+            self.send_response(200)
+            self.end_headers()
+            return
         received.append(body)
         if body == "DONE":
             done.set()
