@@ -6,13 +6,16 @@
 	правильно, остальные — перевёрнуты, лежат на боку или отражены. Надо найти
 	правильную. Лечит классическую дошкольную беду — зеркальное написание.
 
-	Отразить текст в Roblox нечем: интерфейс умеет поворачивать надпись,
-	но не отражать её. Поэтому неправильные варианты трёх видов:
+	Неправильные варианты трёх видов:
 	  · rotate — вверх ногами (поворот на 180°);
 	  · lying  — на боку (поворот на 90°);
-	  · mirror — отражение, но только там, где для него есть готовый знак,
-	    выглядящий ровно как отражённая буква: Я ↔ R, И ↔ N, Э ↔ Є.
-	    Это как раз главные зеркальные путаницы дошкольников.
+	  · mirror — отражение.
+
+	Отразить текст интерфейс Roblox не умеет, поэтому таблички рисуют букву
+	штрихами (Logic/StrokeGlyphs): точки штрихов отражаются формулой. Раньше
+	отражение было только у Я, И и Э — через похожие готовые знаки R, N, Є.
+	Теперь оно есть у каждой несимметричной буквы, и решает это не список,
+	а сами штрихи: отражённая А совпадает с А и в раунд не идёт.
 
 	Буквы, которые от поворота не меняются (О, Х, Н, Ж, И, Ф), получают только
 	те варианты, где разница видна. Раунд, в котором «неправильный» вариант
@@ -27,6 +30,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 local Challenges = require(Shared.Config.Challenges)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
+local StrokeGlyphs = require(Shared.Logic.StrokeGlyphs)
 
 local Mirror = {}
 
@@ -43,8 +47,11 @@ Mirror.focusAlone = true
 Mirror.ROTATE_SAME = { zh = true, n = true, o = true, h = true, i = true, f = true }
 -- Буквы, которые на боку неотличимы от себя (круг и крест).
 Mirror.LYING_SAME = { o = true, h = true }
--- Готовые знаки, выглядящие как отражённая буква.
-Mirror.MIRROR_GLYPH = { ya = "R", i = "N", e = "Є" }
+--[[
+	Классические зеркальные путаницы дошкольников: такие буквы, если открыты,
+	идут в раунды первыми — ради них испытание и придумано.
+]]
+Mirror.CLASSIC = { ya = true, i = true, e = true, z = true, r = true, yu = true }
 
 local function shuffled(list: { any }, random: Random): { any }
 	local copy = table.clone(list)
@@ -62,7 +69,7 @@ end
 ]]
 function Mirror.wrongKinds(letterId: string): { string }
 	local kinds: { string } = {}
-	if Mirror.MIRROR_GLYPH[letterId] then
+	if StrokeGlyphs.mirrorDiffers(letterId) then
 		table.insert(kinds, "mirror")
 	end
 	if not Mirror.ROTATE_SAME[letterId] then
@@ -77,17 +84,18 @@ end
 local function variantOf(letterId: string, kind: string, random: Random)
 	local letter = Letters.expect(letterId)
 	if kind == "mirror" then
-		return { kind = kind, glyph = Mirror.MIRROR_GLYPH[letterId], rotation = 0 }
+		return { kind = kind, glyph = letter.glyph, rotation = 0, mirrored = true }
 	elseif kind == "rotate" then
-		return { kind = kind, glyph = letter.glyph, rotation = 180 }
+		return { kind = kind, glyph = letter.glyph, rotation = 180, mirrored = false }
 	elseif kind == "lying" then
 		return {
 			kind = kind,
 			glyph = letter.glyph,
 			rotation = if random:NextInteger(1, 2) == 1 then 90 else -90,
+			mirrored = false,
 		}
 	end
-	return { kind = "true", glyph = letter.glyph, rotation = 0 }
+	return { kind = "true", glyph = letter.glyph, rotation = 0, mirrored = false }
 end
 
 --[[
@@ -95,7 +103,7 @@ end
 
 	Первая буква — та, которую просит планировщик; дальше остальные, у которых
 	есть хоть один честный неправильный вариант. Если открытых букв меньше,
-	чем раундов, они идут по кругу. Зеркальные путаницы (Я, И, Э) из доступных
+	чем раундов, они идут по кругу. Зеркальные путаницы (Я, И, Э, З, Р, Ю) из доступных
 	ставятся вперёд очереди: ради них испытание и существует.
 ]]
 function Mirror.Build(_player: Player?, letters: { string }, difficulty: number, _track: any, seed: number?)
@@ -117,7 +125,7 @@ function Mirror.Build(_player: Player?, letters: { string }, difficulty: number,
 	end
 	add(letters[1])
 	for _, id in letters do
-		if Mirror.MIRROR_GLYPH[id] then
+		if Mirror.CLASSIC[id] then
 			add(id)
 		end
 	end

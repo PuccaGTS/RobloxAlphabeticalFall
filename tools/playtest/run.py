@@ -7,6 +7,7 @@
 Studio и убирает плагин.
 """
 import http.server
+import io
 import json
 import os
 import shutil
@@ -17,6 +18,8 @@ import time
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
+# Отчёт с эмодзи (⭐) не печатается в кодировке консоли Windows.
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 scenario = sys.argv[1] if len(sys.argv) > 1 else "basic"
 build = root / "build" / "playtest"
 build.mkdir(parents=True, exist_ok=True)

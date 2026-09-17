@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Mirror = require(ReplicatedStorage.ServerChallenges.Mirror)
 local Letters = require(ReplicatedStorage.Shared.Config.Letters)
+local StrokeGlyphs = require(ReplicatedStorage.Shared.Logic.StrokeGlyphs)
 
 local function stateFor(spec)
 	return { spec = spec, startedAt = os.clock(), answered = {}, caught = 0, missed = 0 }
@@ -43,7 +44,7 @@ return function()
 						elseif kind == "lying" then
 							expect(Mirror.LYING_SAME[letterId]).to.equal(nil)
 						elseif kind == "mirror" then
-							expect(Mirror.MIRROR_GLYPH[letterId]).to.be.ok()
+							expect(StrokeGlyphs.mirrorDiffers(letterId)).to.equal(true)
 						end
 					end
 				end
@@ -59,6 +60,32 @@ return function()
 				local spec = Mirror.Build(nil, { "o", "h", "ya" }, 3, nil, 1)
 				for _, round in spec.params.rounds do
 					expect(round.letterId).to.equal("ya")
+				end
+			end
+		)
+
+		it(
+			"симметричные буквы не отражаются, несимметричные — да",
+			function()
+				for _, id in { "a", "o", "t", "sh", "zh", "m" } do
+					expect(table.find(Mirror.wrongKinds(id), "mirror")).to.equal(nil)
+				end
+				-- Р, З и Ю ждали картинок: готовых похожих знаков для них нет.
+				for _, id in { "r", "z", "yu", "b", "ye", "k", "ch", "soft" } do
+					expect(table.find(Mirror.wrongKinds(id), "mirror")).to.be.ok()
+				end
+			end
+		)
+
+		it(
+			"отражённый вариант — та же буква, только отражённая",
+			function()
+				local spec = Mirror.Build(nil, { "r", "z", "yu" }, 1, nil, 5)
+				for _, round in spec.params.rounds do
+					for _, variant in round.variants do
+						expect(variant.glyph).to.equal(Letters.expect(round.letterId).glyph)
+						expect(variant.mirrored).to.equal(variant.kind == "mirror")
+					end
 				end
 			end
 		)

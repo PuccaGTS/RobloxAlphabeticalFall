@@ -7,9 +7,10 @@
 	ребёнок выбирает правильную табличку. Букву-цель на экран не выводим:
 	показать правильное начертание — значит отменить задание.
 
-	Поворот надписи на табличке — это Rotation у самой буквы: интерфейс Roblox
-	поворачивает текст, но не отражает его, поэтому отражение сервер присылает
-	готовым знаком (R вместо Я, N вместо И).
+	Интерфейс Roblox поворачивает текст, но не отражает его, поэтому буквы на
+	табличках нарисованы штрихами (Logic/StrokeGlyphs): отражение и поворот —
+	это формула над точками. Все таблички раунда рисуются одинаково, иначе
+	«неправильную» можно было бы найти по другому шрифту, а не по начертанию.
 ]]
 
 local Players = game:GetService("Players")
@@ -18,6 +19,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteDefs = require(Shared.Net.RemoteDefs)
+local StrokeGlyphs = require(Shared.Logic.StrokeGlyphs)
 
 local Glyph = require(script.Parent.Parent.UI.Glyph)
 local HUD = require(script.Parent.Parent.UI.HUD)
@@ -103,10 +105,16 @@ local function showRound(index: number)
 		card.CanCollide = false
 		card.Parent = folder
 
-		local billboard = Glyph.attach(card, variant.glyph, 0.85, round.color)
-		local label = billboard:FindFirstChild("Glyph")
-		if label and label:IsA("TextLabel") then
-			label.Rotation = variant.rotation
+		if StrokeGlyphs.has(round.letterId) then
+			local strokes = StrokeGlyphs.strokes(round.letterId, variant.mirrored, variant.rotation)
+			Glyph.attachStrokes(card, strokes, 0.85, round.color)
+		else
+			-- Запасной путь для буквы без штрихов: повернуть можно, отразить нет.
+			local billboard = Glyph.attach(card, variant.glyph, 0.85, round.color)
+			local label = billboard:FindFirstChild("Glyph")
+			if label and label:IsA("TextLabel") then
+				label.Rotation = variant.rotation
+			end
 		end
 
 		local click = Instance.new("ClickDetector")
