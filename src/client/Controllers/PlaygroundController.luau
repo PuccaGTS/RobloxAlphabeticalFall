@@ -20,6 +20,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -212,6 +213,42 @@ HANDLERS.AF_MazeFlag = function(flag: BasePart)
 				playSound(CHEER_SOUND, 1, 0.5, flag)
 				burst(flag, flag.Color, 40)
 			end
+		end
+	end)
+end
+
+--[[
+	Крылья мельниц в парке (DecorShapes.windmill). Крутятся здесь, а не на сервере:
+	сервер двигал бы девять деталей каждый кадр по сети каждому ребёнку.
+	Дальше трёхсот студов не крутим — там их всё равно не видно.
+]]
+HANDLERS.AF_Windmill = function(hub: BasePart)
+	local blades = hub.Parent
+	if not blades or not blades:IsA("Model") then
+		return
+	end
+	local home = hub.CFrame
+	local parts: { [BasePart]: CFrame } = {}
+	for _, descendant in blades:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			parts[descendant] = home:ToObjectSpace(descendant.CFrame)
+		end
+	end
+	local angle = math.random() * math.pi * 2
+	local connection
+	connection = RunService.Heartbeat:Connect(function(dt: number)
+		if not hub.Parent then
+			connection:Disconnect()
+			return
+		end
+		local camera = workspace.CurrentCamera
+		if camera and (camera.CFrame.Position - home.Position).Magnitude > 300 then
+			return
+		end
+		angle += dt * 0.7
+		local now = home * CFrame.Angles(0, 0, angle)
+		for part, offset in parts do
+			part.CFrame = now * offset
 		end
 	end)
 end

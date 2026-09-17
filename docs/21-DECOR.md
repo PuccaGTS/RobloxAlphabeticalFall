@@ -35,8 +35,10 @@
 16 в высоту. Сильно крупнее — она полезет в проход, и при запуске игра напишет
 в Output предупреждение про несходящийся размер.
 
-Сейчас в каталоге восемь предметов: `tree_pine`, `tree_round`, `bush_round`,
-`flower_bed`, `rock_small`, `bench`, `lamp`, `fountain`.
+Сейчас в каталоге девятнадцать предметов: `tree_pine`, `tree_round`, `bush_round`,
+`flower_bed`, `rock_small`, `bench`, `lamp`, `fountain`, кубики с буквами и цифрами,
+`mushroom`, `stump`, `log`, `picnic_table`, `mushroom_house`, `hay_bales`,
+`windmill`, `abacus`, `crayons`.
 
 ### Шаг 2. Сделайте или возьмите модель
 
@@ -144,7 +146,7 @@ rojo serve
 
 ## 7. Где брать модели
 
-### 7.1. Уже отобрано: восемь моделей и скрипт, который их вставит
+### 7.1. Уже отобрано: четырнадцать моделей и скрипт, который их вставит
 
 Модели под весь текущий каталог подобраны и проверены по данным Creator Store:
 бесплатные, без скриптов внутри, малополигональные, с положительными оценками.
@@ -159,6 +161,18 @@ rojo serve
 | `bench` | Bench Wooden | TacoMcRocco | 156 | [7499829922](https://create.roblox.com/store/asset/7499829922) |
 | `lamp` | Street Lamp | Dimmy_Turner | 2032 | [565846542](https://create.roblox.com/store/asset/565846542) |
 | `fountain` | Fancy fountain with benches | jsvxsophie165 | 7974 | [5477511653](https://create.roblox.com/store/asset/5477511653) |
+| `mushroom` | Low Poly Mushrooms | CyrilTBFD | 1228 | [4644085527](https://create.roblox.com/store/asset/4644085527) |
+| `stump` | Tree Stump 2 | CCD_24 | 594 | [6764157470](https://create.roblox.com/store/asset/6764157470) |
+| `log` | Low Poly Log | osddxx | 537 | [11312714034](https://create.roblox.com/store/asset/11312714034) |
+| `picnic_table` | Picnic Table | Roblox | 384 | [23153940](https://create.roblox.com/store/asset/23153940) |
+| `mushroom_house` | Mushroom House | Taiyon | 2791 | [11483003911](https://create.roblox.com/store/asset/11483003911) |
+| `hay_bales` | Hay-Bales | finnisep | 504 | [5464985431](https://create.roblox.com/store/asset/5464985431) |
+
+Шесть последних отобраны 17.09.2026 запросом к API Store
+(`apis.roblox.com/toolbox-service/v1/marketplace/10` и `/items/details`, без входа):
+бесплатные, `hasScripts = false`, до 3000 треугольников, одобрение от 88 %.
+Мельница, счёты и карандаши остаются эскизами: подходящих моделей не нашлось.
+Крылья мельницы крутит клиент по метке `AF_Windmill`.
 
 **Способ 0, самый короткий: просто взять модели в аккаунт.** Номера из таблицы
 записаны в `Config/Decor` (поле `assetId`), и сервер загружает модели сам через

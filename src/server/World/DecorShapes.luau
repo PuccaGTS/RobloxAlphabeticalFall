@@ -23,6 +23,7 @@
 	    шариков эту цель убивает быстрее, чем украшает мир.
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Letters = require(ReplicatedStorage:WaitForChild("Shared").Config.Letters)
 
@@ -480,6 +481,376 @@ BUILDERS.number_cubes = function(model: Model)
 		)
 	end
 	cubeStack(model, glyphs)
+end
+
+--[[
+	Лес и деревня: мухоморы, пенёк, бревно, стол для пикника, домик-гриб,
+	стожки сена и мельница. Всё, на что ребёнок захочет залезть.
+]]
+local CAP_RED = Color3.fromRGB(225, 70, 70)
+local CREAM = Color3.fromRGB(250, 240, 220)
+local STRAW = Color3.fromRGB(230, 200, 110)
+
+-- Стоячий цилиндр: как ствол, но любой высоты, толщины и на любой высоте.
+local function column(
+	model: Model,
+	name: string,
+	height: number,
+	diameter: number,
+	cframe: CFrame,
+	color: Color3,
+	material: Enum.Material?
+): BasePart
+	return piece(
+		model,
+		name,
+		Enum.PartType.Cylinder,
+		Vector3.new(height, diameter, diameter),
+		cframe * CFrame.Angles(0, 0, math.rad(90)),
+		color,
+		material
+	)
+end
+
+-- Шляпка гриба: плоский диск снизу и купол сверху, в белых точках.
+local function mushroomCap(model: Model, name: string, cframe: CFrame, width: number, dots: number)
+	column(model, `{name}Brim`, width * 0.24, width, cframe, CAP_RED)
+	local dome = width * 0.78
+	piece(
+		model,
+		`{name}Dome`,
+		Enum.PartType.Ball,
+		Vector3.one * dome,
+		cframe * CFrame.new(0, width * 0.1, 0),
+		CAP_RED
+	)
+	for index = 1, dots do
+		local angle = index / dots * math.pi * 2 + 0.4
+		piece(
+			model,
+			`{name}Dot_{index}`,
+			Enum.PartType.Ball,
+			Vector3.one * width * 0.16,
+			cframe * CFrame.new(math.cos(angle) * width * 0.3, width * 0.36, math.sin(angle) * width * 0.3),
+			Color3.fromRGB(255, 255, 250)
+		)
+	end
+end
+
+BUILDERS.mushroom = function(model: Model)
+	column(model, "Stem", 3.8, 1.5, at(-0.5, 1.9, 0.3), CREAM)
+	mushroomCap(model, "Cap", at(-0.5, 4.3, 0.3), 4, 3)
+	column(model, "SmallStem", 1.6, 0.7, at(1.5, 0.8, -1.2), CREAM)
+	mushroomCap(model, "SmallCap", at(1.5, 1.8, -1.2), 1.8, 1)
+end
+
+BUILDERS.stump = function(model: Model)
+	column(model, "Stump", 2.2, 2.6, at(0, 1.1, 0), BARK, Enum.Material.Wood)
+	column(model, "Rings", 0.2, 2.2, at(0, 2.25, 0), Color3.fromRGB(215, 180, 130), Enum.Material.Wood)
+	piece(
+		model,
+		"Moss",
+		Enum.PartType.Ball,
+		Vector3.one * 0.9,
+		at(0.9, 0.5, 0.8),
+		LEAF_LIGHT,
+		Enum.Material.Grass
+	)
+end
+
+BUILDERS.log = function(model: Model)
+	piece(
+		model,
+		"Log",
+		Enum.PartType.Cylinder,
+		Vector3.new(7.4, 2.4, 2.4),
+		at(0, 1.2, 0),
+		BARK,
+		Enum.Material.Wood
+	)
+	for _, side in { -1, 1 } do
+		piece(
+			model,
+			`LogEnd_{side}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(0.2, 2, 2),
+			at(side * 3.72, 1.2, 0),
+			Color3.fromRGB(215, 180, 130),
+			Enum.Material.Wood
+		)
+	end
+end
+
+BUILDERS.picnic_table = function(model: Model)
+	piece(
+		model,
+		"Top",
+		Enum.PartType.Block,
+		Vector3.new(6.4, 0.4, 2.8),
+		at(0, 2.9, 0),
+		WOOD,
+		Enum.Material.WoodPlanks
+	)
+	-- Скатерть в полоску: полосы поверх красного, а не шахматка из деталей.
+	piece(
+		model,
+		"Cloth",
+		Enum.PartType.Block,
+		Vector3.new(4.2, 0.1, 2.9),
+		at(0, 3.14, 0),
+		Color3.fromRGB(235, 90, 90),
+		Enum.Material.Fabric
+	)
+	for index = -1, 1, 2 do
+		piece(
+			model,
+			`ClothStripe_{index}`,
+			Enum.PartType.Block,
+			Vector3.new(0.6, 0.12, 2.92),
+			at(index * 1, 3.15, 0),
+			Color3.fromRGB(255, 250, 245),
+			Enum.Material.Fabric
+		)
+	end
+	for _, side in { -1, 1 } do
+		piece(
+			model,
+			`Bench_{side}`,
+			Enum.PartType.Block,
+			Vector3.new(6.4, 0.35, 1),
+			at(0, 1.7, side * 2.4),
+			WOOD,
+			Enum.Material.WoodPlanks
+		)
+		piece(
+			model,
+			`Legs_{side}`,
+			Enum.PartType.Block,
+			Vector3.new(0.4, 2.8, 5.6),
+			at(side * 2.4, 1.4, 0),
+			Color3.fromRGB(160, 120, 80),
+			Enum.Material.Wood
+		)
+	end
+	piece(
+		model,
+		"Basket",
+		Enum.PartType.Block,
+		Vector3.new(1.2, 0.8, 0.9),
+		at(-1.8, 3.6, 0.2),
+		Color3.fromRGB(180, 130, 80),
+		Enum.Material.WoodPlanks
+	)
+	piece(
+		model,
+		"Apple",
+		Enum.PartType.Ball,
+		Vector3.one * 0.6,
+		at(1.4, 3.5, -0.3),
+		Color3.fromRGB(230, 60, 60)
+	)
+end
+
+BUILDERS.mushroom_house = function(model: Model)
+	column(model, "Walls", 6.4, 6.6, at(0, 3.2, 0), CREAM)
+	mushroomCap(model, "Roof", at(0, 7.4, 0), 11.6, 4)
+	-- Дверь и окошки смотрят на −Z: туда, откуда подходят.
+	piece(
+		model,
+		"Door",
+		Enum.PartType.Block,
+		Vector3.new(1.8, 3, 0.4),
+		at(0, 1.5, -3.2),
+		Color3.fromRGB(150, 100, 65),
+		Enum.Material.WoodPlanks
+	)
+	piece(
+		model,
+		"DoorTop",
+		Enum.PartType.Cylinder,
+		Vector3.new(0.4, 1.8, 1.8),
+		at(0, 3, -3.2) * CFrame.Angles(0, math.rad(90), 0),
+		Color3.fromRGB(150, 100, 65),
+		Enum.Material.WoodPlanks
+	)
+	for _, side in { -1, 1 } do
+		local window = CFrame.Angles(0, side * math.rad(40), 0) * at(0, 4, -3.25)
+		piece(
+			model,
+			`Window_{side}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(0.3, 1.5, 1.5),
+			window * CFrame.Angles(0, math.rad(90), 0),
+			Color3.fromRGB(150, 205, 240),
+			Enum.Material.Glass
+		)
+	end
+	piece(
+		model,
+		"Flower",
+		Enum.PartType.Ball,
+		Vector3.one * 0.8,
+		at(-1.9, 0.4, -3.6),
+		Color3.fromRGB(240, 130, 200)
+	)
+end
+
+BUILDERS.hay_bales = function(model: Model)
+	local spots = { at(-1.45, 0.8, 0), at(1.45, 0.8, 0.2), at(0, 2.4, 0.1) }
+	for index, spot in spots do
+		piece(
+			model,
+			`Bale_{index}`,
+			Enum.PartType.Block,
+			Vector3.new(2.8, 1.6, 1.8),
+			spot * CFrame.Angles(0, math.rad(index * 7 - 10), 0),
+			STRAW,
+			Enum.Material.Grass
+		)
+		piece(
+			model,
+			`BaleBand_{index}`,
+			Enum.PartType.Block,
+			Vector3.new(0.25, 1.62, 1.82),
+			spot * CFrame.Angles(0, math.rad(index * 7 - 10), 0),
+			Color3.fromRGB(190, 150, 80),
+			Enum.Material.Fabric
+		)
+	end
+end
+
+--[[
+	Мельница: беленый домик-башня, красная крыша-купол, дверь и крылья спереди.
+	Крылья — отдельная модель с меткой AF_Windmill: крутит их клиент
+	(PlaygroundController), сервер ничего не гоняет по сети.
+]]
+BUILDERS.windmill = function(model: Model)
+	column(model, "Tower", 9, 5.2, at(0, 4.5, 0.6), Color3.fromRGB(245, 240, 225), Enum.Material.Plaster)
+	column(model, "TowerTop", 2, 4.2, at(0, 10, 0.6), Color3.fromRGB(245, 240, 225), Enum.Material.Plaster)
+	piece(model, "Roof", Enum.PartType.Ball, Vector3.one * 4.6, at(0, 11.4, 0.6), CAP_RED)
+	piece(
+		model,
+		"Door",
+		Enum.PartType.Block,
+		Vector3.new(1.6, 2.8, 0.4),
+		at(0, 1.4, -1.95),
+		Color3.fromRGB(150, 100, 65),
+		Enum.Material.WoodPlanks
+	)
+
+	local blades = Instance.new("Model")
+	blades.Name = "Blades"
+	-- Крылья приезжают к клиенту целиком: иначе стриминг привёз бы часть лопастей позже, и они встали бы криво.
+	blades.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	blades.Parent = model
+	local hubAt = at(0, 11, -2.6)
+	local hub = piece(
+		blades,
+		"Hub",
+		Enum.PartType.Ball,
+		Vector3.one * 1.1,
+		hubAt,
+		Color3.fromRGB(150, 100, 65),
+		Enum.Material.Wood
+	)
+	-- Две длинные перекладины крестом и четыре паруса на них.
+	for index = 1, 2 do
+		piece(
+			blades,
+			`Arm_{index}`,
+			Enum.PartType.Block,
+			Vector3.new(0.35, 11.4, 0.3),
+			hubAt * CFrame.Angles(0, 0, math.rad(45 + index * 90)),
+			Color3.fromRGB(150, 100, 65),
+			Enum.Material.Wood
+		)
+	end
+	for index = 1, 4 do
+		local spin = hubAt * CFrame.Angles(0, 0, math.rad(45 + index * 90))
+		piece(
+			blades,
+			`Sail_{index}`,
+			Enum.PartType.Block,
+			Vector3.new(1.4, 4.2, 0.15),
+			spin * CFrame.new(0.85, 3.4, 0.05),
+			Color3.fromRGB(255, 252, 245),
+			Enum.Material.Fabric
+		)
+	end
+	blades.PrimaryPart = hub
+	CollectionService:AddTag(hub, "AF_Windmill")
+end
+
+--[[
+	Игрушки учёбы: большие счёты и стакан с карандашами. Не задание и не подсказка —
+	просто вещи из детской, которые напоминают, куда ведут порталы.
+]]
+local RAINBOW = {
+	Color3.fromRGB(235, 90, 90),
+	Color3.fromRGB(245, 160, 70),
+	Color3.fromRGB(245, 210, 80),
+	Color3.fromRGB(110, 190, 110),
+	Color3.fromRGB(100, 160, 235),
+}
+
+-- Счёты: три прутка, на верхнем одна косточка, на среднем две, на нижнем три — сосчитай.
+BUILDERS.abacus = function(model: Model)
+	for _, side in { -1, 1 } do
+		piece(
+			model,
+			`Post_{side}`,
+			Enum.PartType.Block,
+			Vector3.new(0.8, 7.4, 2.4),
+			at(side * 3.6, 3.7, 0),
+			WOOD,
+			Enum.Material.WoodPlanks
+		)
+	end
+	piece(
+		model,
+		"Bar",
+		Enum.PartType.Block,
+		Vector3.new(6.4, 0.6, 1.2),
+		at(0, 6.8, 0),
+		Color3.fromRGB(170, 120, 80),
+		Enum.Material.WoodPlanks
+	)
+	for row = 1, 3 do
+		local y = 6.8 - row * 1.6
+		piece(
+			model,
+			`Rod_{row}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(6.6, 0.2, 0.2),
+			at(0, y, 0),
+			METAL,
+			Enum.Material.Metal
+		)
+		for bead = 1, row do
+			piece(
+				model,
+				`Bead_{row}_{bead}`,
+				Enum.PartType.Ball,
+				Vector3.one * 1.1,
+				at(-3.2 + bead * 1.15, y, 0),
+				RAINBOW[row * 2 - 1]
+			)
+		end
+	end
+end
+
+BUILDERS.crayons = function(model: Model)
+	column(model, "Cup", 3, 3.6, at(0, 1.5, 0), Color3.fromRGB(120, 170, 235))
+	column(model, "CupRim", 0.4, 3.9, at(0, 3, 0), Color3.fromRGB(250, 250, 245))
+	local tilts =
+		{ { -0.7, -0.5, -8, 7.4 }, { 0.8, -0.3, 9, 6.6 }, { 0, 0.8, 4, 7.8 }, { -0.6, 0.7, -12, 6.2 } }
+	for index, spec in tilts do
+		local height = spec[4] - 1.2
+		local base = at(spec[1], 1, spec[2]) * CFrame.Angles(math.rad(spec[3] * 0.4), 0, math.rad(spec[3]))
+		local color = RAINBOW[index]
+		column(model, `Crayon_{index}`, height, 0.9, base * CFrame.new(0, height / 2, 0), color)
+		column(model, `CrayonTip_{index}`, 0.8, 0.5, base * CFrame.new(0, height + 0.4, 0), color)
+	end
 end
 
 function DecorShapes.build(item): Model?

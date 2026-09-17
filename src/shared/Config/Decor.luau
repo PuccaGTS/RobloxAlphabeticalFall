@@ -34,7 +34,18 @@ local Decor = {}
 Decor.FOLDER = "Assets"
 Decor.SUBFOLDER = "decor"
 
-export type Kind = "tree" | "bush" | "flower" | "rock" | "bench" | "lamp" | "fountain" | "sign"
+export type Kind =
+	"tree"
+	| "bush"
+	| "flower"
+	| "rock"
+	| "bench"
+	| "lamp"
+	| "fountain"
+	| "sign"
+	| "mushroom"
+	| "house"
+	| "toy"
 
 export type Item = {
 	id: string, -- он же имя файла: tree_pine -> assets/models/decor/tree_pine.rbxm
@@ -142,6 +153,92 @@ local ITEMS: { Item } = {
 		kind = "sign",
 		size = Vector3.new(5.6, 4.8, 3.6),
 		color = Color3.fromRGB(252, 248, 238),
+		collide = true,
+	},
+	--[[
+		Лесное и деревенское: мухоморы, пеньки, брёвна, стол для пикника,
+		домик-гриб, стожки сена и мельница. На первой прогулке по большому парку
+		деревья, кусты и камни повторялись до зевоты — ребёнку нужно, чтобы
+		за следующим деревом было что-то новое, на что можно залезть.
+		Модели отобраны так же, как первые восемь (docs/21-DECOR.md § 7.1).
+	]]
+	{
+		id = "mushroom",
+		assetId = 4644085527,
+		title = "Мухоморы",
+		kind = "mushroom",
+		size = Vector3.new(5, 6.6, 5),
+		color = Color3.fromRGB(225, 70, 70),
+		collide = true,
+	},
+	{
+		id = "stump",
+		assetId = 6764157470,
+		title = "Пенёк",
+		kind = "rock",
+		size = Vector3.new(3, 2.6, 3),
+		color = Color3.fromRGB(135, 95, 65),
+		collide = true,
+	},
+	{
+		id = "log",
+		assetId = 11312714034,
+		title = "Бревно",
+		kind = "rock",
+		size = Vector3.new(8, 2.6, 2.6),
+		color = Color3.fromRGB(150, 105, 70),
+		collide = true,
+	},
+	{
+		id = "picnic_table",
+		assetId = 23153940,
+		title = "Стол для пикника",
+		kind = "bench",
+		size = Vector3.new(7, 4, 6),
+		color = Color3.fromRGB(190, 145, 95),
+		collide = true,
+	},
+	{
+		id = "mushroom_house",
+		assetId = 11483003911,
+		title = "Домик-гриб",
+		kind = "house",
+		size = Vector3.new(12, 13.2, 12),
+		color = Color3.fromRGB(225, 70, 70),
+		collide = true,
+	},
+	{
+		id = "hay_bales",
+		assetId = 5464985431,
+		title = "Стожки сена",
+		kind = "rock",
+		size = Vector3.new(6, 3.4, 4),
+		color = Color3.fromRGB(230, 200, 110),
+		collide = true,
+	},
+	-- Мельница, счёты и карандаши — только эскизы: подходящих моделей в Store нет.
+	{
+		id = "windmill",
+		title = "Мельница",
+		kind = "house",
+		size = Vector3.new(10, 17, 7),
+		color = Color3.fromRGB(245, 240, 225),
+		collide = true,
+	},
+	{
+		id = "abacus",
+		title = "Счёты",
+		kind = "toy",
+		size = Vector3.new(8, 7.4, 2.4),
+		color = Color3.fromRGB(200, 150, 100),
+		collide = true,
+	},
+	{
+		id = "crayons",
+		title = "Карандаши в стакане",
+		kind = "toy",
+		size = Vector3.new(5, 8.4, 5),
+		color = Color3.fromRGB(120, 170, 235),
 		collide = true,
 	},
 	{
@@ -521,6 +618,44 @@ for quarter = 1, 4 do
 end
 
 --[[
+	Грибная деревня, мельницы и игрушки — во внешнем поясе парка.
+
+	Кольцо участков стало шире, и пояс между рощами и опушкой перед домами
+	остался почти пустым: россыпь распределена на весь парк и там редка.
+	Теперь по дороге домой в каждой четверти своё место: в двух — домик-гриб
+	с мухоморами и пеньками, в двух других — мельница со стожками и столом
+	для пикника. Счёты стоят ближе к миру математики, карандаши — к миру букв.
+]]
+local villageRandom = Random.new(314)
+for quarter = 1, 4 do
+	local angle = ((quarter - 1) / 4 + 1 / 8 + (villageRandom:NextNumber() - 0.5) * 0.06) * math.pi * 2
+	local center = Vector2.new(math.cos(angle), math.sin(angle)) * (Decor.MAX_RADIUS - 52)
+	local facing = math.deg(-angle) + 90
+	if quarter % 2 == 1 then
+		add("mushroom_house", center.X, center.Y, facing)
+		for index = 1, 5 do
+			local around = index / 5 * math.pi * 2 + villageRandom:NextNumber() * 0.5
+			local spot = center
+				+ Vector2.new(math.cos(around), math.sin(around)) * (12 + villageRandom:NextNumber() * 4)
+			local id = if index % 2 == 0 then "stump" else "mushroom"
+			add(id, spot.X, spot.Y, villageRandom:NextNumber() * 360, 0.8 + villageRandom:NextNumber() * 0.5)
+		end
+	else
+		add("windmill", center.X, center.Y, facing)
+		local side = Vector2.new(-math.sin(angle), math.cos(angle))
+		local inward = -Vector2.new(math.cos(angle), math.sin(angle))
+		local hay = center + side * 10
+		add("hay_bales", hay.X, hay.Y, villageRandom:NextNumber() * 360)
+		local hay2 = center + side * 9 + inward * 7
+		add("hay_bales", hay2.X, hay2.Y, villageRandom:NextNumber() * 360)
+		local table_ = center - side * 11 + inward * 6
+		add("picnic_table", table_.X, table_.Y, facing)
+		local log = center - side * 6 + inward * 14
+		add("log", log.X, log.Y, facing + 30)
+	end
+end
+
+--[[
 	Опушка перед домами: кольцо деревьев у края парка. Дома за ней читаются
 	как отдельный посёлок, а не как продолжение площади.
 ]]
@@ -565,6 +700,53 @@ for _ = 1, 140 do
 	local radius = Base.PLAZA_RADIUS + 25 + scatter:NextNumber() * (Decor.MAX_RADIUS - Base.PLAZA_RADIUS - 40)
 	local id = SCATTER[scatter:NextInteger(1, #SCATTER)]
 	add(id, math.cos(angle) * radius, math.sin(angle) * radius, scatter:NextNumber() * 360)
+end
+
+-- Счёты по стороне мира математики (+X), карандаши — мира букв (−X).
+local toyRandom = Random.new(515)
+for index = 1, 8 do
+	local isMath = index % 2 == 0
+	local angle = (index / 8 - 0.5) * math.pi * 0.9
+		+ (if isMath then 0 else math.pi)
+		+ (toyRandom:NextNumber() - 0.5) * 0.2
+	local radius = Base.PLAZA_RADIUS
+		+ 40
+		+ toyRandom:NextNumber() * (Decor.MAX_RADIUS - Base.PLAZA_RADIUS - 70)
+	add(
+		if isMath then "abacus" else "crayons",
+		math.cos(angle) * radius,
+		math.sin(angle) * radius,
+		math.deg(-angle) + 90 + (toyRandom:NextNumber() - 0.5) * 40
+	)
+end
+
+-- Лесная мелочь в рощах и по всему парку: мухоморы, пеньки, брёвна.
+local WOODLAND = { "mushroom", "stump", "log", "mushroom", "stump", "picnic_table" }
+local woodland = Random.new(4096)
+for _ = 1, 90 do
+	local angle = woodland:NextNumber() * math.pi * 2
+	local radius = Base.PLAZA_RADIUS
+		+ 30
+		+ woodland:NextNumber() * (Decor.MAX_RADIUS - Base.PLAZA_RADIUS - 44)
+	local id = WOODLAND[woodland:NextInteger(1, #WOODLAND)]
+	add(id, math.cos(angle) * radius, math.sin(angle) * radius, woodland:NextNumber() * 360)
+end
+
+-- Внешний пояс гуще деревьями: россыпь выше заполнила в основном ближнюю часть.
+local outer = Random.new(8128)
+local OUTER = { "tree_round", "tree_pine", "bush_round", "flower_bed", "tree_round", "rock_small" }
+for _ = 1, 70 do
+	local angle = outer:NextNumber() * math.pi * 2
+	local radius = 175 + outer:NextNumber() * (Decor.MAX_RADIUS - 190)
+	local id = OUTER[outer:NextInteger(1, #OUTER)]
+	local tall = id == "tree_pine" or id == "tree_round"
+	add(
+		id,
+		math.cos(angle) * radius,
+		math.sin(angle) * radius,
+		outer:NextNumber() * 360,
+		if tall then 0.9 + outer:NextNumber() * 0.4 else nil
+	)
 end
 
 Decor.placements = PLACEMENTS

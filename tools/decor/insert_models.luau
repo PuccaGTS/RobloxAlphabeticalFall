@@ -84,6 +84,12 @@ local PICKS = {
 		author = "jsvxsophie165",
 		tri = 7974,
 	},
+	{ id = "mushroom", assetId = 4644085527, title = "Low Poly Mushrooms", author = "CyrilTBFD", tri = 1228 },
+	{ id = "stump", assetId = 6764157470, title = "Tree Stump 2", author = "CCD_24", tri = 594 },
+	{ id = "log", assetId = 11312714034, title = "Low Poly Log", author = "osddxx", tri = 537 },
+	{ id = "picnic_table", assetId = 23153940, title = "Picnic Table", author = "Roblox", tri = 384 },
+	{ id = "mushroom_house", assetId = 11483003911, title = "Mushroom House", author = "Taiyon", tri = 2791 },
+	{ id = "hay_bales", assetId = 5464985431, title = "Hay-Bales", author = "finnisep", tri = 504 },
 }
 
 --[[
@@ -98,6 +104,12 @@ local FALLBACK_SIZES = {
 	tree_round = Vector3.new(10, 14, 10),
 	bush_round = Vector3.new(5, 2.5, 5),
 	flower_bed = Vector3.new(6, 2, 6),
+	mushroom = Vector3.new(5, 6.6, 5),
+	stump = Vector3.new(3, 2.6, 3),
+	log = Vector3.new(8, 2.6, 2.6),
+	picnic_table = Vector3.new(7, 4, 6),
+	mushroom_house = Vector3.new(12, 13.2, 12),
+	hay_bales = Vector3.new(6, 3.4, 4),
 	rock_small = Vector3.new(4, 3, 4),
 	bench = Vector3.new(6, 3, 2.5),
 	lamp = Vector3.new(2, 12, 2),

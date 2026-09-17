@@ -37,3 +37,46 @@ Render.shot(
 	320,
 	65
 )
+
+-- Крупные планы: по одному предмету каждого вида из новых.
+local Decor = require(ReplicatedStorage.Shared.Config.Decor)
+local counts = {}
+for _, placement in Decor.placements do
+	counts[placement.id] = (counts[placement.id] or 0) + 1
+end
+local line = {}
+for id, count in counts do
+	table.insert(line, `{id}={count}`)
+end
+table.sort(line)
+print("INFO decor " .. table.concat(line, " "))
+print(`INFO placements {#Decor.placements}`)
+
+local seen = {}
+for _, placement in Decor.placements do
+	local id = placement.id
+	if
+		not seen[id]
+		and table.find(
+			{
+				"mushroom_house",
+				"windmill",
+				"abacus",
+				"crayons",
+				"picnic_table",
+				"mushroom",
+				"log",
+				"hay_bales",
+			},
+			id
+		)
+	then
+		seen[id] = true
+		local item = Decor.expect(id)
+		local target = Vector3.new(placement.x, 1 + item.size.Y * 0.45, placement.z)
+		local away = Vector3.new(placement.x, 0, placement.z).Unit
+		local distance = math.max(item.size.X, item.size.Y) * 1.6 + 6
+		local eye = target - away * distance + Vector3.new(0, item.size.Y * 0.5 + 2, 0)
+		Render.shot(`park_{id}`, CFrame.lookAt(eye, target), 360, 240, 60)
+	end
+end
