@@ -28,15 +28,20 @@ type Sign = { glyph: TextLabel, dots: { Frame }, streak: TextLabel }
 local function build(stone: BasePart): Sign
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = SIGN_NAME
-	-- Размер в пикселях, как у подписей падов: Scale считался бы от детали.
-	billboard.Size = UDim2.fromOffset(170, 230)
-	billboard.StudsOffset = Vector3.new(0, 7, 0)
+	--[[
+		Размер в студах (у BillboardGui доля Scale — студы): камень стоит
+		между порталами, и пиксельная табличка вдали расползалась на таблички
+		уровней над ними. В студах она держит место, как вывеска. Всё внутри —
+		в долях таблички, иначе оно не росло бы вместе с ней.
+	]]
+	billboard.Size = UDim2.fromScale(8, 10.8)
+	billboard.StudsOffset = Vector3.new(0, 8, 0)
 	billboard.LightInfluence = 0
 	billboard.MaxDistance = 90
 	billboard.Parent = stone
 
 	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, 0, 0, 30)
+	title.Size = UDim2.fromScale(1, 0.13)
 	title.BackgroundTransparency = 1
 	title.Text = "☀ Буква дня"
 	title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -46,8 +51,8 @@ local function build(stone: BasePart): Sign
 	title.Parent = billboard
 
 	local glyph = Instance.new("TextLabel")
-	glyph.Position = UDim2.fromOffset(0, 30)
-	glyph.Size = UDim2.new(1, 0, 0, 140)
+	glyph.Position = UDim2.fromScale(0, 0.13)
+	glyph.Size = UDim2.fromScale(1, 0.61)
 	glyph.BackgroundTransparency = 1
 	glyph.TextColor3 = Color3.fromRGB(255, 255, 255)
 	glyph.TextStrokeColor3 = Color3.fromRGB(35, 30, 50)
@@ -57,34 +62,38 @@ local function build(stone: BasePart): Sign
 	glyph.Parent = billboard
 
 	local row = Instance.new("Frame")
-	row.Position = UDim2.fromOffset(0, 176)
-	row.Size = UDim2.new(1, 0, 0, 26)
+	row.Position = UDim2.fromScale(0, 0.765)
+	row.Size = UDim2.fromScale(1, 0.113)
 	row.BackgroundTransparency = 1
 	row.Parent = billboard
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.Padding = UDim.new(0, 10)
+	layout.Padding = UDim.new(0.06, 0)
 	layout.Parent = row
 
 	local dots: { Frame } = {}
 	for index = 1, 3 do
 		local dot = Instance.new("Frame")
 		dot.Name = `Dot{index}`
-		dot.Size = UDim2.fromOffset(26, 26)
+		dot.Size = UDim2.fromScale(1, 1)
 		dot.BackgroundColor3 = DIM
 		dot.LayoutOrder = index
 		dot.Parent = row
 		local corner = Instance.new("UICorner")
 		corner.CornerRadius = UDim.new(1, 0)
 		corner.Parent = dot
+		local round = Instance.new("UIAspectRatioConstraint")
+		round.AspectRatio = 1
+		round.DominantAxis = Enum.DominantAxis.Height
+		round.Parent = dot
 		table.insert(dots, dot)
 	end
 
 	local streak = Instance.new("TextLabel")
-	streak.Position = UDim2.fromOffset(0, 206)
-	streak.Size = UDim2.new(1, 0, 0, 24)
+	streak.Position = UDim2.fromScale(0, 0.896)
+	streak.Size = UDim2.fromScale(1, 0.104)
 	streak.BackgroundTransparency = 1
 	streak.TextColor3 = Color3.fromRGB(255, 240, 200)
 	streak.TextStrokeTransparency = 0

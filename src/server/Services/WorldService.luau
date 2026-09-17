@@ -172,13 +172,18 @@ local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, 
 end
 
 --[[
-	Подпись над объектом. Размер в ПИКСЕЛЯХ: у BillboardGui доля Scale считается
-	от размера детали, и на платформе 12 студов подпись раздувается до нечитаемой.
+	Подпись над объектом. Размер в пикселях: подпись пада читается с любого
+	расстояния одинаково.
+
+	studs — размер в студах вместо пикселей (у BillboardGui доля Scale — это
+	студы). Нужен там, где подписи стоят друг над другом: пиксельная подпись
+	вдали занимает больше мира и наезжает на соседнюю, а студовая держит место,
+	как настоящая вывеска.
 ]]
-local function caption(parent: BasePart, text: string, height: number)
+local function caption(parent: BasePart, text: string, height: number, studs: Vector2?)
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "Caption"
-	billboard.Size = UDim2.fromOffset(280, 90)
+	billboard.Size = if studs then UDim2.fromScale(studs.X, studs.Y) else UDim2.fromOffset(280, 90)
 	billboard.StudsOffset = Vector3.new(0, height, 0)
 	billboard.LightInfluence = 0
 	-- Близко — чтобы подписи всех падов и Башни не наслаивались друг на друга
@@ -380,6 +385,8 @@ end
 ]]
 local PORTAL_RADIUS = 8
 local PORTAL_STONES = 20
+-- Над постаментом: центр врат на R + 2.5, облетающие буквы до центра + R + 4.8.
+local PORTAL_CAPTION_HEIGHT = PORTAL_RADIUS * 2 + 14
 local PORTAL_GLYPHS = {
 	letters = { "А", "Б", "В", "Г", "Д", "Е" },
 	math = { "1", "2", "3", "4", "5", "+" },
@@ -417,8 +424,13 @@ local function buildPortal(hub: Folder, portal: any)
 	)
 	platform.Shape = Enum.PartType.Cylinder
 	platform.Material = Enum.Material.Slate
-	-- Выше таблички уровня (PortalSignController): раньше они наезжали друг на друга.
-	caption(platform, portal.caption, PORTAL_RADIUS * 2 + 12)
+	--[[
+		Три этажа над вратами, снизу вверх: облетающие буквы, табличка уровня
+		(PortalSignController), название мира. Все три в студах, поэтому этажи
+		не наезжают друг на друга ни вблизи, ни издалека. В пикселях табличка
+		уровня тонула в облетающих буквах, а вдали название ложилось на неё.
+	]]
+	caption(platform, portal.caption, PORTAL_CAPTION_HEIGHT, Vector2.new(24, 4))
 
 	local step = part(
 		`PortalStep_{portal.id}`,

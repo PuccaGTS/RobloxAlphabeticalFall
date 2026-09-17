@@ -40,12 +40,17 @@ local function signOn(arch: BasePart): TextLabel
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = SIGN_NAME
-	-- Размер в пикселях по той же причине, что у подписей падов: Scale у билборда
-	-- считается от детали, и на широкой арке табличка раздулась бы.
-	billboard.Size = UDim2.fromOffset(300, 56)
-	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-	-- Сдвиг в долях собственного размера: под подписью портала на любом расстоянии.
-	billboard.SizeOffset = Vector2.new(0, -0.4)
+	--[[
+		Размер в студах (у BillboardGui доля Scale — студы), как у названия мира
+		над ней (WorldService): табличка висит между облетающими буквами и
+		названием и держит своё место при любом расстоянии. В пикселях буквы
+		проплывали прямо по «Уровень 1 из 11», а издалека на неё ложилось название.
+		Арка — верхний камень кольца; буквы облетают врата на 4.8 студа выше неё.
+	]]
+	billboard.Size = UDim2.fromScale(18, 3.2)
+	billboard.StudsOffset = Vector3.new(0, 7, 0)
+	-- Поверх облетающих букв: они сами поверх всего, и иначе табличку закрывали бы.
+	billboard.AlwaysOnTop = true
 	billboard.LightInfluence = 0
 	billboard.MaxDistance = 70
 	billboard.Parent = arch
@@ -60,8 +65,15 @@ local function signOn(arch: BasePart): TextLabel
 	label.Parent = billboard
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
+	corner.CornerRadius = UDim.new(0.3, 0)
 	corner.Parent = label
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingLeft = UDim.new(0.04, 0)
+	padding.PaddingRight = UDim.new(0.04, 0)
+	padding.PaddingTop = UDim.new(0.12, 0)
+	padding.PaddingBottom = UDim.new(0.12, 0)
+	padding.Parent = label
 
 	return label
 end
