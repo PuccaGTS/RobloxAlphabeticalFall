@@ -207,16 +207,25 @@ local function fitToCatalog(model: Model, item)
 	end
 end
 
+local loading: { [string]: boolean } = {}
+
 local function takeAsset(item): Model?
 	if not item.assetId then
 		return nil
 	end
 
+	-- Модель уже грузится в другом потоке (DecorService.preload): ждём её, а не просим второй раз.
+	while loading[item.id] do
+		task.wait(0.05)
+	end
+
 	local cached = assetCache[item.id]
 	if cached == nil then
+		loading[item.id] = true
 		local ok, result = pcall(function()
 			return InsertService:LoadAsset(item.assetId)
 		end)
+		loading[item.id] = nil
 		if not ok or not result then
 			warn(
 				`[Decor] модель {item.assetId} для "{item.id}" не загрузилась: {result}`
@@ -408,6 +417,35 @@ function DecorService.modelFor(id: string, scale: number?): Model?
 		model:ScaleTo(model:GetScale() * scale)
 	end
 	return model
+end
+
+--[[
+	Грузит модели всех предметов разом, параллельно, до постройки мира.
+
+	По одной они грузились по полсекунды каждая, и мир строился пять-десять
+	секунд — ребёнок появлялся раньше площади и падал. Параллельно выходит
+	столько, сколько самая медленная, но не дольше timeout: что не успело,
+	встанет эскизом.
+]]
+function DecorService.preload(timeout: number)
+	local folder = assetsFolder()
+	local pending = 0
+	for _, item in Decor.items do
+		if item.assetId and assetCache[item.id] == nil and not takeModel(folder, item) then
+			pending += 1
+			task.spawn(function()
+				local model = takeAsset(item)
+				if model then
+					model:Destroy()
+				end
+				pending -= 1
+			end)
+		end
+	end
+	local deadline = os.clock() + timeout
+	while pending > 0 and os.clock() < deadline do
+		task.wait(0.05)
+	end
 end
 
 -- Сколько чужих скриптов вырезано при последней сборке: для лога и для тестов.

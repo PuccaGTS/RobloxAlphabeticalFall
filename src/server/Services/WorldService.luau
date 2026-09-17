@@ -154,6 +154,9 @@ local exitOf: { [Player]: CFrame } = {}
 -- Пауза после конца испытания, прежде чем пад или портал снова сработает на касание.
 local AFTER_FINISH_COOLDOWN = 3
 
+-- Пады, порталы, камень буквы дня и магазин: всё, что запускается, если постоять.
+local activators = {}
+
 local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): BasePart
 	local p = Instance.new("Part")
 	p.Name = name
@@ -270,63 +273,95 @@ local function makeActivator(
 	counterLabel.Parent = counter
 
 	--[[
-		Касание срабатывает много раз в секунду, пока ребёнок стоит на паде.
-		Поэтому реагируем только на ВХОД на пад: пока он с него не сойдёт,
-		повторные касания игнорируются.
+		Кто стоит на паде, сервер проверяет сам, по положению персонажа, четыре
+		раза в секунду (watchActivators ниже). Раньше отсчёт держался на Touched
+		и TouchEnded: при ходьбе нога отрывается от пада, приходит TouchEnded,
+		отсчёт гаснет, а нового Touched у стоящего ребёнка уже не бывает.
+		На проверке в Play из семи падов не запускались четыре, и оба портала.
 	]]
-	local standing: { [Player]: boolean } = {}
-	local counting: Player? = nil
+	table.insert(activators, {
+		part = pad,
+		hold = hold,
+		counter = counter,
+		label = counterLabel,
+		activate = activate,
+		counting = nil,
+		waitLeave = {},
+	})
+end
 
-	local function stopCounting()
-		counting = nil
-		counter.Enabled = false
+--[[
+	Стоит ли точка в зоне активатора. Для пада — столб над ним с запасом
+	в полстуда по краям; для полотна портала (цилиндр на ребре) — диск
+	радиусом с полотно и толщиной в шаг по обе стороны: внутри врат.
+]]
+local function insideActivator(zone: BasePart, position: Vector3): boolean
+	local p = zone.CFrame:PointToObjectSpace(position)
+	if zone.Shape == Enum.PartType.Cylinder then
+		return math.abs(p.X) <= 3 and math.sqrt(p.Y * p.Y + p.Z * p.Z) <= zone.Size.Y / 2
 	end
+	local half = zone.Size / 2
+	return math.abs(p.X) <= half.X + 0.5 and math.abs(p.Z) <= half.Z + 0.5 and p.Y >= -1 and p.Y <= half.Y + 7
+end
 
-	pad.Touched:Connect(function(hit: BasePart)
-		local character = hit.Parent
-		local player = character and Players:GetPlayerFromCharacter(character)
-		if not player or standing[player] or counting then
-			return
+local function rootOf(player: Player): BasePart?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root else nil
+end
+
+local function runCountdown(activator, player: Player)
+	activator.counting = player
+	activator.counter.Enabled = true
+	task.spawn(function()
+		local function stillThere(): boolean
+			local root = rootOf(player)
+			return player.Parent ~= nil and root ~= nil and insideActivator(activator.part, root.Position)
 		end
-
-		local now = os.clock()
-		if lastTouch[player] and now - lastTouch[player] < TOUCH_DEBOUNCE then
-			return
-		end
-
-		standing[player] = true
-		counting = player
-		counter.Enabled = true
-
-		task.spawn(function()
-			for left = math.ceil(hold), 1, -1 do
-				if counting ~= player or not standing[player] then
-					stopCounting()
-					return
-				end
-				counterLabel.Text = tostring(left)
-				task.wait(1)
-			end
-
-			if counting ~= player or not standing[player] then
-				stopCounting()
+		for left = math.ceil(activator.hold), 1, -1 do
+			if not stillThere() then
+				-- Сошёл с пада — отсчёт отменён без единого слова: передумать можно молча.
+				activator.counting = nil
+				activator.counter.Enabled = false
 				return
 			end
-
-			counterLabel.Text = "Поехали!"
-			stopCounting()
-			activate(player)
-		end)
+			activator.label.Text = tostring(left)
+			task.wait(1)
+		end
+		activator.counting = nil
+		activator.counter.Enabled = false
+		if stillThere() then
+			activator.label.Text = "Поехали!"
+			-- Снова сработает, только когда ребёнок сойдёт и вернётся.
+			activator.waitLeave[player] = true
+			activator.activate(player)
+		end
 	end)
+end
 
-	pad.TouchEnded:Connect(function(hit: BasePart)
-		local character = hit.Parent
-		local player = character and Players:GetPlayerFromCharacter(character)
-		if player then
-			standing[player] = nil
-			-- Сошёл с пада — отсчёт отменён без единого слова: передумать можно молча.
-			if counting == player then
-				stopCounting()
+local function watchActivators()
+	task.spawn(function()
+		while true do
+			task.wait(0.25)
+			local now = os.clock()
+			for _, player in Players:GetPlayers() do
+				local root = rootOf(player)
+				for _, activator in activators do
+					if not activator.part.Parent then
+						continue
+					end
+					local inside = root ~= nil and insideActivator(activator.part, root.Position)
+					if not inside then
+						activator.waitLeave[player] = nil
+					elseif
+						not activator.counting
+						and not activator.waitLeave[player]
+						and not ChallengeService.isBusy(player)
+						and not (lastTouch[player] and now - lastTouch[player] < TOUCH_DEBOUNCE)
+					then
+						runCountdown(activator, player)
+					end
+				end
 			end
 		end
 	end)
@@ -532,26 +567,28 @@ local function buildChallengePad(hub: Folder, pad: any, slot: number)
 		part(`Pad_{pad.challengeId}`, Vector3.new(14, 1, 14), CFrame.new(position), pad.color, hub)
 	caption(platform, pad.caption, 5)
 
-	-- Арка над падом, чтобы портал читался как вход, а не как плитка на полу
+	-- Арка над падом, чтобы портал читался как вход, а не как плитка на полу.
+	-- Смотрит на центр площади: у крайних падов столб стоял поперёк пути от спавна.
+	local facing = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
 	local frameColor = Color3.fromRGB(90, 140, 210)
 	part(
 		`PadArch_{pad.challengeId}`,
 		Vector3.new(14, 1.2, 1.2),
-		CFrame.new(position + Vector3.new(0, 9, 0)),
+		facing * CFrame.new(0, 9, 0),
 		frameColor,
 		hub
 	)
 	part(
 		`PadLeft_{pad.challengeId}`,
 		Vector3.new(1.2, 9, 1.2),
-		CFrame.new(position + Vector3.new(-6.4, 4.5, 0)),
+		facing * CFrame.new(-6.4, 4.5, 0),
 		frameColor,
 		hub
 	)
 	part(
 		`PadRight_{pad.challengeId}`,
 		Vector3.new(1.2, 9, 1.2),
-		CFrame.new(position + Vector3.new(6.4, 4.5, 0)),
+		facing * CFrame.new(6.4, 4.5, 0),
 		frameColor,
 		hub
 	)
@@ -733,8 +770,17 @@ end
 
 	Не трогаем только камеру, сам объект Terrain (в нём живут облака)
 	и персонажей игроков, если они уже появились.
+
+	Зовётся из init.server САМОЙ ПЕРВОЙ, до любой постройки. Раньше её звала
+	постройка площади, а поляны занятий строятся раньше площади — и чистка
+	сносила их целиком: ребёнка переносило на поляну без пола, он падал,
+	и ни одно занятие не работало.
+
+	Заодно в Output перечисляются чужие скрипты места: шаблон Studio приносит
+	свои скрипты (убивающие детали, свои точки появления), и они ломают игру
+	так, что по нашему коду причину не найти.
 ]]
-local function clearForeignWorld()
+function WorldService.clearForeignWorld()
 	workspace.Terrain:Clear()
 
 	local removed = 0
@@ -752,11 +798,36 @@ local function clearForeignWorld()
 			`[World] убрано чужое из Workspace: {removed} объектов и рельеф шаблона`
 		)
 	end
+
+	local foreign = {}
+	local function listForeign(container: Instance?, ours: { string })
+		if not container then
+			return
+		end
+		for _, child in container:GetChildren() do
+			if not table.find(ours, child.Name) and not child.Name:match("^ZZ_") then
+				table.insert(foreign, child:GetFullName())
+			end
+		end
+	end
+	listForeign(game:GetService("ServerScriptService"), { "Server" })
+	local starterPlayer = game:GetService("StarterPlayer")
+	listForeign(
+		starterPlayer:FindFirstChild("StarterPlayerScripts"),
+		{ "Client", "PlayerModule", "RbxCharacterSounds", "PlayerScriptsLoader" }
+	)
+	listForeign(starterPlayer:FindFirstChild("StarterCharacterScripts"), {})
+	if #foreign > 0 then
+		warn(
+			`[World] в месте есть чужие скрипты — они не из проекта и могут ломать игру: {table.concat(
+				foreign,
+				", "
+			)}. Открой чистое место: rojo build -o build/game.rbxl`
+		)
+	end
 end
 
 function WorldService.build()
-	clearForeignWorld()
-
 	styleLighting()
 
 	local hub = Instance.new("Folder")
@@ -895,6 +966,7 @@ end
 
 function WorldService.start()
 	WorldService.build()
+	watchActivators()
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		lastTouch[player] = nil
