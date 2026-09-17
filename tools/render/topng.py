@@ -36,7 +36,7 @@ def main():
         row = re.search(r"R(\d+) ([0-9a-f]+)", line)
         if current and row and len(row.group(2)) == current[1] * 6:
             current[3][int(row.group(1))] = row.group(2)
-        elif not current and ("rror" in line or "FAIL" in line):
+        elif not current and ("rror" in line or "FAIL" in line or "INFO" in line):
             print(line)
 
 

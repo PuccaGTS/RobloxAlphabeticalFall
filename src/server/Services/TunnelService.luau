@@ -200,6 +200,12 @@ local CURVE_CHUNK = 5
 
 local function pieces(path, from: number, to: number, chunk: number, piece: (number, number, boolean) -> ())
 	local cuts = { from, to }
+	-- Швы у ворот: пол и бортики меняют цвет ровно там, где начинается новый отрезок.
+	for _, z in path.seams or {} do
+		if z > from and z < to then
+			table.insert(cuts, z)
+		end
+	end
 	for _, zone in path.sampler.zones do
 		if zone.from > from and zone.from < to then
 			table.insert(cuts, zone.from)
@@ -227,8 +233,49 @@ local function pieces(path, from: number, to: number, chunk: number, piece: (num
 	end
 end
 
-local FLOOR_COLOR = Color3.fromRGB(205, 195, 175)
 local FLOOR_ZONE_COLOR = Color3.fromRGB(235, 215, 160)
+
+--[[
+	У каждого отрезка забега свой цвет пола и бортиков: песок, мята, небо,
+	сирень, персик, лимон. Раньше весь забег был одного бежевого цвета,
+	и пройденные ворота ничем не отличались от будущих: бежишь, бежишь,
+	а место то же. Теперь за воротами начинается другое место, и это видно
+	раньше, чем ребёнок добежит до следующей буквы.
+
+	Цвета светлые и неяркие: на полу стоят плитки с буквами и препятствия,
+	и спорить с ними пол не должен.
+]]
+local SEGMENT_FLOORS = {
+	Color3.fromRGB(214, 202, 178),
+	Color3.fromRGB(190, 216, 194),
+	Color3.fromRGB(190, 208, 228),
+	Color3.fromRGB(214, 198, 226),
+	Color3.fromRGB(232, 204, 184),
+	Color3.fromRGB(226, 220, 172),
+}
+local SEGMENT_RAILS = {
+	Color3.fromRGB(245, 175, 110),
+	Color3.fromRGB(110, 195, 140),
+	Color3.fromRGB(120, 170, 235),
+	Color3.fromRGB(185, 140, 225),
+	Color3.fromRGB(240, 130, 120),
+	Color3.fromRGB(235, 200, 80),
+}
+
+-- Номер отрезка в точке z: сколько ворот уже позади, плюс один.
+local function segmentAt(path, z: number): number
+	local segment = 1
+	for _, seam in path.seams or {} do
+		if z > seam then
+			segment += 1
+		end
+	end
+	return segment
+end
+
+local function floorColor(path, z: number): Color3
+	return SEGMENT_FLOORS[(segmentAt(path, z) - 1) % #SEGMENT_FLOORS + 1]
+end
 
 local function buildFloor(model: Model, path, length: number, obstacles: { any })
 	local holes = laneHoles(obstacles)
@@ -263,7 +310,7 @@ local function buildFloor(model: Model, path, length: number, obstacles: { any }
 					`Floor_{lane}_{math.floor(mid - size / 2)}`,
 					Vector3.new(Tunnel.LANE_WIDTH, 2, size),
 					path.frame(mid) * CFrame.new(x, -1, 0),
-					FLOOR_COLOR,
+					floorColor(path, mid),
 					model
 				)
 			end)
@@ -291,12 +338,6 @@ local GUARD_STRAIGHT = 0.99995 -- косинус угла: меньше полу
 local GUARD_SAMPLE = 5 -- шаг, с которым меряется размах высот под стенкой
 local GUARD_MAX_TURN = 0.07 -- радиан поворота внутри одного куска стенки, около четырёх градусов
 local GUARD_MIN_PIECE = 1.5
-local RAIL_COLORS = {
-	Color3.fromRGB(120, 180, 235),
-	Color3.fromRGB(245, 175, 110),
-	Color3.fromRGB(150, 210, 140),
-	Color3.fromRGB(215, 160, 225),
-}
 
 local function buildCorridor(model: Model, path, length: number, obstacles: { any })
 	local half = Tunnel.WIDTH / 2
@@ -307,7 +348,7 @@ local function buildCorridor(model: Model, path, length: number, obstacles: { an
 		local x = side * (half + Tunnel.WALL_THICKNESS / 2)
 
 		pieces(path, 0, length, CURVE_CHUNK * 2, function(mid: number, size: number, curved: boolean)
-			local color = RAIL_COLORS[math.floor(mid / 60) % #RAIL_COLORS + 1]
+			local color = SEGMENT_RAILS[(segmentAt(path, mid) - 1) % #SEGMENT_RAILS + 1]
 			local rail = build(
 				`Rail_{side}_{math.floor(mid)}`,
 				Vector3.new(Tunnel.WALL_THICKNESS, RAIL_HEIGHT, size + (if curved then 1.2 else 0)),
@@ -494,6 +535,105 @@ local function buildGateHeader(model: Model, origin: CFrame, gate: any)
 	end
 end
 
+--[[
+	Ворота — арка из колонн, а не ряд цветных коробок. Колонна на каждой границе
+	дорожек, сверху перемычка с лампочками, выше всего, что висит над воротами
+	(пример и тарелки математики). Закрытая дорожка — деревянная дверь с
+	перекладинами: она читается как «сюда нельзя», а не как ещё один цвет.
+]]
+local GATE_TOP = Tunnel.HEIGHT - 1
+local GATE_STONE = Color3.fromRGB(245, 240, 230)
+local GATE_DOOR = Color3.fromRGB(195, 145, 100)
+local GATE_BOARD = Color3.fromRGB(150, 105, 70)
+local GATE_BULBS = {
+	Color3.fromRGB(255, 120, 120),
+	Color3.fromRGB(255, 200, 90),
+	Color3.fromRGB(130, 220, 140),
+	Color3.fromRGB(120, 185, 255),
+	Color3.fromRGB(200, 150, 240),
+}
+
+local function buildGateArch(model: Model, origin: CFrame, gate: any)
+	local at = origin * CFrame.new(0, 0, -gate.z)
+	local half = Tunnel.WIDTH / 2
+	for boundary = 0, Tunnel.LANE_COUNT do
+		local x = -half + boundary * Tunnel.LANE_WIDTH
+		local plinth = build(
+			`GatePlinth_{gate.index}_{boundary}`,
+			Vector3.new(2.4, 1.4, 2.4),
+			at * CFrame.new(x, 0.7, 0),
+			GATE_STONE,
+			model
+		)
+		plinth.Material = Enum.Material.Marble
+		local pillar = build(
+			`GatePillar_{gate.index}_{boundary}`,
+			Vector3.new(GATE_TOP, 1.6, 1.6),
+			at * CFrame.new(x, GATE_TOP / 2, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			GATE_STONE,
+			model
+		)
+		pillar.Shape = Enum.PartType.Cylinder
+		pillar.Material = Enum.Material.Marble
+		local cap = build(
+			`GateCap_{gate.index}_{boundary}`,
+			Vector3.new(2.2, 2.2, 2.2),
+			at * CFrame.new(x, GATE_TOP + 2.6, 0),
+			GATE_BULBS[boundary % #GATE_BULBS + 1],
+			model
+		)
+		cap.Shape = Enum.PartType.Ball
+		cap.CanCollide = false
+	end
+
+	local lintel = build(
+		`GateLintel_{gate.index}`,
+		Vector3.new(Tunnel.WIDTH + 2.4, 1.6, 2),
+		at * CFrame.new(0, GATE_TOP + 0.8, 0),
+		GATE_STONE,
+		model
+	)
+	lintel.Material = Enum.Material.Marble
+	-- Лампочки на перемычке со стороны бегущего: ворота видно издалека.
+	for bulb = 1, 7 do
+		local light = build(
+			`GateBulb_{gate.index}_{bulb}`,
+			Vector3.new(0.7, 0.7, 0.7),
+			at * CFrame.new((bulb - 4) * 3.8, GATE_TOP + 0.8, 1.05),
+			GATE_BULBS[bulb % #GATE_BULBS + 1],
+			model
+		)
+		light.Shape = Enum.PartType.Ball
+		light.Material = Enum.Material.Neon
+		light.CanCollide = false
+	end
+end
+
+local function dressDoor(model: Model, at: CFrame, name: string)
+	for index, y in { 3, Tunnel.HEIGHT - 4 } do
+		local board = build(
+			`{name}_Board_{index}`,
+			Vector3.new(Tunnel.LANE_WIDTH - 1.8, 1, 0.3),
+			at * CFrame.new(0, y, 0.85),
+			GATE_BOARD,
+			model
+		)
+		board.Material = Enum.Material.WoodPlanks
+		board.CanCollide = false
+	end
+	local rise = Tunnel.HEIGHT - 7
+	local run = Tunnel.LANE_WIDTH - 2.4
+	local brace = build(
+		`{name}_Brace`,
+		Vector3.new(math.sqrt(rise * rise + run * run), 0.9, 0.3),
+		at * CFrame.new(0, Tunnel.HEIGHT / 2 - 0.5, 0.85) * CFrame.Angles(0, 0, math.atan2(rise, run)),
+		GATE_BOARD,
+		model
+	)
+	brace.Material = Enum.Material.WoodPlanks
+	brace.CanCollide = false
+end
+
 local function buildGate(model: Model, origin: CFrame, gate: any, player: Player)
 	local openLanes: { [number]: any } = {}
 	for _, opening in gate.openings do
@@ -501,6 +641,7 @@ local function buildGate(model: Model, origin: CFrame, gate: any, player: Player
 	end
 
 	buildGateHeader(model, origin, gate)
+	buildGateArch(model, origin, gate)
 
 	for lane = 1, Tunnel.LANE_COUNT do
 		local x = Tunnel.laneOffset(lane)
@@ -559,14 +700,16 @@ local function buildGate(model: Model, origin: CFrame, gate: any, player: Player
 				})
 			end)
 		else
-			-- Закрытая дорожка: сплошная стена, объехать выбор нельзя
-			build(
+			-- Закрытая дорожка: сплошная дверь до перемычки, объехать выбор нельзя
+			local door = build(
 				`GateWall_{gate.index}_{lane}`,
 				Vector3.new(Tunnel.LANE_WIDTH, Tunnel.HEIGHT, 1.5),
 				at * CFrame.new(0, Tunnel.HEIGHT / 2, 0),
-				Color3.fromRGB(95, 130, 180),
+				GATE_DOOR,
 				model
 			)
+			door.Material = Enum.Material.WoodPlanks
+			dressDoor(model, at, `GateDoor_{gate.index}_{lane}`)
 		end
 	end
 end
@@ -2320,16 +2463,184 @@ local function buildZoneDecor(model: Model, path, player: Player)
 	end
 end
 
+--[[
+	Гирлянды флажков поперёк трассы — там, где над дорожкой ничего нет:
+	не у ворот и сохранок, не над препятствиями, горками, лестницей и весами.
+	На прямом отрезке между воротами иначе смотреть не на что, кроме пола.
+	Висят высоко и ни с чем не сталкиваются.
+]]
+local GARLAND_HEIGHT = 11
+local GARLAND_STEP = 55 -- реже нельзя: пусто; чаще — сотни деталей на длинном забеге
+local GARLAND_FLAGS = 7
+-- Препятствия, которые поднимаются к гирлянде. Низкие ей не мешают: она висит над ними.
+local TALL_OBSTACLES =
+	{ arch = true, pendulum = true, lift = true, spiral = true, carousel = true, pistons = true }
+
+local function buildGarland(model: Model, path, z: number, name: string)
+	local at = path.flat(z)
+	local half = Tunnel.WIDTH / 2 + Tunnel.WALL_THICKNESS + 0.4
+	for _, side in { -1, 1 } do
+		local post = build(
+			`{name}_Post_{side}`,
+			Vector3.new(0.5, GARLAND_HEIGHT + 0.6, 0.5),
+			at * CFrame.new(side * half, (GARLAND_HEIGHT + 0.6) / 2, 0),
+			Color3.fromRGB(250, 250, 245),
+			model
+		)
+		post.CanCollide = false
+	end
+	local sag = 1.8
+	for _, side in { -1, 1 } do
+		local from = Vector3.new(side * half, GARLAND_HEIGHT, 0)
+		local to = Vector3.new(0, GARLAND_HEIGHT - sag, 0)
+		local rope = build(
+			`{name}_Rope_{side}`,
+			Vector3.new((to - from).Magnitude, 0.12, 0.12),
+			at * CFrame.new((from + to) / 2) * CFrame.Angles(0, 0, math.atan2(to.Y - from.Y, to.X - from.X)),
+			Color3.fromRGB(250, 250, 245),
+			model
+		)
+		rope.CanCollide = false
+	end
+	for index = 1, GARLAND_FLAGS do
+		local t = (index - 0.5) / GARLAND_FLAGS
+		local x = -half + t * 2 * half
+		local y = GARLAND_HEIGHT - sag * (1 - math.abs(2 * t - 1)) - 0.75
+		local flag = build(
+			`{name}_Flag_{index}`,
+			Vector3.new(1.1, 1.1, 0.12),
+			at * CFrame.new(x, y, 0) * CFrame.Angles(0, 0, math.pi / 4),
+			ARCH_COLORS[(index - 1) % #ARCH_COLORS + 1],
+			model
+		)
+		flag.CanCollide = false
+	end
+end
+
+local function buildGarlands(model: Model, path, spec: any)
+	local params = spec.params
+	local length = params.length
+	local busy: { { number } } = {}
+	local function block(from: number, to: number)
+		table.insert(busy, { from, to })
+	end
+	for _, gate in params.gates or {} do
+		block(gate.z - 9, gate.z + 9)
+	end
+	for _, checkpoint in params.checkpoints or {} do
+		block(checkpoint.z - 6, checkpoint.z + 6)
+	end
+	for _, obstacle in params.obstacles or {} do
+		if TALL_OBSTACLES[obstacle.kind] then
+			block(obstacle.z - 6, obstacle.z + Tunnel.OBSTACLE_PITCH + 6)
+		end
+	end
+	for _, zone in path.sampler.zones do
+		block(zone.from - 4, zone.to + 4)
+	end
+	local stairs = params.stairs
+	if stairs and #stairs.steps > 0 then
+		block(stairs.z - 6, stairStepZ(stairs, #stairs.steps) + Tunnel.STAIR_DEPTH + 6)
+	end
+	local balance = params.balance
+	if balance and #balance.rounds > 0 then
+		block(balance.z - 6, balanceBarrierZ(balance, #balance.rounds) + 6)
+	end
+	block(length - 24, length + 1)
+
+	local count = 0
+	local z = 12
+	while z < length do
+		local free = true
+		for _, span in busy do
+			if z >= span[1] and z <= span[2] then
+				free = false
+				break
+			end
+		end
+		if free then
+			count += 1
+			buildGarland(model, path, z, `Garland_{count}`)
+			z += GARLAND_STEP
+		else
+			z += 4
+		end
+	end
+end
+
 local function buildFinish(model: Model, origin: CFrame, length: number, player: Player)
 	local at = origin * CFrame.new(0, 0, -(length - 6))
+	local half = Tunnel.WIDTH / 2
 
-	build(
-		"FinishArch",
-		Vector3.new(Tunnel.WIDTH, 1.5, 1.5),
-		at * CFrame.new(0, Tunnel.HEIGHT * 0.6, 0),
+	--[[
+		Финиш — клетчатые столбы, клетчатое полотно поперёк трассы, шарики
+		на столбах и золотая звезда, которая покачивается над серединой.
+		Раньше это была жёлтая планка, похожая на сохранку.
+	]]
+	local checkWhite = Color3.fromRGB(250, 250, 250)
+	local checkBlack = Color3.fromRGB(45, 45, 55)
+	local cube = 2.2
+	for _, side in { -1, 1 } do
+		for level = 0, 6 do
+			local block = build(
+				`FinishPost_{side}_{level}`,
+				Vector3.new(cube, cube, cube),
+				at * CFrame.new(side * (half - cube / 2), cube / 2 + level * cube, 0),
+				if (level + (side + 1) / 2) % 2 == 0 then checkWhite else checkBlack,
+				model
+			)
+			block.CanCollide = level == 0
+		end
+		for index, color in { GATE_BULBS[1], GATE_BULBS[2], GATE_BULBS[4] } do
+			local offset = Vector3.new(side * (half - 1.1) + (index - 2) * 1.3, 7 * cube + 3 + (index % 2), 0)
+			local balloon = build(
+				`FinishBalloon_{side}_{index}`,
+				Vector3.new(2, 2, 2),
+				at * CFrame.new(offset),
+				color,
+				model
+			)
+			balloon.Shape = Enum.PartType.Ball
+			balloon.CanCollide = false
+			local thread = build(
+				`FinishBalloonString_{side}_{index}`,
+				Vector3.new(0.1, 3, 0.1),
+				at * CFrame.new(offset - Vector3.new(0, 2.4, 0)),
+				checkWhite,
+				model
+			)
+			thread.CanCollide = false
+		end
+	end
+	local columns = 9
+	local square = (Tunnel.WIDTH - 2 * cube) / columns
+	for row = 0, 1 do
+		for column = 0, columns - 1 do
+			local cell = build(
+				`FinishBanner_{row}_{column}`,
+				Vector3.new(square, square, 0.4),
+				at * CFrame.new(-half + cube + square * (column + 0.5), 7 * cube - square * (row + 0.5), 0),
+				if (row + column) % 2 == 0 then checkWhite else checkBlack,
+				model
+			)
+			cell.CanCollide = false
+		end
+	end
+	local star = build(
+		"FinishStar",
+		Vector3.new(3.4, 3.4, 3.4),
+		at * CFrame.new(0, 7 * cube + 2.4, 0),
 		Color3.fromRGB(255, 214, 102),
 		model
 	)
+	star.Shape = Enum.PartType.Ball
+	star.Material = Enum.Material.Neon
+	star.CanCollide = false
+	TweenService:Create(
+		star,
+		TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ CFrame = star.CFrame * CFrame.new(0, 1.5, 0) }
+	):Play()
 
 	local trigger = build(
 		"FinishTrigger",
@@ -2349,14 +2660,24 @@ local function buildFinish(model: Model, origin: CFrame, length: number, player:
 		ChallengeService.submitAction(player, { kind = "finish" })
 	end)
 
-	-- Стена за финишем: чтобы не убежать в пустоту за краем туннеля
+	-- Стена за финишем: чтобы не убежать в пустоту за краем туннеля. Радужная, а не синяя глухая.
 	build(
 		"EndWall",
 		Vector3.new(Tunnel.WIDTH, Tunnel.HEIGHT, 2),
 		origin * CFrame.new(0, Tunnel.HEIGHT / 2, -length),
-		Color3.fromRGB(120, 165, 220),
+		Color3.fromRGB(250, 245, 235),
 		model
 	)
+	for index, color in ARCH_COLORS do
+		local stripe = build(
+			`EndWallStripe_{index}`,
+			Vector3.new(Tunnel.WIDTH, 1.4, 0.3),
+			origin * CFrame.new(0, 2 + (index - 1) * 2, -length + 1.1),
+			color,
+			model
+		)
+		stripe.CanCollide = false
+	end
 end
 
 local function humanoidOf(player: Player): Humanoid?
@@ -2372,6 +2693,10 @@ function TunnelService.spawn(player: Player, spec: any)
 	local origin =
 		makePath(CFrame.new(Tunnel.PLOT_ORIGIN + Vector3.new(index * Tunnel.PLOT_SPACING, 0, 0)), spec)
 	local length = spec.params.length
+	origin.seams = {}
+	for _, gate in spec.params.gates do
+		table.insert(origin.seams, gate.z)
+	end
 
 	local model = Instance.new("Model")
 	model.Name = `Tunnel_{player.UserId}`
@@ -2416,6 +2741,7 @@ function TunnelService.spawn(player: Player, spec: any)
 	buildSoftBottom(model, origin, length, player)
 	buildScenery(model, origin, length, spec.seed or 0)
 	buildZoneDecor(model, origin, player)
+	buildGarlands(model, origin, spec)
 
 	if character then
 		Teleport.to(player, origin * CFrame.new(0, 4, -math.max(startZ, 4)))

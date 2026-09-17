@@ -45,6 +45,13 @@ function Render.shot(
 			local v = (1 - (y + 0.5) / height * 2) * tanY
 			local direction = camera:VectorToWorldSpace(Vector3.new(u, v, -1).Unit)
 			local hit = workspace:Raycast(camera.Position, direction * 1000, params)
+			-- Триггеры и невидимые стенки полупрозрачны: в игре сквозь них видно, и здесь тоже.
+			local skipped = 0
+			while hit and hit.Instance.Transparency >= 0.5 and skipped < 6 do
+				params:AddToFilter(hit.Instance)
+				skipped += 1
+				hit = workspace:Raycast(camera.Position, direction * 1000, params)
+			end
 			if hit then
 				local light = 0.5 + 0.5 * math.max(0, hit.Normal:Dot(SUN))
 				local color = hit.Instance.Color
