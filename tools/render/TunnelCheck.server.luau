@@ -85,6 +85,22 @@ if post then
 		guards
 	)
 end
+local kinds = {}
+for _, child in model:GetChildren() do
+	if child:IsA("Model") and child.Name:match("^Scenery_") then
+		local _, size = child:GetBoundingBox()
+		local key = string.format("%dx%d", math.floor(size.X), math.floor(size.Y))
+		kinds[key] = (kinds[key] or 0) + 1
+	end
+end
+local line = {}
+for key, count in kinds do
+	table.insert(line, `{key}:{count}`)
+end
+print("INFO scenery sizes " .. table.concat(line, " "))
+-- Вид на долину сверху сбоку: что стоит внизу по обе стороны трассы.
+local low = base * sampler.flat(spec.params.length * 0.55)
+Render.shot("tunnel_valley", CFrame.lookAt((low * CFrame.new(-70, 30, 40)).Position, (low * CFrame.new(-20, -30, -40)).Position), 480, 300, 65, guards)
 local mid = base * sampler.flat(spec.params.length * 0.3)
 Render.shot(
 	"tunnel_side",

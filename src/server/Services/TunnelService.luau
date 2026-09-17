@@ -2279,7 +2279,27 @@ end
 	до уровня бега: ребёнок видит, что мчится над лесом, а не по полосе в пустоте.
 	Расстановка детерминирована сидом забега — как и всё остальное в нём.
 ]]
-local SCENERY = { "tree_round", "tree_pine", "bush_round", "tree_round", "rock_small", "tree_pine" }
+--[[
+	Деревья чаще всего, но не только они: великанские мухоморы, домик-гриб,
+	мельница и стожки. Долина одних ёлок на забеге в полторы минуты надоедала
+	быстрее, чем кончалась трасса.
+]]
+local SCENERY = {
+	"tree_round",
+	"tree_pine",
+	"bush_round",
+	"tree_round",
+	"rock_small",
+	"tree_pine",
+	"mushroom",
+	"tree_round",
+	"tree_pine",
+	"mushroom_house",
+	"hay_bales",
+	"windmill",
+}
+-- Во сколько раз крупнее каталожного: мелочь в долине под трассой не разглядеть.
+local SCENERY_SCALE = { mushroom = 2.2, hay_bales = 1.6, mushroom_house = 1.1, windmill = 1.2 }
 -- Шаг деревьев в долине. Было 44: на длинном забеге лес давал четыре сотни деталей.
 local SCENERY_STEP = 62
 
@@ -2299,13 +2319,16 @@ local function buildScenery(model: Model, path, length: number, seed: number)
 					* CFrame.new(lateral, 0, 0)
 				tree.Name = `Scenery_{slot}`
 				tree.Parent = model
-				if id ~= "rock_small" and id ~= "bush_round" then
+				if SCENERY_SCALE[id] then
+					tree:ScaleTo(tree:GetScale() * SCENERY_SCALE[id])
+				elseif id ~= "rock_small" and id ~= "bush_round" then
 					tree:ScaleTo(tree:GetScale() * (1.6 + random:NextNumber() * 0.6))
 				end
-				tree:PivotTo(
-					CFrame.new(spot.Position.X, baseY, spot.Position.Z)
-						* CFrame.Angles(0, random:NextNumber() * 6.28, 0)
-				)
+				-- Домики и мельницы смотрят дверью на трассу, остальное как попало.
+				local facing = if id == "windmill" or id == "mushroom_house"
+					then CFrame.lookAt(spot.Position, path.flat(z).Position).Rotation
+					else CFrame.Angles(0, random:NextNumber() * 6.28, 0)
+				tree:PivotTo(CFrame.new(spot.Position.X, baseY, spot.Position.Z) * facing)
 				local box, size = tree:GetBoundingBox()
 				tree:PivotTo(tree:GetPivot() + Vector3.new(0, baseY - (box.Position.Y - size.Y / 2), 0))
 				for _, descendant in tree:GetDescendants() do
