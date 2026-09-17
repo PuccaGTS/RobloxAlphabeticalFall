@@ -23,12 +23,13 @@ local StrokeGlyphs = require(Shared.Logic.StrokeGlyphs)
 
 local Glyph = require(script.Parent.Parent.UI.Glyph)
 local HUD = require(script.Parent.Parent.UI.HUD)
+local Props = require(script.Parent.Parent.UI.Props)
 
 local MirrorController = {}
 
 local FOLDER_NAME = "AlphabetFall_Mirror"
 local CARD_SIZE = Vector3.new(5, 5, 0.8)
-local CARD_STEP = 6.2
+local CARD_STEP = 7
 local DISTANCE = 13
 
 local player = Players.LocalPlayer
@@ -95,15 +96,20 @@ local function showRound(index: number)
 	HUD.showTarget(nil, index - 1, #spec.params.rounds)
 
 	for slot, variant in round.variants do
-		local card = Instance.new("Part")
-		card.Name = `MirrorCard_{slot}`
-		card.Size = CARD_SIZE
-		card.CFrame = origin * CFrame.new((slot - (#round.variants + 1) / 2) * CARD_STEP, 0, 0)
-		card.Color = Color3.fromRGB(250, 248, 240)
-		card.Material = Enum.Material.SmoothPlastic
-		card.Anchored = true
-		card.CanCollide = false
-		card.Parent = folder
+		-- Зеркало в раме на ножках: серебристое стекло, в котором «живёт» буква.
+		local card = Props.framedPanel(
+			folder,
+			`MirrorCard_{slot}`,
+			CARD_SIZE,
+			origin * CFrame.new((slot - (#round.variants + 1) / 2) * CARD_STEP, 0, 0),
+			Color3.fromRGB(225, 240, 250),
+			Color3.fromRGB(215, 170, 80),
+			0.5,
+			2.2
+		)
+		card.Material = Enum.Material.Glass
+		card.Reflectance = 0.2
+		card.CanQuery = true
 
 		if StrokeGlyphs.has(round.letterId) then
 			local strokes = StrokeGlyphs.strokes(round.letterId, variant.mirrored, variant.rotation)
@@ -154,7 +160,7 @@ function MirrorController.feedback(fb: any)
 	if fb.correct then
 		-- Правильная табличка вспыхивает, остальные гаснут, потом следующий раунд.
 		for _, card in cards do
-			TweenService:Create(card, TweenInfo.new(0.25), { Transparency = 0.8 }):Play()
+			Props.setTransparency(card, 0.8)
 			Glyph.setTransparency(card, 0.8)
 		end
 		currentRound = (fb.sectionIndex or currentRound) + 1
@@ -167,12 +173,12 @@ function MirrorController.feedback(fb: any)
 		-- Промах не убирает выбор: таблички остаются, после паузы можно снова.
 		blockedUntil = os.clock() + (fb.cooldown or 0)
 		for _, card in cards do
-			card.Transparency = 0.6
+			Props.setTransparency(card, 0.6)
 		end
 		task.delay(fb.cooldown or 0, function()
 			for _, card in cards do
 				if card.Parent then
-					card.Transparency = 0
+					Props.setTransparency(card, 0)
 				end
 			end
 		end)

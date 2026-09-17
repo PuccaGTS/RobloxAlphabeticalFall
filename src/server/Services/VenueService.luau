@@ -53,9 +53,14 @@ local function sign(parent: Instance, at: CFrame, text: string, color: Color3)
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "Title"
-	billboard.Size = UDim2.fromOffset(420, 110)
-	billboard.StudsOffset = Vector3.new(0, 3, 0)
-	billboard.AlwaysOnTop = true
+	--[[
+		В студах и не поверх всего. Пиксельная надпись держала размер на экране:
+		вблизи, когда ребёнок стоит в задании, она разрасталась и ложилась поверх
+		падающих букв и пузырей («Берег Пузырей» прямо по «Б» и «В»).
+	]]
+	billboard.Size = UDim2.fromScale(34, 8)
+	billboard.StudsOffset = Vector3.new(0, 4, 0)
+	billboard.AlwaysOnTop = false
 	billboard.LightInfluence = 0
 	billboard.MaxDistance = 220
 	billboard.Parent = board

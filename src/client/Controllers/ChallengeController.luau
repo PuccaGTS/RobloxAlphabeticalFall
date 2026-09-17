@@ -24,6 +24,7 @@ local SfxController = require(script.Parent.SfxController)
 local LadderController = require(script.Parent.LadderController)
 local BubblesController = require(script.Parent.BubblesController)
 local MirrorController = require(script.Parent.MirrorController)
+local Props = require(script.Parent.Parent.UI.Props)
 local LiveWorldController = require(script.Parent.LiveWorldController)
 local ScalesController = require(script.Parent.ScalesController)
 local BerryController = require(script.Parent.BerryController)
@@ -191,15 +192,19 @@ local function buildBackdrop(parent: Instance, height: number)
 		Табло за полем: буква-цель крупно. Ребёнок бегает, смотрит под ноги
 		и забывает, что ловит, — табло напоминает, куда ни повернись.
 	]]
-	local board = Instance.new("Part")
-	board.Name = "TargetBoard"
-	board.Size = Vector3.new(12, 12, 1)
-	board.CFrame = origin * CFrame.new(0, 9, -(ROW_DEPTH * 1.5 + 9))
-	board.Color = Color3.fromRGB(255, 250, 235)
-	board.Anchored = true
-	board.CanCollide = false
-	board.CanQuery = false
-	board.Parent = parent
+	local board = Props.framedPanel(
+		parent,
+		"TargetBoard",
+		Vector3.new(11, 11, 0.8),
+		origin * CFrame.new(0, 9.5, -(ROW_DEPTH * 1.5 + 9)),
+		Color3.fromRGB(255, 250, 235),
+		Color3.fromRGB(150, 105, 70),
+		1,
+		3
+	)
+	-- Табло не темнеет в тени: оно смотрит на ребёнка, а солнце за спиной у табло.
+	board.Material = Enum.Material.Neon
+	board.Color = Color3.fromRGB(205, 200, 190)
 	if spec then
 		local target = Letters.expect(spec.params.targetLetter)
 		Glyph.attach(board, target.glyph, 0.9, target.color)
