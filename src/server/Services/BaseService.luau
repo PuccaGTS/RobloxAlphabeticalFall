@@ -109,6 +109,20 @@ local function cylinder(
 	return p
 end
 
+--[[
+	Группа деталей, которую двигает клиент (PlaygroundController): карусель
+	крутится, шар покачивается, утки плавают по кругу. Сервер ставит только
+	метку и числа — анимация у каждого ребёнка своя и в сеть не идёт.
+]]
+local function moving(parent: Instance, name: string): Model
+	local group = Instance.new("Model")
+	group.Name = name
+	-- Приезжает к клиенту целиком: иначе часть деталей встала бы на место позже и не в такт.
+	group.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	group.Parent = parent
+	return group
+end
+
 -- Мелкая отделка, о которую ребёнок не должен спотыкаться.
 local function trim(p: BasePart): BasePart
 	p.CanCollide = false
@@ -270,14 +284,26 @@ end
 
 -- Двор: от голой земли до фонтана. Растёт вокруг дома, а не вместо него.
 local function buildYard(plot: Model, at: CFrame, level: number)
+	--[[
+		Двор без травы — не голая земля, а выгоревшая светлая трава и вскопанная
+		площадка под дом. Участок вырос до 64 студов, и двадцать голых коричневых
+		квадратов вокруг парка читались как стройка на весь посёлок. Купленная
+		«Трава» по-прежнему видна сразу: двор становится сочно-зелёным.
+	]]
 	local ground = part(
 		"Ground",
 		Vector3.new(Base.PLOT_SIZE, FLOOR, Base.PLOT_SIZE),
 		at * CFrame.new(0, FLOOR / 2, 0),
-		if level >= 1 then GRASS else SOIL,
+		if level >= 1 then GRASS else Color3.fromRGB(196, 205, 150),
 		plot
 	)
-	ground.Material = if level >= 1 then Enum.Material.Grass else Enum.Material.Ground
+	ground.Material = Enum.Material.Grass
+	if level <= 0 then
+		local site =
+			part("BuildingSite", Vector3.new(18, 0.1, 18), at * CFrame.new(0, FLOOR + 0.05, 0), SOIL, plot)
+		site.Material = Enum.Material.Ground
+		site.CanCollide = false
+	end
 
 	if level >= 2 then
 		part(
@@ -1018,7 +1044,12 @@ local PLAYGROUND = {
 	-- Карусель: круглый пол, столб, полосатый купол и четыре лошадки на шестах.
 	function(plot: Model, at: CFrame)
 		cylinder("CarouselFloor", 0.6, 7, at * CFrame.new(0, 0.3, 0), Color3.fromRGB(250, 235, 200), plot)
-		cylinder("CarouselPole", 6, 0.7, at * CFrame.new(0, 3.5, 0), Color3.fromRGB(250, 205, 80), plot)
+		-- Всё выше пола крутится: пол стоит, чтобы на него можно было встать.
+		plot = moving(plot, "CarouselSpin")
+		local pole =
+			cylinder("CarouselPole", 6, 0.7, at * CFrame.new(0, 3.5, 0), Color3.fromRGB(250, 205, 80), plot)
+		pole:SetAttribute("Speed", 0.6)
+		CollectionService:AddTag(pole, "AF_Spin")
 		trim(
 			cylinder(
 				"CarouselRoof",
@@ -1063,12 +1094,14 @@ local PLAYGROUND = {
 			)
 			local lift = 1.9 + (index % 2) * 0.6
 			local color = colors[index]
-			part(
-				`CarouselHorse_{index}`,
-				Vector3.new(1.8, 0.8, 0.7),
-				spot * CFrame.new(0, lift, 0),
-				color,
-				plot
+			trim(
+				part(
+					`CarouselHorse_{index}`,
+					Vector3.new(1.8, 0.8, 0.7),
+					spot * CFrame.new(0, lift, 0),
+					color,
+					plot
+				)
 			)
 			trim(
 				part(
@@ -1325,7 +1358,16 @@ local PETS = {
 				)
 			)
 		end
-		for index, spec in { { -0.6, -0.3, 1, 30 }, { 0.6, 0.5, 0.65, 50 } } do
+		-- Уточка с утёнком плывут по кругу за невидимым центром пруда.
+		local swimming = moving(plot, "PondDucks")
+		local center = trim(
+			part("PondDucksCenter", Vector3.new(0.2, 0.2, 0.2), at * CFrame.new(0, 0.3, 0), WHITE, swimming)
+		)
+		center.Transparency = 1
+		center:SetAttribute("Speed", -0.35)
+		CollectionService:AddTag(center, "AF_Spin")
+		plot = swimming
+		for index, spec in { { -1.4, 0, 1, 0 }, { 1.4, 0, 0.65, 180 } } do
 			local duck = at * CFrame.new(spec[1], 0.25, spec[2]) * CFrame.Angles(0, math.rad(spec[4]), 0)
 			local size = spec[3]
 			local color = if index == 1 then WHITE else Color3.fromRGB(255, 225, 90)
@@ -1566,8 +1608,14 @@ local TRANSPORT = {
 		)
 		basket.Material = Enum.Material.WoodPlanks
 		local lift = at * CFrame.new(0, 10, 0)
+		local basketPlot = plot
+		-- Купол чуть покачивается на привязи; корзина и верёвки стоят.
+		plot = moving(plot, "BalloonLift")
 		local envelope = trim(ball("BalloonEnvelope", 7, lift, Color3.fromRGB(250, 205, 80), plot))
 		envelope.Material = Enum.Material.SmoothPlastic
+		envelope:SetAttribute("Amplitude", 0.6)
+		envelope:SetAttribute("Period", 4)
+		CollectionService:AddTag(envelope, "AF_Float")
 		-- Полосы — тонкие диски чуть шире шара, поставленные на ребро.
 		for index, color in { Color3.fromRGB(240, 100, 110), Color3.fromRGB(100, 170, 240) } do
 			local band = trim(
@@ -1591,6 +1639,7 @@ local TRANSPORT = {
 				plot
 			)
 		)
+		plot = basketPlot
 		local flame =
 			trim(ball("BalloonFlame", 0.8, at * CFrame.new(0, 3.2, 0), Color3.fromRGB(255, 160, 60), plot))
 		flame.Material = Enum.Material.Neon

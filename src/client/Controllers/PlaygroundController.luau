@@ -253,6 +253,61 @@ HANDLERS.AF_Windmill = function(hub: BasePart)
 	end)
 end
 
+--[[
+	Двигает всю группу деталей, в которой лежит метка, каждый кадр по формуле.
+	Смещения деталей запоминаются от их места на сервере, поэтому группа
+	не «уплывает» и после перестройки участка начинает с чистого листа.
+]]
+local ANIMATE_DISTANCE = 250
+
+local function animateGroup(anchor: BasePart, frameAt: (number) -> CFrame)
+	local group = anchor.Parent
+	if not group or not group:IsA("Model") then
+		return
+	end
+	local home = CFrame.new(anchor.Position)
+	local parts: { [BasePart]: CFrame } = {}
+	for _, descendant in group:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			parts[descendant] = home:ToObjectSpace(descendant.CFrame)
+		end
+	end
+	local clock = math.random() * 10
+	local connection
+	connection = RunService.Heartbeat:Connect(function(dt: number)
+		if not anchor.Parent then
+			connection:Disconnect()
+			return
+		end
+		local camera = workspace.CurrentCamera
+		if camera and (camera.CFrame.Position - home.Position).Magnitude > ANIMATE_DISTANCE then
+			return
+		end
+		clock += dt
+		local now = home * frameAt(clock)
+		for part, offset in parts do
+			part.CFrame = now * offset
+		end
+	end)
+end
+
+-- Карусель во дворе, утки в пруду: крутятся вокруг вертикали метки.
+HANDLERS.AF_Spin = function(anchor: BasePart)
+	local speed = anchor:GetAttribute("Speed") or 0.5
+	animateGroup(anchor, function(t: number)
+		return CFrame.Angles(0, t * speed, 0)
+	end)
+end
+
+-- Воздушный шар на привязи: плавно вверх и вниз.
+HANDLERS.AF_Float = function(anchor: BasePart)
+	local amplitude = anchor:GetAttribute("Amplitude") or 0.5
+	local period = anchor:GetAttribute("Period") or 3
+	animateGroup(anchor, function(t: number)
+		return CFrame.new(0, math.sin(t / period * math.pi * 2) * amplitude, 0)
+	end)
+end
+
 function PlaygroundController.init()
 	for tag, handler in HANDLERS do
 		local function attach(instance: Instance)
