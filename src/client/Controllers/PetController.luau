@@ -25,6 +25,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Base = require(Shared.Config.Base)
 local Letters = require(Shared.Config.Letters)
 local Shop = require(Shared.Config.Shop)
 
@@ -533,6 +534,130 @@ local function syncTitle(player: Player)
 	billboard.Parent = head
 end
 
+-- ===== Буквята дома =================================================================
+
+--[[
+	Освоенные буквы, которых ребёнок сейчас не водит, кружат над его двором
+	(Services/BaseService пишет список). Каждый буквёнок на своей высоте и радиусе,
+	половина летит по часовой, половина против — хоровода строем не выходит.
+	Круг шире дома и ниже Башни и шпилей, над грядками, горкой и каруселью.
+
+	Дальше YARD_DISTANCE от камеры буквята не рисуются: двадцать дворов по шесть
+	зверьков — это уже заметная работа для дешёвого планшета.
+]]
+local YARD_PREFIX = "YardPets_"
+local YARD_MAX = 6
+local YARD_DISTANCE = 220
+local YARD_FLOOR = 1.4
+
+type YardPet = { pet: Pet, radius: number, height: number, speed: number, phase: number }
+local yards: { [number]: { key: string, pets: { YardPet } } } = {}
+local plotsFolder: Instance? = nil
+
+local function clearYard(index: number)
+	local yard = yards[index]
+	if yard then
+		for _, entry in yard.pets do
+			entry.pet.model:Destroy()
+		end
+		yards[index] = nil
+	end
+end
+
+local function syncYard(index: number)
+	local raw = plotsFolder and plotsFolder:GetAttribute(`{YARD_PREFIX}{index}`)
+	if typeof(raw) ~= "string" then
+		clearYard(index)
+		return
+	end
+	local userIdText, lettersText = string.match(raw, "^(%d+):(.*)$")
+	local owner = if userIdText then Players:GetPlayerByUserId(tonumber(userIdText) or 0) else nil
+	local equipped: { [string]: boolean } = {}
+	local skinId: string? = nil
+	if owner then
+		for _, attribute in ATTRIBUTES do
+			local letterId = owner:GetAttribute(attribute)
+			if typeof(letterId) == "string" then
+				equipped[letterId] = true
+			end
+		end
+		local rawSkin = owner:GetAttribute(SKIN_ATTRIBUTE)
+		skinId = if typeof(rawSkin) == "string" then rawSkin else nil
+	end
+
+	local letters = {}
+	for letterId in string.gmatch(lettersText or "", "[^,]+") do
+		if not equipped[letterId] and Letters.get(letterId) then
+			table.insert(letters, letterId)
+		end
+	end
+	while #letters > YARD_MAX do
+		table.remove(letters, 1)
+	end
+
+	local key = `{table.concat(letters, ",")}|{skinId or ""}`
+	if yards[index] and yards[index].key == key then
+		return
+	end
+	clearYard(index)
+	local list: { YardPet } = {}
+	for order, letterId in letters do
+		local pet = build(letterId, skinId)
+		pet.model.Parent = nil
+		table.insert(list, {
+			pet = pet,
+			radius = 12.5 + (order % 3) * 0.8,
+			height = 8 + (order % 4) * 0.9,
+			speed = (0.22 + (order % 3) * 0.05) * (if order % 2 == 0 then -1 else 1),
+			phase = order / #letters * math.pi * 2,
+		})
+	end
+	yards[index] = { key = key, pets = list }
+end
+
+local function syncYards()
+	for index = 1, Base.PLOT_COUNT do
+		syncYard(index)
+	end
+end
+
+local function stepYards(now: number)
+	local camera = workspace.CurrentCamera
+	for index, yard in yards do
+		local center = Base.plotPosition(index) + Vector3.new(0, YARD_FLOOR, 0)
+		local far = camera ~= nil and (camera.CFrame.Position - center).Magnitude > YARD_DISTANCE
+		for order, entry in yard.pets do
+			local pet = entry.pet
+			if far then
+				if pet.model.Parent ~= nil then
+					pet.model.Parent = nil
+				end
+			else
+				local angle = now * entry.speed + entry.phase
+				local position = center
+					+ Vector3.new(
+						math.cos(angle) * entry.radius,
+						entry.height + math.sin(now * 1.7 + entry.phase) * 0.5,
+						math.sin(angle) * entry.radius
+					)
+				local tangent = Vector3.new(-math.sin(angle), 0, math.cos(angle)) * math.sign(entry.speed)
+				local goal = CFrame.lookAt(position, position + tangent)
+				if now < pet.hopUntil then
+					local progress = 1 - (pet.hopUntil - now) / HOP_SECONDS
+					goal *= CFrame.new(0, math.sin(progress * math.pi) * 1.2, 0)
+				end
+				place(pet, goal)
+				if pet.rainbow then
+					tint(pet, Color3.fromHSV((now * RAINBOW_SPEED + order * 0.17) % 1, 0.6, 1))
+				end
+				if pet.model.Parent == nil then
+					pet.model.Parent = container()
+				end
+			end
+		end
+	end
+end
+
 local function watch(player: Player)
 	for slot, attribute in ATTRIBUTES do
 		sync(player, slot)
@@ -544,7 +669,12 @@ local function watch(player: Player)
 		for slot in ATTRIBUTES do
 			sync(player, slot)
 		end
+		syncYards()
 	end)
+	-- Взял буквёнка с собой — он улетает со двора; отпустил — возвращается домой.
+	for _, attribute in ATTRIBUTES do
+		player:GetAttributeChangedSignal(attribute):Connect(syncYards)
+	end
 
 	syncTitle(player)
 	player:GetAttributeChangedSignal(KEEPER_ATTRIBUTE):Connect(function()
@@ -559,6 +689,8 @@ end
 local function step(dt: number)
 	local now = os.clock()
 	local alpha = math.min(1, dt * FOLLOW_SPEED)
+
+	stepYards(now)
 
 	for player, slots in pets do
 		local character = player.Character
@@ -613,6 +745,20 @@ function PetController.init()
 	end)
 
 	RunService.Heartbeat:Connect(step)
+
+	task.spawn(function()
+		local found = workspace:WaitForChild("Plots", 120)
+		if not found then
+			return
+		end
+		plotsFolder = found
+		for index = 1, Base.PLOT_COUNT do
+			found:GetAttributeChangedSignal(`{YARD_PREFIX}{index}`):Connect(function()
+				syncYard(index)
+			end)
+		end
+		syncYards()
+	end)
 end
 
 return PetController

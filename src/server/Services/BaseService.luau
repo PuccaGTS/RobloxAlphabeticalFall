@@ -2142,6 +2142,37 @@ local function renderBuildings(plot: Plot, base: { [string]: number })
 	end
 end
 
+--[[
+	Буквята дома (docs/15-HOME-BASE.md § 5). Освоенные буквы, которые не летают
+	за ребёнком, живут у него во дворе и кружат над домом — соседи видят, сколько
+	у него буквят, и любого можно нажать, чтобы услышать букву.
+
+	Сервер пишет только список: атрибут YardPets_<номер участка> на папке участков
+	в виде «userId:a,b,v». Папка не пространственная и приезжает к клиенту всегда,
+	в отличие от модели участка при стриминге. Кого из списка сейчас водит хозяин,
+	клиент отсеивает сам по атрибутам PetLetter — сервису питомцев не нужно
+	перестраивать участок при каждой смене буквёнка.
+]]
+local YARD_PETS_SENT = 8
+
+local function renderYardPets(plot: Plot, player: Player?, earned: Awards.Earned?)
+	local folder = plot.model.Parent
+	if not folder then
+		return
+	end
+	local attribute = `YardPets_{plot.index}`
+	local mastered = earned and earned.letterRooms or {}
+	if not player or #mastered == 0 then
+		folder:SetAttribute(attribute, nil)
+		return
+	end
+	local list = {}
+	for index = math.max(1, #mastered - YARD_PETS_SENT + 1), #mastered do
+		table.insert(list, mastered[index])
+	end
+	folder:SetAttribute(attribute, `{player.UserId}:{table.concat(list, ",")}`)
+end
+
 local function renderSign(plot: Plot, text: string)
 	local sign = part(
 		"Sign",
@@ -2161,6 +2192,7 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 		-- как «сюда кто-то въедет», а не как дырка в мире.
 		renderBuildings(plot, Base.newProgress())
 		renderSign(plot, "Свободный участок")
+		renderYardPets(plot, nil, nil)
 		return
 	end
 
@@ -2171,6 +2203,7 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 	buildRooms(plot.model, plot.cframe, earned, base.house)
 	buildRoofFlags(plot.model, plot.cframe, earned, base.house, base.roof)
 	renderSign(plot, `Дом: {player.DisplayName}`)
+	renderYardPets(plot, player, earned)
 
 	for index, categoryId in Base.rowIds() do
 		buildUpgradePad(plot.model, plot.cframe, index, categoryId, player, base[categoryId])
