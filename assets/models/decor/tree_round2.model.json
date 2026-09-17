@@ -1,0 +1,187 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Model",
+   "children": [
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Part",
+       "name": "Meshes/Low-Poly Tree Stump",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.4117647111415863,
+          0.250980406999588,
+          0.1568627506494522
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            1,
+            0,
+            0
+           ],
+           [
+            0,
+            1,
+            0
+           ],
+           [
+            0,
+            0,
+            1
+           ]
+          ],
+          "position": [
+           30.164989471435547,
+           8.731439590454102,
+           -37.827091217041016
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          7.269994258880615,
+          13.364299774169922,
+          7.5150299072265625
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            0.14539988338947296,
+            0.16314978897571564,
+            0.14210127294063568
+           ]
+          },
+          "MeshId": {
+           "ContentId": "rbxassetid://2638167049"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Meshes/LeavesMesh",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.12156862765550613,
+        0.501960813999176,
+        0.11372549086809158
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          1
+         ]
+        ],
+        "position": [
+         30.672161102294922,
+         16.650304794311523,
+         -38.01626205444336
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        14.462318420410156,
+        11.824481964111328,
+        19.78474998474121
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          5.9951982498168945,
+          8.359590530395508,
+          17.133405685424805
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://2992901017"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

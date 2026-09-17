@@ -1,0 +1,93 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Part",
+   "name": "9",
+   "properties": {
+    "Reflectance": {
+     "Float32": 0
+    },
+    "CanCollide": {
+     "Bool": true
+    },
+    "Color": {
+     "Color3": [
+      0.6392157077789307,
+      0.6352941393852234,
+      0.6470588445663452
+     ]
+    },
+    "CFrame": {
+     "CFrame": {
+      "orientation": [
+       [
+        -0.5877853035926819,
+        0,
+        0.80901700258255
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        -0.80901700258255,
+        0,
+        -0.5877853035926819
+       ]
+      ],
+      "position": [
+       -239.41775512695312,
+       59.00858688354492,
+       280.27606201171875
+      ]
+     }
+    },
+    "Transparency": {
+     "Float32": 0
+    },
+    "Anchored": {
+     "Bool": true
+    },
+    "Material": {
+     "Enum": 256
+    },
+    "CastShadow": {
+     "Bool": true
+    },
+    "Size": {
+     "Vector3": [
+      26.088136672973633,
+      27.791492462158203,
+      13.475539207458496
+     ]
+    }
+   },
+   "children": [
+    {
+     "className": "SpecialMesh",
+     "name": "Mesh",
+     "properties": {
+      "Scale": {
+       "Vector3": [
+        0.5558298826217651,
+        0.5558298230171204,
+        0.5558298826217651
+       ]
+      },
+      "MeshId": {
+       "ContentId": "rbxassetid://5949978832"
+      },
+      "MeshType": {
+       "Enum": 5
+      },
+      "TextureId": {
+       "ContentId": "rbxassetid://5949978873"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

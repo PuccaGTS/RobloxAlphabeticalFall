@@ -1,0 +1,122 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Giant Teddy Bear",
+   "children": [
+    {
+     "className": "Model",
+     "name": "Giant Teddy Bear",
+     "children": [
+      {
+       "className": "Part",
+       "name": "Handle",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            0,
+            0,
+            1
+           ],
+           [
+            0,
+            1,
+            0
+           ],
+           [
+            -1,
+            0,
+            0
+           ]
+          ],
+          "position": [
+           -97.9205322265625,
+           2.434499979019165,
+           98.784423828125
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          4.38700008392334,
+          4.86899995803833,
+          2.9800000190734863
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "SpecialMesh",
+         "properties": {
+          "Offset": {
+           "Vector3": [
+            0,
+            0,
+            0
+           ]
+          },
+          "VertexColor": {
+           "Vector3": [
+            1,
+            1,
+            1
+           ]
+          },
+          "MeshType": {
+           "Enum": 5
+          },
+          "Scale": {
+           "Vector3": [
+            1,
+            1,
+            1
+           ]
+          },
+          "MeshId": {
+           "ContentId": "rbxassetid://5437169274"
+          },
+          "TextureId": {
+           "ContentId": "http://www.roblox.com/asset/?id=5436206172"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

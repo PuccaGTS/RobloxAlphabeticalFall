@@ -27,7 +27,7 @@ return function()
 	describe("DecorShapes", function()
 		it("эскиз есть у каждого предмета каталога", function()
 			for _, item in Decor.items do
-				if not DecorShapes.has(item.id) then
+				if not item.file and not DecorShapes.has(item.id) then
 					error(`у предмета «{item.title}» ({item.id}) нет эскиза`)
 				end
 			end
@@ -39,6 +39,9 @@ return function()
 		]]
 		it("эскиз вписывается в габарит каталога", function()
 			for _, item in Decor.items do
+				if item.file then
+					continue
+				end
 				local model = DecorShapes.build(item)
 				expect(model).to.be.ok()
 
@@ -62,6 +65,9 @@ return function()
 		]]
 		it("эскиз стоит на нуле, а не висит и не тонет", function()
 			for _, item in Decor.items do
+				if item.file then
+					continue
+				end
 				local model = DecorShapes.build(item)
 				local box, size = model:GetBoundingBox()
 				local bottom = box.Position.Y - size.Y / 2
@@ -77,6 +83,9 @@ return function()
 
 		it("деталей на предмет немного", function()
 			for _, item in Decor.items do
+				if item.file then
+					continue
+				end
 				local model = DecorShapes.build(item)
 				local parts = partsOf(model)
 
@@ -92,6 +101,9 @@ return function()
 
 		it("все детали закреплены", function()
 			for _, item in Decor.items do
+				if item.file then
+					continue
+				end
 				local model = DecorShapes.build(item)
 				for _, descendant in model:GetDescendants() do
 					if descendant:IsA("BasePart") then
@@ -109,6 +121,9 @@ return function()
 		]]
 		it("точка привязки эскиза не повёрнута", function()
 			for _, item in Decor.items do
+				if item.file then
+					continue
+				end
 				local model = DecorShapes.build(item)
 				local pivot = model:GetPivot()
 

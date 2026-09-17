@@ -73,7 +73,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             model.pop("name", None)
             path = out_dir / f"{data['id']}.model.json"
             path.write_text(json.dumps(model, ensure_ascii=False, indent=1), encoding="utf-8")
-            print(f"OK {data['id']} -> {path.relative_to(root)}" + (f" (пропущено: {data['skipped']})" if data["skipped"] else ""))
+            size = " x ".join(f"{v:.1f}" for v in data.get("size", []))
+            print(f"OK {data['id']} [{size}] -> {path.relative_to(root)}" + (f" (пропущено: {data['skipped']})" if data["skipped"] else ""))
         elif body == "DONE":
             done.set()
         else:

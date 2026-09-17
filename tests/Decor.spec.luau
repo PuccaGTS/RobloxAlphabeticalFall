@@ -67,6 +67,25 @@ return function()
 		)
 	end)
 
+	--[[
+		Предмет без эскиза держится только на файле модели. Файл потеряли
+		или переименовали — в мире встанет серая коробка вместо утки.
+	]]
+	describe("Config: модели из файлов", function()
+		it(
+			"у предмета с пометкой file модель лежит в assets/models/decor",
+			function()
+				local assets = ReplicatedStorage:FindFirstChild("Assets")
+				local folder = assets and assets:FindFirstChild("decor")
+				for _, item in Decor.items do
+					if item.file and not (folder and folder:FindFirstChild(item.id, true)) then
+						error(`нет файла модели для «{item.title}» ({item.id})`)
+					end
+				end
+			end
+		)
+	end)
+
 	describe("Config: расстановка декора", function()
 		it("каждая точка ссылается на предмет каталога", function()
 			for _, placement in Decor.placements do

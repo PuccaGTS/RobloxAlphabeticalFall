@@ -17,7 +17,7 @@ task.wait(2)
 for _, screen in gui:GetChildren() do
 	if screen:IsA("ScreenGui") then
 		for _, button in screen:GetDescendants() do
-			if button:IsA("GuiButton") and button.AbsoluteSize.X > 0 and button.AbsolutePosition.X < 200 then
+			if workspace:GetAttribute("ZZ_Buttons") and button:IsA("GuiButton") and button.AbsoluteSize.X > 0 and button.AbsolutePosition.X < 200 then
 				local shown = button.Visible and screen.Enabled
 				local cursor = button.Parent
 				while shown and cursor and cursor ~= screen do

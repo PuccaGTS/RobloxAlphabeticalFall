@@ -46,6 +46,7 @@ export type Kind =
 	| "mushroom"
 	| "house"
 	| "toy"
+	| "play"
 
 export type Item = {
 	id: string, -- он же имя файла: tree_pine -> assets/models/decor/tree_pine.rbxm
@@ -68,6 +69,12 @@ export type Item = {
 		нажать Get на странице модели, и сохранять её в файл из Studio не нужно.
 	]]
 	assetId: number?,
+	--[[
+		Модель лежит в проекте (assets/models/decor/<id>.model.json, импорт —
+		tools/models/import.py), эскиза из деталей у предмета нет. Тест проверяет,
+		что файл на месте: без него предмет встал бы серой коробкой.
+	]]
+	file: boolean?,
 }
 
 local ITEMS: { Item } = {
@@ -239,6 +246,163 @@ local ITEMS: { Item } = {
 		kind = "toy",
 		size = Vector3.new(5, 8.4, 5),
 		color = Color3.fromRGB(120, 170, 235),
+		collide = true,
+	},
+	--[[
+		Игрушки-великаны и детская площадка из Creator Store (импорт 17.09.2026,
+		tools/models/picks.json). На первой прогулке мир назвали скучным: деревья,
+		клумбы и кубики. Теперь по дороге есть резиновая утка ростом с дом,
+		плюшевый мишка, машинка, динозаврик, надувной замок, воздушный шар.
+		На всё крупное можно залезть.
+	]]
+	{
+		id = "tree_round2",
+		assetId = 3287226226,
+		file = true,
+		title = "Пышное дерево",
+		kind = "tree",
+		size = Vector3.new(10, 14, 10),
+		color = Color3.fromRGB(110, 175, 95),
+		collide = true,
+	},
+	{
+		id = "tree_blossom",
+		assetId = 5950446599,
+		file = true,
+		title = "Цветущее дерево",
+		kind = "tree",
+		size = Vector3.new(12, 14, 9),
+		color = Color3.fromRGB(245, 170, 205),
+		collide = true,
+	},
+	{
+		id = "bush_round2",
+		assetId = 10432612977,
+		file = true,
+		title = "Светлый куст",
+		kind = "bush",
+		size = Vector3.new(4, 3.6, 4),
+		color = Color3.fromRGB(170, 215, 90),
+		collide = false,
+	},
+	{
+		id = "rubber_duck",
+		assetId = 5134201685,
+		file = true,
+		title = "Резиновая утка",
+		kind = "toy",
+		size = Vector3.new(7, 7.5, 10),
+		color = Color3.fromRGB(255, 220, 60),
+		collide = true,
+	},
+	{
+		id = "teddy_bear",
+		assetId = 12549476788,
+		file = true,
+		title = "Плюшевый мишка",
+		kind = "toy",
+		size = Vector3.new(8, 9, 5.5),
+		color = Color3.fromRGB(190, 130, 80),
+		collide = true,
+	},
+	{
+		id = "rocking_horse",
+		assetId = 4722865973,
+		file = true,
+		title = "Лошадка-качалка",
+		kind = "toy",
+		size = Vector3.new(5, 3.1, 6.6),
+		color = Color3.fromRGB(215, 140, 80),
+		collide = true,
+	},
+	{
+		id = "toy_car",
+		assetId = 14133969865,
+		file = true,
+		title = "Игрушечная машинка",
+		kind = "toy",
+		size = Vector3.new(10, 5, 6.7),
+		color = Color3.fromRGB(90, 160, 80),
+		collide = true,
+	},
+	{
+		id = "toy_dino",
+		assetId = 5151489661,
+		file = true,
+		title = "Динозаврик",
+		kind = "toy",
+		size = Vector3.new(11, 6, 3.4),
+		color = Color3.fromRGB(110, 200, 110),
+		collide = true,
+	},
+	{
+		id = "hot_air_balloon",
+		assetId = 166871533,
+		file = true,
+		title = "Воздушный шар",
+		kind = "toy",
+		size = Vector3.new(4, 34, 4.6),
+		color = Color3.fromRGB(240, 120, 110),
+		collide = true,
+	},
+	{
+		id = "tent",
+		assetId = 11853786155,
+		file = true,
+		title = "Палатка",
+		kind = "house",
+		size = Vector3.new(11, 5.4, 10.5),
+		color = Color3.fromRGB(230, 210, 150),
+		collide = true,
+	},
+	{
+		id = "bouncy_castle",
+		assetId = 28701,
+		file = true,
+		title = "Надувной замок",
+		kind = "play",
+		size = Vector3.new(13, 24, 17),
+		color = Color3.fromRGB(250, 215, 60),
+		collide = true,
+	},
+	{
+		id = "sand_castle",
+		assetId = 4882256146,
+		file = true,
+		title = "Замок из песка",
+		kind = "toy",
+		size = Vector3.new(7, 3.7, 7),
+		color = Color3.fromRGB(230, 205, 150),
+		collide = true,
+	},
+	{
+		id = "koi_bridge",
+		assetId = 574502744,
+		file = true,
+		title = "Горбатый мостик",
+		kind = "play",
+		size = Vector3.new(19, 7.4, 4.4),
+		color = Color3.fromRGB(150, 100, 70),
+		collide = true,
+	},
+	{
+		id = "swing",
+		assetId = 3245765758,
+		file = true,
+		title = "Качели",
+		kind = "play",
+		size = Vector3.new(7, 9.6, 6.8),
+		color = Color3.fromRGB(120, 90, 70),
+		collide = true,
+	},
+	{
+		id = "merry_wheel",
+		assetId = 15709165,
+		file = true,
+		title = "Крутилка",
+		kind = "play",
+		size = Vector3.new(13, 2.6, 13),
+		color = Color3.fromRGB(230, 60, 60),
 		collide = true,
 	},
 	{
@@ -488,6 +652,38 @@ add("number_cubes", 37, -10, -25)
 add("letter_cubes", -30, -30, -15)
 add("number_cubes", 30, -30, 15)
 
+--[[
+	Игрушки-великаны сразу за краем площади — то, что ребёнок видит, появившись:
+	за порталами надувной замок, утка ростом с дом и воздушный шар над деревьями,
+	слева динозаврик и палатка, справа машинка и лошадка-качалка, за спиной качели,
+	крутилка и горбатый мостик. Ставятся раньше колец и россыпи: место за ними.
+]]
+local TOYS = {
+	{ "bouncy_castle", 30, -98, 180 },
+	{ "rubber_duck", -30, -84, 150 },
+	{ "hot_air_balloon", -48, -132, 0 },
+	{ "hot_air_balloon", 70, -150, 40 },
+	{ "teddy_bear", 58, -70, 210 },
+	{ "sand_castle", -58, -66, 20 },
+	{ "toy_dino", -92, -24, 70 },
+	{ "tent", -104, 34, 110 },
+	{ "tree_blossom", -84, 62, 0 },
+	{ "toy_car", 92, -30, 250 },
+	{ "rocking_horse", 84, 46, 290 },
+	{ "tree_blossom", 104, 20, 90 },
+	{ "swing", -24, 92, 0 },
+	{ "merry_wheel", 26, 96, 0 },
+	{ "koi_bridge", -64, 110, 40 },
+	{ "tree_blossom", 62, 116, 30 },
+	{ "rubber_duck", 150, 70, 300 },
+	{ "teddy_bear", -150, -70, 80 },
+	{ "toy_dino", 120, -120, 220 },
+	{ "tent", 140, 130, 200 },
+}
+for _, toy in TOYS do
+	add(toy[1], toy[2], toy[3], toy[4])
+end
+
 -- Клумбы у выходов на дорожки к домам: они показывают, куда идти, и не мешают идти.
 for index = 1, 4 do
 	local angle = (index - 1) / 4 * math.pi * 2
@@ -504,8 +700,15 @@ end
 	Так и задумано: дорожка важнее симметрии.
 ]]
 local RING_COUNT = 20
-local RING_KINDS =
-	{ "tree_pine", "tree_round", "bush_round", "tree_round", "tree_pine", "bush_round", "rock_small" }
+local RING_KINDS = {
+	"tree_pine",
+	"tree_round",
+	"bush_round",
+	"tree_blossom",
+	"tree_round2",
+	"bush_round2",
+	"rock_small",
+}
 local ringRandom = Random.new(54)
 for index = 1, RING_COUNT do
 	-- Опушка живая: деревья чуть вразброс по кругу и разного роста.
@@ -582,9 +785,9 @@ end
 -- У каждой рощи свой характер: ельник, лиственная, кустарник с камнями, смешанная.
 local GROVES = {
 	{ "tree_pine", "tree_pine", "tree_pine", "tree_round", "bush_round", "rock_small" },
-	{ "tree_round", "tree_round", "bush_round", "tree_round", "flower_bed", "bush_round" },
+	{ "tree_blossom", "tree_round", "bush_round2", "tree_blossom", "flower_bed", "bush_round" },
 	{ "bush_round", "rock_small", "tree_pine", "rock_small", "bush_round", "tree_round" },
-	{ "tree_round", "tree_pine", "tree_round", "tree_pine", "bush_round", "bush_round" },
+	{ "tree_round2", "tree_pine", "tree_round", "tree_blossom", "bush_round2", "bush_round" },
 }
 local GROVE_HEART = { "tree_pine", "tree_round", "tree_pine", "tree_round" }
 local groveRandom = Random.new(105)
@@ -660,7 +863,7 @@ end
 	как отдельный посёлок, а не как продолжение площади.
 ]]
 local EDGE_COUNT = 44
-local EDGE_KINDS = { "tree_pine", "tree_round", "tree_pine", "bush_round" }
+local EDGE_KINDS = { "tree_pine", "tree_round", "tree_round2", "bush_round", "tree_blossom", "tree_pine" }
 local edgeRandom = Random.new(202)
 for index = 1, EDGE_COUNT do
 	local angle = (index - 0.5 + (edgeRandom:NextNumber() - 0.5) * 0.6) / EDGE_COUNT * math.pi * 2
@@ -734,7 +937,8 @@ end
 
 -- Внешний пояс гуще деревьями: россыпь выше заполнила в основном ближнюю часть.
 local outer = Random.new(8128)
-local OUTER = { "tree_round", "tree_pine", "bush_round", "flower_bed", "tree_round", "rock_small" }
+local OUTER =
+	{ "tree_round", "tree_pine", "bush_round2", "flower_bed", "tree_blossom", "tree_round2", "rock_small" }
 for _ = 1, 70 do
 	local angle = outer:NextNumber() * math.pi * 2
 	local radius = 175 + outer:NextNumber() * (Decor.MAX_RADIUS - 190)

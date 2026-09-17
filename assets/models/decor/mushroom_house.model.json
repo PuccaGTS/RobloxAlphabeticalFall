@@ -1,0 +1,93 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Part",
+   "name": "Meshes/Mushroom House",
+   "properties": {
+    "Reflectance": {
+     "Float32": 0
+    },
+    "CanCollide": {
+     "Bool": true
+    },
+    "Color": {
+     "Color3": [
+      0.6392157077789307,
+      0.6352941393852234,
+      0.6470588445663452
+     ]
+    },
+    "CFrame": {
+     "CFrame": {
+      "orientation": [
+       [
+        1,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        0,
+        1
+       ]
+      ],
+      "position": [
+       0.04315292835235596,
+       3.1998798847198486,
+       59.84074783325195
+      ]
+     }
+    },
+    "Transparency": {
+     "Float32": 0
+    },
+    "Anchored": {
+     "Bool": true
+    },
+    "Material": {
+     "Enum": 512
+    },
+    "CastShadow": {
+     "Bool": true
+    },
+    "Size": {
+     "Vector3": [
+      6.753503799438477,
+      6.303016185760498,
+      6.7165374755859375
+     ]
+    }
+   },
+   "children": [
+    {
+     "className": "SpecialMesh",
+     "name": "Mesh",
+     "properties": {
+      "Scale": {
+       "Vector3": [
+        1,
+        1,
+        1
+       ]
+      },
+      "MeshId": {
+       "ContentId": "rbxassetid://11482975757"
+      },
+      "MeshType": {
+       "Enum": 5
+      },
+      "TextureId": {
+       "ContentId": "http://www.roblox.com/asset/?id=11482983938"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

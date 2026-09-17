@@ -1,0 +1,181 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Street Lamp",
+   "children": [
+    {
+     "className": "Part",
+     "name": "Lamp Pole",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.10588235408067703,
+        0.16470588743686676,
+        0.2078431397676468
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0,
+          0,
+          1
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          -1,
+          0,
+          0
+         ]
+        ],
+        "position": [
+         -58.87944030761719,
+         9.96403980255127,
+         -113.5612564086914
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 1280
+      },
+      "CastShadow": {
+       "Bool": false
+      },
+      "Size": {
+       "Vector3": [
+        1.6624528169631958,
+        16.36808204650879,
+        1.7788816690444946
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.011648017913103104,
+          0.01619315706193447,
+          0.010793943889439106
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://2492718189"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Lamp Glass",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.800000011920929,
+        0.5568627715110779,
+        0.4117647111415863
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0,
+          0,
+          1
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          -1,
+          0,
+          0
+         ]
+        ],
+        "position": [
+         -58.87821960449219,
+         15.862625122070312,
+         -113.5612564086914
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 288
+      },
+      "CastShadow": {
+       "Bool": false
+      },
+      "Size": {
+       "Vector3": [
+        1.5599861145019531,
+        2.06178879737854,
+        1.5584174394607544
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.011436393484473228,
+          0.016193591058254242,
+          0.010309572331607342
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://2492713048"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -317,6 +317,154 @@ function BUILDERS.balloons(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(0, 0, 7), "🎈")
 end
 
+--[[
+	Паркур-гора. Платформы идут спиралью вокруг столба, каждая на полтора студа
+	выше предыдущей, между ними шаг меньше двух студов: прыжок простой,
+	промахнулся — упал в траву и начал снова, ничего не потеряно. Батут у подножия
+	забрасывает на середину спирали. Наверху площадка с перилами и колокольчик —
+	дошёл, он звенит и искрит (тот же обработчик, что у флажка в лабиринте).
+	Вниз — по скату, а не прыжком с высоты.
+]]
+local OBBY_STEPS = 10
+local OBBY_RADIUS = 10
+local OBBY_RISE = 1.5
+local OBBY_TOP = 2 + (OBBY_STEPS + 1) * OBBY_RISE
+
+function BUILDERS.obby(model: Model, origin: CFrame)
+	local center = origin * CFrame.new(0, 0, 6)
+	cylinder(
+		model,
+		"ObbyPole",
+		OBBY_TOP,
+		3,
+		center * CFrame.new(0, OBBY_TOP / 2, 0),
+		Color3.fromRGB(250, 245, 235)
+	)
+
+	-- Три ступеньки к первой платформе: начать можно без прыжка.
+	local firstAngle = math.rad(200)
+	for step = 1, 3 do
+		local r = OBBY_RADIUS + 3 + (3 - step) * 2.2
+		part(
+			model,
+			`ObbyStart_{step}`,
+			Vector3.new(3.4, step * 0.9, 3.4),
+			center * CFrame.new(math.cos(firstAngle - 0.35) * r, step * 0.45, math.sin(firstAngle - 0.35) * r),
+			RAINBOW[step]
+		)
+	end
+
+	for index = 1, OBBY_STEPS do
+		local angle = firstAngle + index * math.rad(32)
+		local y = 2 + index * OBBY_RISE
+		local pad = part(
+			model,
+			`ObbyStep_{index}`,
+			Vector3.new(3.6, 1, 3.6),
+			center * CFrame.new(math.cos(angle) * OBBY_RADIUS, y - 0.5, math.sin(angle) * OBBY_RADIUS),
+			RAINBOW[(index - 1) % #RAINBOW + 1]
+		)
+		pad.Material = Enum.Material.SmoothPlastic
+		-- Ножка до земли: платформа не висит в воздухе, а стоит на тонкой опоре.
+		local leg = part(
+			model,
+			`ObbyLeg_{index}`,
+			Vector3.new(0.5, y - 1, 0.5),
+			center * CFrame.new(math.cos(angle) * OBBY_RADIUS, (y - 1) / 2, math.sin(angle) * OBBY_RADIUS),
+			Color3.fromRGB(240, 240, 245)
+		)
+		leg.CanCollide = false
+	end
+
+	local top = cylinder(
+		model,
+		"ObbyTop",
+		1,
+		14,
+		center * CFrame.new(0, OBBY_TOP - 0.5, 0),
+		Color3.fromRGB(120, 200, 255)
+	)
+	top.Material = Enum.Material.SmoothPlastic
+	for post = 1, 10 do
+		local angle = post / 10 * math.pi * 2
+		if math.abs(math.sin(angle) - 1) > 0.1 then -- проём над скатом
+			part(
+				model,
+				`ObbyRail_{post}`,
+				Vector3.new(0.5, 2.2, 0.5),
+				center * CFrame.new(math.cos(angle) * 6.6, OBBY_TOP + 1.1, math.sin(angle) * 6.6),
+				RAINBOW[(post - 1) % #RAINBOW + 1]
+			)
+		end
+	end
+
+	local bell = part(
+		model,
+		"ObbyBell",
+		Vector3.new(2.4, 2.4, 2.4),
+		center * CFrame.new(0, OBBY_TOP + 3.2, 0),
+		Color3.fromRGB(255, 210, 70)
+	)
+	bell.Shape = Enum.PartType.Ball
+	bell.Material = Enum.Material.Neon
+	bell.CanCollide = false
+	CollectionService:AddTag(bell, "AF_MazeFlag")
+	cylinder(
+		model,
+		"ObbyBellStand",
+		2,
+		0.4,
+		center * CFrame.new(0, OBBY_TOP + 1, 0),
+		Color3.fromRGB(240, 240, 245)
+	)
+
+	-- Скат от края площадки наружу, прочь от площади.
+	local from = Vector3.new(0, OBBY_TOP, 6.5)
+	local to = Vector3.new(0, 0.3, 6.5 + 22)
+	local length = (to - from).Magnitude
+	local tilt = math.atan2(from.Y - to.Y, to.Z - from.Z)
+	local slide = part(
+		model,
+		"ObbySlide",
+		Vector3.new(3.4, 0.4, length),
+		center * CFrame.new((from + to) / 2) * CFrame.Angles(tilt, 0, 0),
+		Color3.fromRGB(255, 140, 90)
+	)
+	slide.Material = Enum.Material.SmoothPlastic
+	for _, side in { -1, 1 } do
+		part(
+			model,
+			`ObbySlideRail_{side}`,
+			Vector3.new(0.4, 1.4, length),
+			center * CFrame.new((from + to) / 2 + Vector3.new(side * 1.9, 0.6, 0)) * CFrame.Angles(tilt, 0, 0),
+			Color3.fromRGB(255, 220, 90)
+		)
+	end
+
+	-- Батут с внешней стороны спирали, под пятой-шестой платформами.
+	local trampolineAngle = firstAngle + 5.5 * math.rad(32)
+	local tramp = center
+		* CFrame.new(
+			math.cos(trampolineAngle) * (OBBY_RADIUS + 5.5),
+			0,
+			math.sin(trampolineAngle) * (OBBY_RADIUS + 5.5)
+		)
+	cylinder(model, "ObbyTrampolineFrame", 1.2, 6, tramp * CFrame.new(0, 0.6, 0), Color3.fromRGB(70, 90, 140))
+	local mat = cylinder(
+		model,
+		"ObbyTrampoline",
+		0.3,
+		5,
+		tramp * CFrame.new(0, 1.35, 0),
+		Color3.fromRGB(255, 120, 170)
+	)
+	mat.Material = Enum.Material.Fabric
+	mat:SetAttribute("Power", 80)
+	CollectionService:AddTag(mat, "AF_Trampoline")
+
+	sign(model, origin * CFrame.new(-8, 0, -14), "🧗")
+end
+
 -- Лабиринт из кустов с флажком в середине.
 function BUILDERS.maze(model: Model, origin: CFrame)
 	local rows = Playground.MAZE

@@ -1,0 +1,93 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Part",
+   "name": "low poly bush comission",
+   "properties": {
+    "Reflectance": {
+     "Float32": 0
+    },
+    "CanCollide": {
+     "Bool": true
+    },
+    "Color": {
+     "Color3": [
+      0.6392157077789307,
+      0.6352941393852234,
+      0.6470588445663452
+     ]
+    },
+    "CFrame": {
+     "CFrame": {
+      "orientation": [
+       [
+        -1,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        0,
+        -1
+       ]
+      ],
+      "position": [
+       133.6215057373047,
+       2.2000033855438232,
+       -789.5119018554688
+      ]
+     }
+    },
+    "Transparency": {
+     "Float32": 0
+    },
+    "Anchored": {
+     "Bool": true
+    },
+    "Material": {
+     "Enum": 256
+    },
+    "CastShadow": {
+     "Bool": true
+    },
+    "Size": {
+     "Vector3": [
+      4.75697660446167,
+      4.4000067710876465,
+      5.02376651763916
+     ]
+    }
+   },
+   "children": [
+    {
+     "className": "SpecialMesh",
+     "name": "Mesh",
+     "properties": {
+      "Scale": {
+       "Vector3": [
+        0.10328460484743118,
+        0.08800011873245239,
+        0.10706230252981186
+       ]
+      },
+      "MeshId": {
+       "ContentId": "rbxassetid://10013551215"
+      },
+      "MeshType": {
+       "Enum": 5
+      },
+      "TextureId": {
+       "ContentId": "rbxassetid://10013551374"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

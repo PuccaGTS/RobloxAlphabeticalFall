@@ -1,0 +1,93 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Part",
+   "name": "Log",
+   "properties": {
+    "Reflectance": {
+     "Float32": 0
+    },
+    "CanCollide": {
+     "Bool": true
+    },
+    "Color": {
+     "Color3": [
+      0.9725490212440491,
+      0.9725490212440491,
+      0.9725490212440491
+     ]
+    },
+    "CFrame": {
+     "CFrame": {
+      "orientation": [
+       [
+        1,
+        0,
+        0
+       ],
+       [
+        0,
+        1,
+        0
+       ],
+       [
+        0,
+        0,
+        1
+       ]
+      ],
+      "position": [
+       45.399375915527344,
+       36.496158599853516,
+       547.5782470703125
+      ]
+     }
+    },
+    "Transparency": {
+     "Float32": 0
+    },
+    "Anchored": {
+     "Bool": true
+    },
+    "Material": {
+     "Enum": 272
+    },
+    "CastShadow": {
+     "Bool": true
+    },
+    "Size": {
+     "Vector3": [
+      11.890215873718262,
+      2.911433219909668,
+      3.2434980869293213
+     ]
+    }
+   },
+   "children": [
+    {
+     "className": "SpecialMesh",
+     "name": "Mesh",
+     "properties": {
+      "Scale": {
+       "Vector3": [
+        1,
+        1,
+        1
+       ]
+      },
+      "MeshId": {
+       "ContentId": "rbxassetid://11312698479"
+      },
+      "MeshType": {
+       "Enum": 5
+      },
+      "TextureId": {
+       "ContentId": "rbxassetid://11312698537"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -47,6 +47,8 @@ node["$path"] = rel(root / node["$path"])
 attrs = project["tree"]["Workspace"].setdefault("$attributes", {})
 attrs["ZZ_ProbePort"] = port
 attrs["ZZ_Mode"] = "play"
+if os.environ.get("ZZ_ONLY"):
+    attrs["ZZ_Only"] = os.environ["ZZ_ONLY"]
 (build / "playtest.project.json").write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
 place = build / "playtest.rbxl"
 subprocess.run(["rojo", "build", str(build / "playtest.project.json"), "-o", str(place)], check=True)
@@ -59,6 +61,8 @@ subprocess.run(["rojo", "build", str(build / "plugin.project.json"), "-o", str(p
 
 shots = root / "build" / "shots"
 shots.mkdir(parents=True, exist_ok=True)
+
+capture_lock = threading.Lock()
 
 def capture_window(name):
     """Снимок окна Studio через PrintWindow: работает, даже если окно перекрыто."""
@@ -85,6 +89,10 @@ def capture_window(name):
     if not hwnd:
         print("SHOT: окно Studio не найдено")
         return
+    # Свёрнутое окно рисуется в 0×0: разворачиваем, не забирая фокус у пользователя.
+    if user32.IsIconic(hwnd):
+        user32.ShowWindow(hwnd, 4)  # SW_SHOWNOACTIVATE
+        time.sleep(1.5)
     rect = wintypes.RECT()
     user32.GetClientRect(hwnd, ctypes.byref(rect))
     width, height = rect.right, rect.bottom
@@ -98,9 +106,12 @@ def capture_window(name):
     header = BITMAPINFOHEADER(ctypes.sizeof(BITMAPINFOHEADER), width, -height, 1, 32, 0, 0, 0, 0, 0, 0)
     buffer = ctypes.create_string_buffer(width * height * 4)
     gdi32.GetDIBits(mem, bitmap, 0, height, buffer, ctypes.byref(header), 0)
-    image = Image.frombuffer("RGB", (width, height), buffer, "raw", "BGRX", 0, 1)
+    image = Image.frombuffer("RGB", (width, height), buffer.raw, "raw", "BGRX", 0, 1).copy()
     path = shots / f"{name}.png"
-    image.save(path)
+    try:
+        image.save(path)
+    except Exception as error:
+        print(f"SHOT save failed {name}: {error!r} size {width}x{height}")
     gdi32.DeleteObject(bitmap)
     gdi32.DeleteDC(mem)
     user32.ReleaseDC(hwnd, hdc)
@@ -112,7 +123,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8", "replace")
         if self.path == "/capture":
-            capture_window(body)
+            with capture_lock:
+                capture_window(body)
             self.send_response(200)
             self.end_headers()
             return

@@ -1,0 +1,690 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Model",
+   "children": [
+    {
+     "className": "Part",
+     "name": "Tent",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.6392157077789307,
+        0.6352941393852234,
+        0.6470588445663452
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.7071067690849304,
+          0.7071067690849304,
+          0
+         ],
+         [
+          0,
+          0,
+          1
+         ],
+         [
+          0.7071067690849304,
+          -0.7071067690849304,
+          0
+         ]
+        ],
+        "position": [
+         96.80056762695312,
+         3.5000998973846436,
+         111.2464599609375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        7,
+        7,
+        7
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 5
+        },
+        "Scale": {
+         "Vector3": [
+          7,
+          7,
+          7
+         ]
+        },
+        "MeshId": {
+         "ContentId": "http://www.roblox.com/asset/?id=56824172"
+        },
+        "TextureId": {
+         "ContentId": "http://www.roblox.com/asset/?id=56824061"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.7071067690849304,
+          0,
+          -0.7071067690849304
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0.7071067690849304,
+          0,
+          0.7071067690849304
+         ]
+        ],
+        "position": [
+         97.15412139892578,
+         10.200052261352539,
+         111.60000610351562
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 1
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 800
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        20,
+        1.2000000476837158,
+        19
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Tent",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.6392157077789307,
+        0.6352941393852234,
+        0.6470588445663452
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.7071067690849304,
+          -0.7071067690849304,
+          0
+         ],
+         [
+          0,
+          0,
+          -1
+         ],
+         [
+          0.7071067690849304,
+          0.7071067690849304,
+          0
+         ]
+        ],
+        "position": [
+         96.80056762695312,
+         3.5000998973846436,
+         111.2464599609375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        7,
+        7,
+        7
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 5
+        },
+        "Scale": {
+         "Vector3": [
+          -7,
+          -7,
+          -7
+         ]
+        },
+        "MeshId": {
+         "ContentId": "http://www.roblox.com/asset/?id=56824172"
+        },
+        "TextureId": {
+         "ContentId": "http://www.roblox.com/asset/?id=56824061"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -0.7071067690849304,
+          0,
+          0.7071067690849304
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          -0.7071067690849304,
+          0,
+          -0.7071067690849304
+         ]
+        ],
+        "position": [
+         90.08305358886719,
+         5.400032997131348,
+         118.67108154296875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 1
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 800
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        20,
+        10.800000190734863,
+        1
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -0.7071067690849304,
+          0,
+          -0.7071067690849304
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0.7071067690849304,
+          0,
+          -0.7071067690849304
+         ]
+        ],
+        "position": [
+         104.22518920898438,
+         5.400032997131348,
+         119.378173828125
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 1
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 800
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        20,
+        10.800000190734863,
+        1
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.7071067690849304,
+          0,
+          0.7071067690849304
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          -0.7071067690849304,
+          0,
+          0.7071067690849304
+         ]
+        ],
+        "position": [
+         89.37594604492188,
+         5.400032997131348,
+         104.5289306640625
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 1
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 800
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        20,
+        10.800000190734863,
+        1
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.7071067690849304,
+          0,
+          -0.7071067690849304
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0.7071067690849304,
+          0,
+          0.7071067690849304
+         ]
+        ],
+        "position": [
+         98.92188262939453,
+         5.400032997131348,
+         99.22563171386719
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 1
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 800
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        7,
+        10.800000190734863,
+        1
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.7071067690849304,
+          0,
+          -0.7071067690849304
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0.7071067690849304,
+          0,
+          0.7071067690849304
+         ]
+        ],
+        "position": [
+         104.22518920898438,
+         8.400033950805664,
+         104.5289306640625
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 1
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 800
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        8,
+        4.800000190734863,
+        1
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.7071067690849304,
+          0,
+          -0.7071067690849304
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0.7071067690849304,
+          0,
+          0.7071067690849304
+         ]
+        ],
+        "position": [
+         109.52848815917969,
+         5.400032997131348,
+         109.83224487304688
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 1
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 800
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        7,
+        10.800000190734863,
+        1
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

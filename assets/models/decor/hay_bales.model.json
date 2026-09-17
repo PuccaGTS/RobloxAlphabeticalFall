@@ -1,0 +1,3725 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Hay-Bales",
+   "children": [
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              4.479405561141903e-06,
+              1,
+              -4.466787686396856e-06
+             ],
+             [
+              4.48544233222492e-06,
+              4.466767677513417e-06,
+              1
+             ],
+             [
+              1,
+              -4.479425570025342e-06,
+              -4.485422778088832e-06
+             ]
+            ],
+            "position": [
+             -56.60833740234375,
+             6.334831237792969,
+             -22.529184341430664
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              6.569336983375251e-05,
+              3.869208740070462e-05,
+              -1
+             ],
+             [
+              -6.319625072137569e-07,
+              1,
+              3.869205102091655e-05
+             ],
+             [
+              1,
+              6.29420298992045e-07,
+              6.569340621354058e-05
+             ]
+            ],
+            "position": [
+             -58.608333587646484,
+             4.343842506408691,
+             -22.529205322265625
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -8.160780998878181e-05,
+              2.676321309991181e-05,
+              1
+             ],
+             [
+              1.1732624898286304e-06,
+              1,
+              -2.6763118512462825e-05
+             ],
+             [
+              -1,
+              1.1710783383023227e-06,
+              -8.160784636856988e-05
+             ]
+            ],
+            "position": [
+             -54.608360290527344,
+             4.343853950500488,
+             -22.529197692871094
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              1.8724880646914244e-05,
+              1,
+              3.1176874472294e-05
+             ],
+             [
+              -3.769738214032259e-06,
+              -3.117680535069667e-05,
+              1
+             ],
+             [
+              1,
+              -1.8724998881225474e-05,
+              3.769154545807396e-06
+             ]
+            ],
+            "position": [
+             -56.60835266113281,
+             6.334820747375488,
+             -25.529163360595703
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.00017791085701901466,
+              4.4521719246404245e-05,
+              -1
+             ],
+             [
+              -1.1781932016674546e-06,
+              1,
+              4.452193024917506e-05
+             ],
+             [
+              1,
+              1.1861142183988704e-06,
+              -0.00017791079881135374
+             ]
+            ],
+            "position": [
+             -58.60835266113281,
+             4.3438310623168945,
+             -25.529184341430664
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              7.276827091118321e-05,
+              4.159782110946253e-05,
+              1
+             ],
+             [
+              3.422652753215516e-06,
+              1,
+              -4.159807213000022e-05
+             ],
+             [
+              -1,
+              3.425680006330367e-06,
+              7.276813994394615e-05
+             ]
+            ],
+            "position": [
+             -54.60837936401367,
+             4.343843460083008,
+             -25.529176712036133
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -3.3884282402141253e-06,
+            4.3866271880688146e-05,
+            -1
+           ],
+           [
+            3.7442671896315005e-07,
+            1,
+            4.386627551866695e-05
+           ],
+           [
+            1,
+            -3.742779313142819e-07,
+            -3.3884457479871344e-06
+           ]
+          ],
+          "position": [
+           -56.608360290527344,
+           4.343846321105957,
+           -24.02918243408203
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 1280
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          6,
+          3,
+          3
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              4.479405561141903e-06,
+              1,
+              -4.466787686396856e-06
+             ],
+             [
+              4.48544233222492e-06,
+              4.466767677513417e-06,
+              1
+             ],
+             [
+              1,
+              -4.479425570025342e-06,
+              -4.485422778088832e-06
+             ]
+            ],
+            "position": [
+             -59.71638107299805,
+             3.491243600845337,
+             -22.529226303100586
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              6.569336983375251e-05,
+              3.869208740070462e-05,
+              -1
+             ],
+             [
+              -6.319625072137569e-07,
+              1,
+              3.869205102091655e-05
+             ],
+             [
+              1,
+              6.29420298992045e-07,
+              6.569340621354058e-05
+             ]
+            ],
+            "position": [
+             -61.71637725830078,
+             1.5002539157867432,
+             -22.529247283935547
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -8.160780998878181e-05,
+              2.676321309991181e-05,
+              1
+             ],
+             [
+              1.1732624898286304e-06,
+              1,
+              -2.6763118512462825e-05
+             ],
+             [
+              -1,
+              1.1710783383023227e-06,
+              -8.160784636856988e-05
+             ]
+            ],
+            "position": [
+             -57.716407775878906,
+             1.5002739429473877,
+             -22.529226303100586
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              1.8724880646914244e-05,
+              1,
+              3.1176874472294e-05
+             ],
+             [
+              -3.769738214032259e-06,
+              -3.117680535069667e-05,
+              1
+             ],
+             [
+              1,
+              -1.8724998881225474e-05,
+              3.769154545807396e-06
+             ]
+            ],
+            "position": [
+             -59.716400146484375,
+             3.4912326335906982,
+             -25.529205322265625
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.00017791085701901466,
+              4.4521719246404245e-05,
+              -1
+             ],
+             [
+              -1.1781932016674546e-06,
+              1,
+              4.452193024917506e-05
+             ],
+             [
+              1,
+              1.1861142183988704e-06,
+              -0.00017791079881135374
+             ]
+            ],
+            "position": [
+             -61.71639633178711,
+             1.5002429485321045,
+             -25.529226303100586
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              7.276827091118321e-05,
+              4.159782110946253e-05,
+              1
+             ],
+             [
+              3.422652753215516e-06,
+              1,
+              -4.159807213000022e-05
+             ],
+             [
+              -1,
+              3.425680006330367e-06,
+              7.276813994394615e-05
+             ]
+            ],
+            "position": [
+             -57.71642303466797,
+             1.5002624988555908,
+             -25.529205322265625
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -3.3884282402141253e-06,
+            4.3866271880688146e-05,
+            -1
+           ],
+           [
+            3.7442671896315005e-07,
+            1,
+            4.386627551866695e-05
+           ],
+           [
+            1,
+            -3.742779313142819e-07,
+            -3.3884457479871344e-06
+           ]
+          ],
+          "position": [
+           -59.71640396118164,
+           1.500258207321167,
+           -24.029226303100586
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 1280
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          6,
+          3,
+          3
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.904747724533081,
+              0.4259478449821472,
+              0
+             ],
+             [
+              0,
+              0,
+              1
+             ],
+             [
+              0.4259478449821472,
+              0.904747724533081,
+              0
+             ]
+            ],
+            "position": [
+             -56.49311065673828,
+             3.491192102432251,
+             -25.33367347717285
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.9047237634658813,
+              0,
+              -0.42599889636039734
+             ],
+             [
+              0,
+              1,
+              0
+             ],
+             [
+              0.42599889636039734,
+              0,
+              -0.9047237634658813
+             ]
+            ],
+            "position": [
+             -57.34498596191406,
+             1.5002020597457886,
+             -27.143165588378906
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              0.9047167301177979,
+              0,
+              0.42601385712623596
+             ],
+             [
+              0,
+              1,
+              0
+             ],
+             [
+              -0.42601385712623596,
+              0,
+              0.9047167301177979
+             ]
+            ],
+            "position": [
+             -55.641197204589844,
+             1.5002411603927612,
+             -23.52419662475586
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.904747724533081,
+              0.4259478449821472,
+              9.796796803129837e-06
+             ],
+             [
+              0,
+              -2.2999991415417753e-05,
+              1
+             ],
+             [
+              0.4259478449821472,
+              0.904747724533081,
+              2.0809189663850702e-05
+             ]
+            ],
+            "position": [
+             -53.77888107299805,
+             3.4912590980529785,
+             -26.611499786376953
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.9048272371292114,
+              0,
+              -0.4257791042327881
+             ],
+             [
+              0,
+              1,
+              0
+             ],
+             [
+              0.4257791042327881,
+              0,
+              -0.9048272371292114
+             ]
+            ],
+            "position": [
+             -54.630775451660156,
+             1.5002641677856445,
+             -28.420991897583008
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              0.9047824144363403,
+              0,
+              0.4258742034435272
+             ],
+             [
+              0,
+              1,
+              0
+             ],
+             [
+              -0.4258742034435272,
+              0,
+              0.9047824144363403
+             ]
+            ],
+            "position": [
+             -52.92697525024414,
+             1.5003011226654053,
+             -24.802038192749023
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.9047518968582153,
+            0,
+            -0.4259389340877533
+           ],
+           [
+            0,
+            1,
+            0
+           ],
+           [
+            0.4259389340877533,
+            0,
+            -0.9047518968582153
+           ]
+          ],
+          "position": [
+           -55.13597106933594,
+           1.500251054763794,
+           -25.97259521484375
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 1280
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          6,
+          3,
+          3
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              4.479405561141903e-06,
+              1,
+              -4.466787686396856e-06
+             ],
+             [
+              4.48544233222492e-06,
+              4.466767677513417e-06,
+              1
+             ],
+             [
+              1,
+              -4.479425570025342e-06,
+              -4.485422778088832e-06
+             ]
+            ],
+            "position": [
+             -55.7164421081543,
+             6.337562561035156,
+             -22.52920913696289
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              6.569336983375251e-05,
+              3.869208740070462e-05,
+              -1
+             ],
+             [
+              -6.319625072137569e-07,
+              1,
+              3.869205102091655e-05
+             ],
+             [
+              1,
+              6.29420298992045e-07,
+              6.569340621354058e-05
+             ]
+            ],
+            "position": [
+             -57.7164421081543,
+             4.3465728759765625,
+             -22.52921485900879
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -8.160780998878181e-05,
+              2.676321309991181e-05,
+              1
+             ],
+             [
+              1.1732624898286304e-06,
+              1,
+              -2.6763118512462825e-05
+             ],
+             [
+              -1,
+              1.1710783383023227e-06,
+              -8.160784636856988e-05
+             ]
+            ],
+            "position": [
+             -53.716468811035156,
+             4.346592903137207,
+             -22.52920913696289
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              1.8724880646914244e-05,
+              1,
+              3.1176874472294e-05
+             ],
+             [
+              -3.769738214032259e-06,
+              -3.117680535069667e-05,
+              1
+             ],
+             [
+              1,
+              -1.8724998881225474e-05,
+              3.769154545807396e-06
+             ]
+            ],
+            "position": [
+             -55.716461181640625,
+             6.337551116943359,
+             -25.52918815612793
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.00017791085701901466,
+              4.4521719246404245e-05,
+              -1
+             ],
+             [
+              -1.1781932016674546e-06,
+              1,
+              4.452193024917506e-05
+             ],
+             [
+              1,
+              1.1861142183988704e-06,
+              -0.00017791079881135374
+             ]
+            ],
+            "position": [
+             -57.71645736694336,
+             4.346562385559082,
+             -25.529193878173828
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              7.276827091118321e-05,
+              4.159782110946253e-05,
+              1
+             ],
+             [
+              3.422652753215516e-06,
+              1,
+              -4.159807213000022e-05
+             ],
+             [
+              -1,
+              3.425680006330367e-06,
+              7.276813994394615e-05
+             ]
+            ],
+            "position": [
+             -53.716487884521484,
+             4.34658145904541,
+             -25.52918815612793
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -3.3884282402141253e-06,
+            4.3866271880688146e-05,
+            -1
+           ],
+           [
+            3.7442671896315005e-07,
+            1,
+            4.386627551866695e-05
+           ],
+           [
+            1,
+            -3.742779313142819e-07,
+            -3.3884457479871344e-06
+           ]
+          ],
+          "position": [
+           -55.716468811035156,
+           4.3465776443481445,
+           -24.02920913696289
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 1280
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          6,
+          3,
+          3
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -1,
+              -4.479419203562429e-06,
+              -4.466787686396856e-06
+             ],
+             [
+              -4.466807695280295e-06,
+              4.485402314458042e-06,
+              1
+             ],
+             [
+              -4.47939919467899e-06,
+              1,
+              -4.485422778088832e-06
+             ]
+            ],
+            "position": [
+             -57.21639633178711,
+             3.491262674331665,
+             -22.029224395751953
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -1,
+              -9.462787602387834e-06,
+              -5.639382288791239e-05
+             ],
+             [
+              -9.46497038967209e-06,
+              1,
+              3.871120497933589e-05
+             ],
+             [
+              5.6393455452052876e-05,
+              3.871173976222053e-05,
+              -1
+             ]
+            ],
+            "position": [
+             -57.21642303466797,
+             1.5002715587615967,
+             -24.029220581054688
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              1,
+              -1.0242798452964053e-05,
+              7.299140997929499e-05
+             ],
+             [
+              1.0244752957078163e-05,
+              1,
+              -2.6782401619129814e-05
+             ],
+             [
+              -7.299113349290565e-05,
+              2.678314922377467e-05,
+              1
+             ]
+            ],
+            "position": [
+             -57.216400146484375,
+             1.500286340713501,
+             -20.029247283935547
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -1,
+              9.604821570974309e-06,
+              -1.2670610885834321e-05
+             ],
+             [
+              -1.2670910109591205e-05,
+              -3.127740274067037e-05,
+              1
+             ],
+             [
+              9.604424121789634e-06,
+              1,
+              3.1277530069928616e-05
+             ]
+            ],
+            "position": [
+             -54.2164192199707,
+             3.4912753105163574,
+             -22.029207229614258
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -1,
+              -1.001952296064701e-05,
+              0.00018697984341997653
+             ],
+             [
+              -1.0011194717662875e-05,
+              1,
+              4.45388795924373e-05
+             ],
+             [
+              -0.00018698027997743338,
+              4.4537006033351645e-05,
+              -1
+             ]
+            ],
+            "position": [
+             -54.2164421081543,
+             1.5002844333648682,
+             -24.029203414916992
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              1,
+              -1.2497523130150512e-05,
+              -8.142245496856049e-05
+             ],
+             [
+              1.2494134352891706e-05,
+              1,
+              -4.1615989175625145e-05
+             ],
+             [
+              8.14229715615511e-05,
+              4.161497054155916e-05,
+              1
+             ]
+            ],
+            "position": [
+             -54.21642303466797,
+             1.5002992153167725,
+             -20.029232025146484
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -1,
+            -8.459142009087373e-06,
+            1.2758401680912357e-05
+           ],
+           [
+            -8.45858176035108e-06,
+            1,
+            4.388480374473147e-05
+           ],
+           [
+            -1.275877275475068e-05,
+            4.388469460536726e-05,
+            -1
+           ]
+          ],
+          "position": [
+           -55.7164192199707,
+           1.5002853870391846,
+           -22.029218673706055
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 1280
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          6,
+          3,
+          3
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.8902486562728882,
+              0.4554749131202698,
+              -4.466787686396856e-06
+             ],
+             [
+              -1.933554131028359e-06,
+              6.027650215401081e-06,
+              1
+             ],
+             [
+              0.45547497272491455,
+              0.8902485966682434,
+              -4.485422778088832e-06
+             ]
+            ],
+            "position": [
+             -57.051387786865234,
+             3.4912848472595215,
+             -17.34626007080078
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.8902207612991333,
+              1.2059770597261377e-05,
+              -0.4555293619632721
+             ],
+             [
+              -7.050884050840978e-06,
+              1,
+              4.025342423119582e-05
+             ],
+             [
+              0.4555293321609497,
+              3.904631739715114e-05,
+              -0.8902208805084229
+             ]
+            ],
+            "position": [
+             -57.962398529052734,
+             1.500291109085083,
+             -19.126262664794922
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              0.8902137279510498,
+              6.1444247876352165e-06,
+              0.4555433392524719
+             ],
+             [
+              7.592157544422662e-06,
+              1,
+              -2.8324569939286448e-05
+             ],
+             [
+              -0.4555433690547943,
+              2.8673472115769982e-05,
+              0.890213668346405
+             ]
+            ],
+            "position": [
+             -56.1403923034668,
+             1.5003116130828857,
+             -15.565285682678223
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Model",
+       "name": "Model",
+       "children": [
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.8902422189712524,
+              0.45548754930496216,
+              4.4191860979481135e-06
+             ],
+             [
+              -1.0188740816374775e-05,
+              -2.961581776617095e-05,
+              1
+             ],
+             [
+              0.45548751950263977,
+              0.8902422189712524,
+              3.100609319517389e-05
+             ]
+            ],
+            "position": [
+             -54.38140869140625,
+             3.4912829399108887,
+             -18.712228775024414
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              -0.8903317451477051,
+              1.4217323041521013e-05,
+              -0.4553126096725464
+             ],
+             [
+              -7.59749173084856e-06,
+              1,
+              4.608177550835535e-05
+             ],
+             [
+              0.4553126096725464,
+              4.4487296690931544e-05,
+              -0.8903316855430603
+             ]
+            ],
+            "position": [
+             -55.29241943359375,
+             1.5002892017364502,
+             -20.49323844909668
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        },
+        {
+         "className": "Part",
+         "name": "Part",
+         "properties": {
+          "Reflectance": {
+           "Float32": 0
+          },
+          "CanCollide": {
+           "Bool": true
+          },
+          "Color": {
+           "Color3": [
+            0.48627451062202454,
+            0.3607843220233917,
+            0.27450981736183167
+           ]
+          },
+          "CFrame": {
+           "CFrame": {
+            "orientation": [
+             [
+              0.8902838826179504,
+              1.0892685168073513e-05,
+              0.455406129360199
+             ],
+             [
+              9.841798600973561e-06,
+              1,
+              -4.315857222536579e-05
+             ],
+             [
+              -0.45540615916252136,
+              4.2905394366243854e-05,
+              0.8902838826179504
+             ]
+            ],
+            "position": [
+             -53.470428466796875,
+             1.5003173351287842,
+             -16.9322452545166
+            ]
+           }
+          },
+          "Transparency": {
+           "Float32": 0
+          },
+          "Anchored": {
+           "Bool": true
+          },
+          "Shape": {
+           "Enum": 1
+          },
+          "Material": {
+           "Enum": 256
+          },
+          "CastShadow": {
+           "Bool": true
+          },
+          "Size": {
+           "Vector3": [
+            1,
+            3,
+            1
+           ]
+          }
+         },
+         "children": [
+          {
+           "className": "BlockMesh",
+           "name": "Mesh",
+           "properties": {
+            "Scale": {
+             "Vector3": [
+              0.15000000596046448,
+              1.125,
+              0.15000000596046448
+             ]
+            },
+            "Offset": {
+             "Vector3": [
+              0,
+              0,
+              -0.4000000059604645
+             ]
+            }
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.8902521729469299,
+            1.5309444279409945e-05,
+            -0.45546796917915344
+           ],
+           [
+            -6.044591827958357e-06,
+            1,
+            4.542725218925625e-05
+           ],
+           [
+            0.45546793937683105,
+            4.319482468417846e-05,
+            -0.8902522325515747
+           ]
+          ],
+          "position": [
+           -55.71640396118164,
+           1.5003001689910889,
+           -18.029247283935547
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 1280
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          6,
+          3,
+          3
+         ]
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -90,8 +90,12 @@ local PROPS = {
 local SUPPORTED = {
 	Model = true, Folder = true, Part = true, WedgePart = true, CornerWedgePart = true, TrussPart = true,
 	MeshPart = true, SpecialMesh = true, BlockMesh = true, CylinderMesh = true, Decal = true, Texture = true,
-	SurfaceAppearance = true, PointLight = true, SpotLight = true,
+	SurfaceAppearance = true, PointLight = true, SpotLight = true, Seat = true, VehicleSeat = true,
+	Accessory = true, Tool = true,
 }
+
+-- Классы, которые пишутся другим классом: сиденье — просто деталь, аксессуар и инструмент — модель.
+local WRITE_AS = { Seat = "Part", VehicleSeat = "Part", Accessory = "Model", Tool = "Model" }
 
 local skipped = {}
 
@@ -157,7 +161,7 @@ local function serialize(instance)
 		skipped[instance.ClassName] = (skipped[instance.ClassName] or 0) + 1
 		return nil
 	end
-	local node = { Name = instance.Name, ClassName = instance.ClassName, Properties = {}, Children = {} }
+	local node = { Name = instance.Name, ClassName = WRITE_AS[instance.ClassName] or instance.ClassName, Properties = {}, Children = {} }
 	for class, names in PROPS do
 		if instance:IsA(class) then
 			for _, name in names do
@@ -207,18 +211,49 @@ for _, entry in ids do
 	for _, object in result do
 		object.Parent = root
 	end
+	--[[
+		Цельные детали (UnionOperation) в файл не записать: их форма хранится
+		в облаке. Разбираем их на исходные детали; вырезы (NegateOperation)
+		выбрасываем — лучше чуть более грубая форма, чем дыра в модели.
+	]]
+	for _ = 1, 3 do
+		local unions = {}
+		for _, descendant in root:GetDescendants() do
+			if descendant:IsA("UnionOperation") then
+				table.insert(unions, descendant)
+			end
+		end
+		if #unions == 0 then
+			break
+		end
+		for _, union in unions do
+			local ok, parts = pcall(function()
+				return plugin:Separate({ union })
+			end)
+			if not ok then
+				warn("ZZ separate failed " .. tostring(parts))
+			end
+		end
+	end
+	for _, descendant in root:GetDescendants() do
+		if descendant:IsA("NegateOperation") then
+			descendant:Destroy()
+		end
+	end
+
 	-- Скрипты не берём никогда: ни живые, ни выключенные.
 	for _, descendant in root:GetDescendants() do
 		if descendant:IsA("LuaSourceContainer") then
 			descendant:Destroy()
 		end
 	end
+	local _, bounds = root:GetBoundingBox()
 	local encoded = serialize(root)
 	local skippedText = {}
 	for class, count in skipped do
 		table.insert(skippedText, `{class}×{count}`)
 	end
-	post(HttpService:JSONEncode({ id = entry.id, model = encoded, skipped = table.concat(skippedText, ", ") }), "model")
+	post(HttpService:JSONEncode({ id = entry.id, model = encoded, skipped = table.concat(skippedText, ", "), size = { bounds.X, bounds.Y, bounds.Z } }), "model")
 	root:Destroy()
 end
 post("DONE")

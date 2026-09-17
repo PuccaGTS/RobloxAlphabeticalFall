@@ -1,0 +1,96 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "lowpolyrocks",
+   "children": [
+    {
+     "className": "Part",
+     "name": "default",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.6392157077789307,
+        0.6352941393852234,
+        0.6470588445663452
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          1
+         ]
+        ],
+        "position": [
+         -0.6118804216384888,
+         0.3422504961490631,
+         0.6893624663352966
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        5.3381147384643555,
+        2.5371150970458984,
+        5.171794891357422
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://14603612699"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

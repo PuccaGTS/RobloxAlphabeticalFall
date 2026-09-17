@@ -1,0 +1,96 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "LowPolyBushes",
+   "children": [
+    {
+     "className": "Part",
+     "name": "LowPolyBushes",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.20392157137393951,
+        0.5568627715110779,
+        0.250980406999588
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          1
+         ]
+        ],
+        "position": [
+         110.84014892578125,
+         2.419133186340332,
+         53.8770751953125
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": false
+      },
+      "Size": {
+       "Vector3": [
+        10.277949333190918,
+        4.838266372680664,
+        7.895591735839844
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          4.505115985870361,
+          3.3146119117736816,
+          3.6610054969787598
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://7191451797"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

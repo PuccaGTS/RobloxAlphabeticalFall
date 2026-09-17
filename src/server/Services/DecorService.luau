@@ -269,6 +269,28 @@ end
 	она лезет в проход, которого в конфиге не видно, и заметит это ребёнок.
 	Не отказываемся ставить — говорим в лог, чтобы поправили каталог или модель.
 ]]
+--[[
+	Модель из файла проекта (assets/models/decor): обезвреживается и подгоняется
+	под габарит каталога один раз, дальше только клонируется. Импортированные
+	из Store модели бывают и в два студа, и в сорок — расстановка же считается
+	по каталогу.
+]]
+local fileCache: { [string]: Model | false } = {}
+
+local function takeFile(folder: Instance?, item): Model?
+	local cached = fileCache[item.id]
+	if cached == nil then
+		local model = takeModel(folder, item)
+		if model then
+			sanitize(model, item, item.id)
+			fitToCatalog(model, item)
+		end
+		fileCache[item.id] = model or false
+		cached = fileCache[item.id]
+	end
+	return if cached then cached:Clone() else nil
+end
+
 local function checkSize(item, actual: Vector3, scale: number)
 	local expected = item.size * scale
 	for _, axis in { "X", "Y", "Z" } do
@@ -316,12 +338,10 @@ function DecorService.build(parent: Instance): number
 
 		local ok, err = pcall(function()
 			local scale = placement.scale or 1
-			local model = takeModel(folder, item)
+			local model = takeFile(folder, item)
 			local fromAsset = model ~= nil
 
-			if model then
-				sanitize(model, item, item.id)
-			else
+			if not model then
 				model = takeAsset(item)
 				fromAsset = model ~= nil
 			end
@@ -397,10 +417,8 @@ function DecorService.modelFor(id: string, scale: number?): Model?
 		return nil
 	end
 
-	local model = takeModel(assetsFolder(), item)
-	if model then
-		sanitize(model, item, item.id)
-	else
+	local model = takeFile(assetsFolder(), item)
+	if not model then
 		model = takeAsset(item)
 	end
 	if not model then
