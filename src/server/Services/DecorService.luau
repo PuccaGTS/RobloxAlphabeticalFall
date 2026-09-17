@@ -373,6 +373,17 @@ function DecorService.build(parent: Instance): number
 				checkSize(item, size, scale)
 			end
 			placed += 1
+
+			-- Под горбатым мостиком — пруд: мост должен быть через что-то.
+			if item.id == Decor.POND_UNDER then
+				local pond = DecorShapes.pond(Decor.POND_BLOBS)
+				pond:PivotTo(
+					CFrame.new(placement.x, Decor.groundY(placement.x, placement.z), placement.z)
+						* CFrame.Angles(0, math.rad(placement.rotation), 0)
+				)
+				pond.Name = `KoiPond_{placed}`
+				pond.Parent = container
+			end
 		end)
 
 		if not ok then

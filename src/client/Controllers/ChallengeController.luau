@@ -24,6 +24,7 @@ local SfxController = require(script.Parent.SfxController)
 local LadderController = require(script.Parent.LadderController)
 local BubblesController = require(script.Parent.BubblesController)
 local MirrorController = require(script.Parent.MirrorController)
+local LiveWorldController = require(script.Parent.LiveWorldController)
 local ScalesController = require(script.Parent.ScalesController)
 local BerryController = require(script.Parent.BerryController)
 local PetController = require(script.Parent.PetController)
@@ -737,6 +738,10 @@ local function onEnd(result: any)
 	-- Нажал 🏠 посреди испытания — он уже ушёл, и итог ему показывать незачем.
 	if result.reason ~= "aborted" then
 		ResultScreen.show(result.stars or 1, result.stars_awarded or 0, cleared)
+		-- Три звезды — над парком радуга: вернёшься на площадь и увидишь.
+		if result.stars == 3 then
+			LiveWorldController.rainbow()
+		end
 	end
 	print(
 		string.format(

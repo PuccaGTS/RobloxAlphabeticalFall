@@ -1,6 +1,7 @@
 --!nonstrict
 --[[
-	Бабочки у клумб, листья с деревьев, утки у фонтана и зайчики на полянках.
+	Бабочки у клумб, листья с деревьев, утки у фонтана, зайчики на полянках,
+	карпы в пруду под мостиком и радуга над парком.
 	Места, количество и бюджет — Config/LiveWorld.
 
 	Всё движется твинами (TweenService) по закреплённым деталям, без физики —
@@ -360,6 +361,203 @@ local function startBunny(index: number): (number) -> ()
 	end
 end
 
+-- ===== Карпы в пруду ===============================================================
+
+-- Тело карпа — брусок со сферическим мешем: шар в Roblox не бывает вытянутым.
+local function oval(name: string, size: Vector3, color: Color3): BasePart
+	local part = ghostPart(name, size, color)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = part
+	return part
+end
+
+type Koi = { pieces: { Piece }, phase: number, speed: number, jumpStart: number? }
+
+local function makeKoi(index: number): Koi
+	local colors = LiveWorld.KOI_COLORS[(index - 1) % #LiveWorld.KOI_COLORS + 1]
+	local model = Instance.new("Model")
+	model.Name = "Koi"
+	model.Parent = container()
+	local recipe = {
+		{ oval("Body", Vector3.new(0.7, 0.4, 1.9), colors[1]), CFrame.new() },
+		{ oval("Spot", Vector3.new(0.5, 0.2, 0.7), colors[2]), CFrame.new(0, 0.13, -0.25) },
+		{ oval("Tail", Vector3.new(0.12, 0.5, 0.8), colors[1]), CFrame.new(0, 0.05, 1.15) },
+		{
+			oval("FinL", Vector3.new(0.5, 0.06, 0.3), colors[2]),
+			CFrame.new(-0.4, -0.05, -0.3) * CFrame.Angles(0, 0.5, 0),
+		},
+		{
+			oval("FinR", Vector3.new(0.5, 0.06, 0.3), colors[2]),
+			CFrame.new(0.4, -0.05, -0.3) * CFrame.Angles(0, -0.5, 0),
+		},
+	}
+	local pieces = {}
+	for _, item in recipe do
+		item[1].Parent = model
+		table.insert(pieces, { part = item[1], offset = item[2] })
+	end
+	return {
+		pieces = pieces,
+		phase = (index - 1) / LiveWorld.KOI_PER_POND * math.pi * 2,
+		speed = 1 + index * 0.08,
+	}
+end
+
+-- Кольцо брызг там, где карп ушёл обратно в воду.
+local function splash(at: Vector3)
+	local ring = ghostPart("Splash", Vector3.new(0.08, 0.6, 0.6), Color3.fromRGB(235, 250, 255))
+	ring.Shape = Enum.PartType.Cylinder
+	ring.Transparency = 0.2
+	ring.CFrame = CFrame.new(at) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Parent = container()
+	local tween =
+		TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.08, 4, 4),
+			Transparency = 1,
+		})
+	tween.Completed:Connect(function()
+		ring:Destroy()
+	end)
+	tween:Play()
+end
+
+local function startPond(pond: LiveWorld.Pond): (number) -> ()
+	local fish = {}
+	for index = 1, LiveWorld.KOI_PER_POND do
+		table.insert(fish, makeKoi(index))
+	end
+	local path = Decor.KOI_PATH
+	-- Верх воды на 0.17: спина карпа чуть над ней, как у настоящего у поверхности.
+	local surface = 0.2
+	local nextJump = os.clock() + random:NextNumber(3, 6)
+
+	return function(now: number)
+		if not nearCamera(pond.cframe.Position) then
+			return
+		end
+		if now >= nextJump then
+			local jumper = fish[random:NextInteger(1, #fish)]
+			if not jumper.jumpStart then
+				jumper.jumpStart = now
+			end
+			nextJump = now + random:NextNumber(LiveWorld.KOI_JUMP_EVERY[1], LiveWorld.KOI_JUMP_EVERY[2])
+		end
+
+		for _, koi in fish do
+			local angle = now / LiveWorld.KOI_LAP_SECONDS * math.pi * 2 * koi.speed + koi.phase
+			local x, z = math.cos(angle) * path.radiusX, math.sin(angle) * path.radiusZ
+			local heading =
+				Vector3.new(-math.sin(angle) * path.radiusX, 0, math.cos(angle) * path.radiusZ).Unit
+			local spot = Vector3.new(x, surface, z)
+			-- Хвост виляет: тело чуть поворачивается туда-сюда.
+			local frame = CFrame.lookAt(spot, spot + heading)
+				* CFrame.Angles(0, math.sin(now * 7 + koi.phase) * 0.18, 0)
+
+			if koi.jumpStart then
+				local t = (now - koi.jumpStart) / LiveWorld.KOI_JUMP_SECONDS
+				if t >= 1 then
+					koi.jumpStart = nil
+					splash((pond.cframe * frame).Position)
+				else
+					-- Дуга вверх, к концу прыжка носом вниз.
+					local lift = math.sin(t * math.pi) * LiveWorld.KOI_JUMP_HEIGHT
+					frame = frame * CFrame.new(0, lift, 0) * CFrame.Angles(math.rad(50 - 100 * t), 0, 0)
+				end
+			end
+
+			local world = pond.cframe * frame
+			for _, piece in koi.pieces do
+				piece.part.CFrame = world * piece.offset
+			end
+		end
+	end
+end
+
+-- ===== Радуга ======================================================================
+
+local rainbow: { beams: { Beam }, fade: NumberValue }? = nil
+local rainbowToken = 0
+
+--[[
+	Семь лучей-дуг. Луч изгибается кривой Безье: у обоих концов вектор кривизны
+	смотрит вверх, и луч встаёт аркой. Концы у земли прозрачные — радуга
+	растворяется, а не упирается в траву.
+]]
+local function buildRainbow()
+	local anchor = ghostPart("Rainbow", Vector3.one, Color3.new(1, 1, 1))
+	anchor.Transparency = 1
+	anchor.CFrame = CFrame.new(LiveWorld.RAINBOW_CENTER)
+	anchor.Parent = container()
+
+	local fade = Instance.new("NumberValue")
+	fade.Value = 1
+	local beams = {}
+	-- Ось вложения (X) смотрит вверх: вдоль неё и гнётся луч.
+	local up = CFrame.fromMatrix(Vector3.zero, Vector3.yAxis, Vector3.xAxis)
+	for index, color in LiveWorld.RAINBOW_COLORS do
+		local span = LiveWorld.RAINBOW_SPAN - (index - 1) * LiveWorld.RAINBOW_BAND
+		local height = LiveWorld.RAINBOW_HEIGHT * span / LiveWorld.RAINBOW_SPAN
+		local left = Instance.new("Attachment")
+		left.CFrame = CFrame.new(-span, 0, 0) * up
+		left.Parent = anchor
+		local right = Instance.new("Attachment")
+		right.CFrame = CFrame.new(span, 0, 0) * up
+		right.Parent = anchor
+
+		local beam = Instance.new("Beam")
+		beam.Attachment0 = left
+		beam.Attachment1 = right
+		-- Вершина кубической кривой — три четверти от кривизны.
+		beam.CurveSize0 = height / 0.75
+		beam.CurveSize1 = -height / 0.75
+		beam.Width0 = LiveWorld.RAINBOW_BAND + 0.4
+		beam.Width1 = LiveWorld.RAINBOW_BAND + 0.4
+		beam.Segments = 48
+		beam.FaceCamera = true
+		beam.Color = ColorSequence.new(color)
+		beam.LightEmission = 0.4
+		beam.Enabled = false
+		beam.Parent = anchor
+		table.insert(beams, beam)
+	end
+
+	local function apply()
+		local base = 0.35 + 0.65 * fade.Value
+		for _, beam in beams do
+			beam.Enabled = fade.Value < 0.99
+			beam.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 1),
+				NumberSequenceKeypoint.new(0.18, base),
+				NumberSequenceKeypoint.new(0.82, base),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+		end
+	end
+	fade.Changed:Connect(apply)
+	apply()
+	rainbow = { beams = beams, fade = fade }
+end
+
+--[[
+	Показать радугу на seconds секунд: проявляется за три секунды, тает за пять.
+	Повторный вызов, пока она видна, продлевает её, а не мигает заново.
+]]
+function LiveWorldController.rainbow(seconds: number?)
+	if not rainbow then
+		buildRainbow()
+	end
+	local current = rainbow :: any
+	rainbowToken += 1
+	local token = rainbowToken
+	TweenService:Create(current.fade, TweenInfo.new(3), { Value = 0 }):Play()
+	task.delay(seconds or LiveWorld.RAINBOW_SECONDS, function()
+		if token == rainbowToken then
+			TweenService:Create(current.fade, TweenInfo.new(5), { Value = 1 }):Play()
+		end
+	end)
+end
+
 function LiveWorldController.init()
 	--[[
 		Ждём декор: расстановка общая, но деревья и клумбы приедут не сразу.
@@ -382,6 +580,17 @@ function LiveWorldController.init()
 		for bunny = 1, #LiveWorld.BUNNY_HOMES do
 			table.insert(animators, startBunny(bunny))
 		end
+		for _, pond in LiveWorld.ponds() do
+			table.insert(animators, startPond(pond))
+		end
+
+		-- Радуга изредка сама по себе; после трёх звёзд её зовёт ChallengeController.
+		task.spawn(function()
+			while true do
+				task.wait(random:NextNumber(LiveWorld.RAINBOW_EVERY[1], LiveWorld.RAINBOW_EVERY[2]))
+				LiveWorldController.rainbow()
+			end
+		end)
 		RunService.Heartbeat:Connect(function()
 			local now = os.clock()
 			for _, animate in animators do

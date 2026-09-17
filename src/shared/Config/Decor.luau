@@ -418,6 +418,23 @@ local ITEMS: { Item } = {
 
 Decor.items = ITEMS
 
+--[[
+	Пруд под горбатым мостиком. Мостик из Creator Store стоял прямо на траве:
+	горб есть, а перебираться не через что. Под каждый мостик ставится пруд
+	(DecorService), в нём плавают карпы (LiveWorldController).
+
+	Форма — три круга воды вдоль мостика, в координатах мостика: x — вдоль
+	пролёта, z — поперёк. Пролёт 19 студов, поэтому вода кончается у его опор.
+	Карпы плавают по эллипсу KOI_PATH внутри воды и ныряют под мостик.
+]]
+Decor.POND_UNDER = "koi_bridge"
+Decor.POND_BLOBS = {
+	{ x = 0, z = 0, radius = 6 },
+	{ x = -4.4, z = 0.6, radius = 4.6 },
+	{ x = 4.4, z = -0.6, radius = 4.6 },
+}
+Decor.KOI_PATH = { radiusX = 6.3, radiusZ = 3 }
+
 local byId: { [string]: Item } = {}
 for _, item in ITEMS do
 	assert(byId[item.id] == nil, `Decor: дубликат предмета "{item.id}"`)

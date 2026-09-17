@@ -1,6 +1,7 @@
 --!strict
 --[[
-	Живой мир площади: бабочки у клумб и листья, падающие с деревьев.
+	Живой мир площади: бабочки у клумб, листья с деревьев, утки, зайчики,
+	карпы в пруду и радуга.
 	См. docs/18-CONTENT-BACKLOG.md § 7.
 
 	Чистая атмосфера: ничего из этого не учит, не награждает и не мешает пройти.
@@ -33,7 +34,7 @@ LiveWorld.MAX_BUTTERFLY_BEDS = 10 -- было 14: часть бюджета от
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
-LiveWorld.LEAVES_AT_ONCE = 12
+LiveWorld.LEAVES_AT_ONCE = 8 -- было 12: четыре места отданы карпам и брызгам в пруду
 LiveWorld.LEAF_INTERVAL = 0.9 -- секунд между листьями
 LiveWorld.LEAF_FALL_SECONDS = { 4, 6.5 }
 
@@ -63,6 +64,61 @@ LiveWorld.DUCK_COUNT = 4 -- мама и три утёнка
 LiveWorld.DUCK_LOOP = { center = Vector2.new(0, -34), radius = 11 } -- вокруг фонтана
 LiveWorld.DUCK_LAP_SECONDS = 40
 LiveWorld.DUCK_GAP = 0.28 -- на сколько радиан утёнок отстаёт от впереди идущего
+
+--[[
+	Карпы в пруду под горбатым мостиком (Config/Decor.POND_BLOBS). Плавают
+	по кругу у самой поверхности, ныряют под мостик, и время от времени один
+	выпрыгивает с брызгами — на это ребёнок и бежит посмотреть.
+]]
+LiveWorld.KOI_PER_POND = 3
+LiveWorld.KOI_LAP_SECONDS = 18
+LiveWorld.KOI_JUMP_EVERY = { 6, 12 } -- секунд между прыжками в одном пруду
+LiveWorld.KOI_JUMP_SECONDS = 1.1
+LiveWorld.KOI_JUMP_HEIGHT = 2.6
+-- Раскраска карпов: тело и пятно.
+LiveWorld.KOI_COLORS = {
+	{ Color3.fromRGB(245, 120, 45), Color3.fromRGB(255, 250, 240) },
+	{ Color3.fromRGB(255, 250, 240), Color3.fromRGB(230, 70, 50) },
+	{ Color3.fromRGB(250, 195, 60), Color3.fromRGB(245, 120, 45) },
+}
+
+--[[
+	Радуга над парком. Не движется — только проявляется и тает, поэтому
+	в бюджет движущихся не входит: это семь лучей (Beam), а не детали.
+	Появляется сама изредка и сразу после испытания на три звезды — ребёнок
+	возвращается на площадь, а над ней радуга.
+]]
+LiveWorld.RAINBOW_CENTER = Vector3.new(0, 0, -190)
+LiveWorld.RAINBOW_SPAN = 165 -- от центра до ноги внешней полосы
+LiveWorld.RAINBOW_HEIGHT = 125 -- высота внешней дуги
+LiveWorld.RAINBOW_BAND = 6.5 -- ширина полосы
+LiveWorld.RAINBOW_SECONDS = 45
+LiveWorld.RAINBOW_EVERY = { 180, 300 }
+LiveWorld.RAINBOW_COLORS = {
+	Color3.fromRGB(235, 80, 80),
+	Color3.fromRGB(245, 150, 60),
+	Color3.fromRGB(250, 220, 80),
+	Color3.fromRGB(110, 200, 110),
+	Color3.fromRGB(90, 170, 240),
+	Color3.fromRGB(90, 110, 220),
+	Color3.fromRGB(160, 100, 210),
+}
+
+export type Pond = { cframe: CFrame }
+
+-- Пруды: по одному под каждым горбатым мостиком, в его развороте, на уровне земли.
+function LiveWorld.ponds(): { Pond }
+	local ponds: { Pond } = {}
+	for _, placement in Decor.placements do
+		if placement.id == Decor.POND_UNDER then
+			table.insert(ponds, {
+				cframe = CFrame.new(placement.x, Decor.groundY(placement.x, placement.z), placement.z)
+					* CFrame.Angles(0, math.rad(placement.rotation), 0),
+			})
+		end
+	end
+	return ponds
+end
 
 -- Полянки зайчиков: угол от центра площади в градусах и расстояние.
 LiveWorld.BUNNY_HOMES = {
@@ -130,6 +186,8 @@ function LiveWorld.movingBudget(): number
 		+ LiveWorld.LEAVES_AT_ONCE
 		+ LiveWorld.DUCK_COUNT
 		+ #LiveWorld.BUNNY_HOMES
+		-- В каждом пруду карпы и одно кольцо брызг от прыжка.
+		+ #LiveWorld.ponds() * (LiveWorld.KOI_PER_POND + 1)
 end
 
 return LiveWorld

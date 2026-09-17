@@ -1,6 +1,6 @@
 --!nonstrict
 --[[
-	Панель разработчика: полёт, звёзды, перенос по локациям.
+	Панель разработчика: полёт, звёзды, радуга, перенос по локациям.
 
 	Строится, только если сервер поставил игроку атрибут DevTools (Studio или
 	владелец места, Services/DevService). Ребёнок её не видит никогда.
@@ -20,6 +20,8 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 local Venues = require(Shared.Config.Venues)
+
+local LiveWorldController = require(script.Parent.LiveWorldController)
 
 local DevController = {}
 
@@ -283,6 +285,10 @@ local function build()
 	end)
 	button(panel, "⭐ +1000", 11, function()
 		command({ kind = "stars", amount = 1000 })
+	end)
+	-- Радуга приходит сама раз в несколько минут или за три звезды — ждать долго.
+	button(panel, "🌈 Радуга", 12, function()
+		LiveWorldController.rainbow(60)
 	end)
 
 	button(panel, "➜ Площадь", 20, function()

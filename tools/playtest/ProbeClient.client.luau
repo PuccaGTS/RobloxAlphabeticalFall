@@ -4,6 +4,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local report = ReplicatedStorage:WaitForChild("ZZ_ProbeReport")
 local player = Players.LocalPlayer
+-- Сценарий зовёт радугу меткой в Workspace: у сервера до клиентского контроллера не дотянуться.
+workspace:GetAttributeChangedSignal("ZZ_Rainbow"):Connect(function()
+	local scripts = player:WaitForChild("PlayerScripts")
+	require(scripts.Client.Controllers.LiveWorldController).rainbow(120)
+end)
 task.wait(6)
 local gui = player:WaitForChild("PlayerGui")
 local names = {}

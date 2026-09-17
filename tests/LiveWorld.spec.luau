@@ -79,5 +79,31 @@ return function()
 			expect(LiveWorld.BUTTERFLY_HEIGHT[2] <= 8).to.equal(true)
 			expect(LiveWorld.BUTTERFLY_RADIUS <= 10).to.equal(true)
 		end)
+
+		it(
+			"под каждым горбатым мостиком пруд, и карпы плавают в его воде",
+			function()
+				expect(#LiveWorld.ponds() > 0).to.equal(true)
+				local path = Decor.KOI_PATH
+				-- Точки пути карпа обязаны лежать в одном из кругов воды, с запасом на тело рыбы.
+				for step = 0, 35 do
+					local angle = step / 36 * math.pi * 2
+					local x, z = math.cos(angle) * path.radiusX, math.sin(angle) * path.radiusZ
+					local wet = false
+					for _, blob in Decor.POND_BLOBS do
+						if Vector2.new(x - blob.x, z - blob.z).Magnitude < blob.radius - 0.8 then
+							wet = true
+						end
+					end
+					expect(wet).to.equal(true)
+				end
+				-- Вода кончается у опор мостика: пролёт 19 студов.
+				for _, blob in Decor.POND_BLOBS do
+					expect(math.abs(blob.x) + blob.radius <= Decor.expect(Decor.POND_UNDER).size.X / 2).to.equal(
+						true
+					)
+				end
+			end
+		)
 	end)
 end

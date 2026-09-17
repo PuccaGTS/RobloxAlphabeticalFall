@@ -853,6 +853,142 @@ BUILDERS.crayons = function(model: Model)
 	end
 end
 
+--[[
+	Пруд под мостиком (Config/Decor.POND_BLOBS): вода из трёх кругов, камни
+	по берегу, кувшинки, камыш. Стоит на нуле, как все эскизы, в координатах
+	мостика: x — вдоль пролёта.
+
+	Вода непрозрачная: прозрачные круги, наложенные друг на друга, темнеют
+	в местах наложения пятнами. Под ней — круги чуть шире цвета мокрой земли,
+	это береговая кромка.
+]]
+function DecorShapes.pond(blobs: { any }): Model
+	local model = Instance.new("Model")
+	model.Name = "KoiPond"
+
+	for index, blob in blobs do
+		local flat = CFrame.Angles(0, 0, math.rad(90))
+		local shore = piece(
+			model,
+			`Shore_{index}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(0.12, blob.radius * 2 + 1.6, blob.radius * 2 + 1.6),
+			at(blob.x, 0.06, blob.z) * flat,
+			Color3.fromRGB(125, 110, 80),
+			Enum.Material.Mud
+		)
+		shore.CanCollide = false
+		local water = piece(
+			model,
+			`PondWater_{index}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(0.14, blob.radius * 2, blob.radius * 2),
+			at(blob.x, 0.1, blob.z) * flat,
+			Color3.fromRGB(70, 160, 200),
+			Enum.Material.Glass
+		)
+		water.Reflectance = 0.12
+		water.CanCollide = false
+	end
+
+	--[[
+		Камни по берегу: точки по краю объединённой формы, те, что не утонули
+		в соседнем круге. У опор мостика (края по x) камней нет — там в воду
+		спускаются доски.
+	]]
+	local stones = 0
+	for index, blob in blobs do
+		local count = math.floor(blob.radius * 2.2)
+		for step = 1, count do
+			local angle = (step + index * 0.37) / count * math.pi * 2
+			local x = blob.x + math.cos(angle) * (blob.radius + 0.5)
+			local z = blob.z + math.sin(angle) * (blob.radius + 0.5)
+			local inside = false
+			for other, neighbour in blobs do
+				if
+					other ~= index
+					and Vector2.new(x - neighbour.x, z - neighbour.z).Magnitude < neighbour.radius + 0.2
+				then
+					inside = true
+				end
+			end
+			if not inside and math.abs(z) > 1.8 then
+				stones += 1
+				local size = 0.9 + ((stones * 37) % 7) / 10
+				local stone = piece(
+					model,
+					`Stone_{stones}`,
+					Enum.PartType.Ball,
+					Vector3.one * size,
+					at(x, size * 0.25, z),
+					if stones % 3 == 0 then Color3.fromRGB(140, 140, 150) else STONE,
+					Enum.Material.Slate
+				)
+				stone.CanCollide = false
+			end
+		end
+	end
+
+	-- Кувшинки: плоские зелёные круги, на двух — розовый цветок.
+	local pads =
+		{ { -6.5, -1.8, 1.4 }, { -3.2, 2.9, 1.1 }, { 2.6, 3.6, 1.3 }, { 6.8, 1.6, 1.0 }, { 1.2, -3.8, 1.2 } }
+	for index, pad in pads do
+		local lily = piece(
+			model,
+			`LilyPad_{index}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(0.08, pad[3] * 2, pad[3] * 2),
+			at(pad[1], 0.2, pad[2]) * CFrame.Angles(0, 0, math.rad(90)),
+			if index % 2 == 0 then LEAF_LIGHT else LEAF_DARK
+		)
+		lily.CanCollide = false
+		if index % 2 == 1 then
+			local flower = piece(
+				model,
+				`Lotus_{index}`,
+				Enum.PartType.Ball,
+				Vector3.new(0.7, 0.5, 0.7),
+				at(pad[1] + 0.2, 0.42, pad[2]),
+				Color3.fromRGB(245, 160, 200)
+			)
+			flower.CanCollide = false
+		end
+	end
+
+	-- Камыш у дальнего берега: тонкие стебли с коричневыми початками.
+	for index, reed in
+		{
+			{ -2.5, -5.6, 3.2 },
+			{ -1.9, -5.9, 2.6 },
+			{ -1.2, -5.5, 3.6 },
+			{ 5.2, 4.8, 2.8 },
+			{ 5.8, 4.4, 3.3 },
+		}
+	do
+		local stem = piece(
+			model,
+			`Reed_{index}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(reed[3], 0.14, 0.14),
+			at(reed[1], reed[3] / 2, reed[2]) * CFrame.Angles(0, 0, math.rad(90)),
+			LEAF_DARK
+		)
+		stem.CanCollide = false
+		local top = piece(
+			model,
+			`Cattail_{index}`,
+			Enum.PartType.Cylinder,
+			Vector3.new(0.7, 0.3, 0.3),
+			at(reed[1], reed[3] - 0.2, reed[2]) * CFrame.Angles(0, 0, math.rad(90)),
+			Color3.fromRGB(120, 80, 50)
+		)
+		top.CanCollide = false
+	end
+
+	model.WorldPivot = CFrame.new()
+	return model
+end
+
 function DecorShapes.build(item): Model?
 	local builder = BUILDERS[item.id]
 	if not builder then
