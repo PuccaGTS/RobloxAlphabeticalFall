@@ -82,10 +82,22 @@ local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, 
 	return p
 end
 
+--[[
+	Мелкий шар — деталь, которую клиент не рисует у далёких участков
+	(DetailLodController): шар стоит сотню с лишним треугольников, а на застроенном
+	участке их сотня — глазки, цветы, лампочки. Порог — полтора студа: кусты
+	и шары-фонари остаются видны издалека.
+]]
+local DETAIL_TAG = "PlotDetail"
+local DETAIL_MAX_SIZE = 1.6
+
 -- Шар диаметром size: у Roblox шар берёт наименьшую сторону, поэтому стороны равны.
 local function ball(name: string, size: number, cframe: CFrame, color: Color3, parent: Instance): BasePart
 	local p = part(name, Vector3.new(size, size, size), cframe, color, parent)
 	p.Shape = Enum.PartType.Ball
+	if size <= DETAIL_MAX_SIZE then
+		CollectionService:AddTag(p, DETAIL_TAG)
+	end
 	return p
 end
 
@@ -831,11 +843,8 @@ local function buildRoof(plot: Model, at: CFrame, level: number, houseLevel: num
 		)
 		star.Material = Enum.Material.Neon
 		trim(star)
-		local light = Instance.new("PointLight")
-		light.Color = Color3.fromRGB(255, 220, 140)
-		light.Range = 16
-		light.Brightness = 1.2
-		light.Parent = star
+		-- Без PointLight: неон светится сам, а свет на каждой золотой крыше давал
+		-- по источнику на участок — бюджет всей сцены два (docs/07-TECH-ARCH.md § 8).
 	end
 end
 
