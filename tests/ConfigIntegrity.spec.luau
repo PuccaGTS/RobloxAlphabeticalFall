@@ -56,6 +56,9 @@ return function()
 				expect(letter.vo.name).to.be.a("string")
 				expect(#letter.vo.name > 0).to.equal(true)
 				expect(#letter.example > 0).to.equal(true)
+				-- Картинка к слову есть у каждой буквы, и слово содержит саму букву.
+				expect(#letter.picture > 0).to.equal(true)
+				expect(string.find(letter.example, letter.glyph, 1, true) ~= nil).to.equal(true)
 			end
 		end)
 

@@ -11,10 +11,17 @@ local shot = ReplicatedStorage:WaitForChild("ZZ_Shot")
 local camera = workspace.CurrentCamera
 
 shot.OnClientEvent:Connect(function(name, cframe, fov)
+	-- «release» ждёт предыдущий снимок; обработчику он не кадр. Раньше он выключал
+	-- интерфейс и падал на пустом cframe — после первого снимка UI не возвращался.
+	if typeof(cframe) ~= "CFrame" then
+		return
+	end
 	local gui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local hidden = {}
+	-- Снимки ui_* — вместе с интерфейсом: проверяется сам экран, а не мир.
+	local keepUI = string.sub(name, 1, 3) == "ui_"
 	for _, screen in gui:GetChildren() do
-		if screen:IsA("ScreenGui") and screen.Enabled then
+		if not keepUI and screen:IsA("ScreenGui") and screen.Enabled then
 			screen.Enabled = false
 			table.insert(hidden, screen)
 		end

@@ -71,46 +71,19 @@ function Glyph.attach(part: BasePart, text: string, scale: number?, color: Color
 end
 
 --[[
-	Буква, нарисованная штрихами (Logic/StrokeGlyphs), — там, где её надо
-	отразить: TextLabel умеет только поворачиваться.
-
-	Каждый отрезок ломаной — полоска со скруглёнными концами, повёрнутая вдоль
-	отрезка. Соседние полоски перекрываются кругляшами концов, и ломаная выходит
-	гладкой, как от фломастера. Под цветными полосками такие же тёмные, чуть
-	толще, — это обводка, как TextStroke у обычной буквы.
-
-	Размеры в долях квадрата, поэтому толщина штриха растёт и падает вместе
-	с билбордом на любом расстоянии.
+	Квадратный холст с буквой из штрихов: полоски в долях холста. Вставляется
+	куда угодно — в билборд над табличкой или в карточку на экране.
+	Квадрат обязателен: доли X и Y у полосок должны значить одно и то же.
+	Размер штрихов ничем не ограничен, в отличие от TextScaled (не крупнее
+	100 пикселей), поэтому такая буква годится и на весь экран.
 ]]
-function Glyph.attachStrokes(
-	part: BasePart,
-	strokes: { { { number } } },
-	scale: number?,
-	color: Color3?
-): BillboardGui
-	local existing = part:FindFirstChild("GlyphBillboard")
-	if existing then
-		existing:Destroy()
-	end
-
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "GlyphBillboard"
-	local studs = studsOf(part, scale)
-	billboard.Size = UDim2.fromScale(studs, studs)
-	-- Поверх всего — по той же причине, что у обычной буквы.
-	billboard.AlwaysOnTop = true
-	billboard.LightInfluence = 0
-	billboard.MaxDistance = 250
-	billboard.Parent = part
-
-	-- Квадрат внутри: доли X и Y у полосок обязаны значить одно и то же.
+function Glyph.strokeCanvas(strokes: { { { number } } }, color: Color3?): Frame
 	local canvas = Instance.new("Frame")
 	canvas.Name = "Strokes"
 	canvas.AnchorPoint = Vector2.new(0.5, 0.5)
 	canvas.Position = UDim2.fromScale(0.5, 0.5)
 	canvas.Size = UDim2.fromScale(1, 1)
 	canvas.BackgroundTransparency = 1
-	canvas.Parent = billboard
 	local aspect = Instance.new("UIAspectRatioConstraint")
 	aspect.AspectRatio = 1
 	aspect.Parent = canvas
@@ -143,6 +116,44 @@ function Glyph.attachStrokes(
 			end
 		end
 	end
+
+	return canvas
+end
+
+--[[
+	Буква, нарисованная штрихами (Logic/StrokeGlyphs), — там, где её надо
+	отразить: TextLabel умеет только поворачиваться.
+
+	Каждый отрезок ломаной — полоска со скруглёнными концами, повёрнутая вдоль
+	отрезка. Соседние полоски перекрываются кругляшами концов, и ломаная выходит
+	гладкой, как от фломастера. Под цветными полосками такие же тёмные, чуть
+	толще, — это обводка, как TextStroke у обычной буквы.
+
+	Размеры в долях квадрата, поэтому толщина штриха растёт и падает вместе
+	с билбордом на любом расстоянии.
+]]
+function Glyph.attachStrokes(
+	part: BasePart,
+	strokes: { { { number } } },
+	scale: number?,
+	color: Color3?
+): BillboardGui
+	local existing = part:FindFirstChild("GlyphBillboard")
+	if existing then
+		existing:Destroy()
+	end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "GlyphBillboard"
+	local studs = studsOf(part, scale)
+	billboard.Size = UDim2.fromScale(studs, studs)
+	-- Поверх всего — по той же причине, что у обычной буквы.
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = 250
+	billboard.Parent = part
+
+	Glyph.strokeCanvas(strokes, color).Parent = billboard
 
 	return billboard
 end

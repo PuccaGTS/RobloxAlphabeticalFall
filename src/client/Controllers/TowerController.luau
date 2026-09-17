@@ -46,6 +46,47 @@ local folder: Folder? = nil
 local counter: TextLabel? = nil
 local lastSnapshot: any = nil
 
+--[[
+	Картинка к букве всплывает над сегментом и тает: коснулся А — вылетел арбуз.
+	Башня сама по себе только называет букву; картинка даёт ей предмет, за который
+	память цепляется лучше голой буквы. Одна на сегмент: частые тапы не копят стопку.
+]]
+local function showPicture(part: BasePart, letter: any)
+	if letter.picture == "" or part:FindFirstChild("Picture") then
+		return
+	end
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "Picture"
+	-- Студы, не пиксели: картинка размером с сегмент на любом расстоянии.
+	billboard.Size = UDim2.fromScale(4, 4)
+	billboard.StudsOffset = Vector3.new(0, 1, 0)
+	billboard.AlwaysOnTop = true
+	billboard.LightInfluence = 0
+	billboard.Parent = part
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = letter.picture
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.Parent = billboard
+
+	local info = TweenInfo.new(1.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(billboard, info, { StudsOffset = Vector3.new(3.5, 5, 0) }):Play()
+	local fade = TweenService:Create(
+		label,
+		TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 1.1),
+		{
+			TextTransparency = 1,
+		}
+	)
+	fade.Completed:Connect(function()
+		billboard:Destroy()
+	end)
+	fade:Play()
+end
+
 local function buildSegment(letterId: string, index: number): BasePart
 	local letter = Letters.expect(letterId)
 
@@ -60,7 +101,9 @@ local function buildSegment(letterId: string, index: number): BasePart
 	part.CFrame = CFrame.new((basePosition or Vector3.zero) + Vector3.new(0, index * SEGMENT_HEIGHT, 0))
 		* CFrame.Angles(0, index * 0.22, 0)
 
-	Glyph.attach(part, letter.glyph, 0.9)
+	-- Этаж 2.4 студа при ширине сегмента 5: буква в 0.44 ширины — ровно в этаж,
+	-- соседние буквы друг на друга не ложатся.
+	Glyph.attach(part, letter.glyph, 0.44)
 
 	local click = Instance.new("ClickDetector")
 	click.MaxActivationDistance = 80
@@ -68,6 +111,7 @@ local function buildSegment(letterId: string, index: number): BasePart
 
 	click.MouseClick:Connect(function()
 		AudioController.speak(letter.vo.name)
+		showPicture(part, letter)
 
 		--[[
 			Освоенная буква — это ещё и буквёнок. Коснулся её на Башне — её буквёнок

@@ -9,7 +9,14 @@
 ]]
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Letters = require(Shared.Config.Letters)
+local StrokeGlyphs = require(Shared.Logic.StrokeGlyphs)
+
+local Glyph = require(script.Parent.Glyph)
 
 local HUD = {}
 
@@ -197,7 +204,21 @@ end
 	Знакомство с буквой: она выезжает крупно на весь экран, держится, пока звучит
 	реплика, и уходит. Никаких кнопок — ребёнку ничего не нужно делать,
 	это момент «посмотри и послушай», а не задание.
+
+	Под буквой — картинка к слову-примеру (🍉 и «АРБУЗ» под А). Слово ребёнок
+	не прочтёт, а арбуз узнает; взрослый рядом прочтёт и скажет вслух. Буква
+	остаётся главной: картинка втрое меньше и стоит под ней, а не рядом.
 ]]
+local function letterByGlyph(glyph: string)
+	for _, id in Letters.ordered() do
+		local letter = Letters.expect(id)
+		if letter.glyph == glyph then
+			return letter
+		end
+	end
+	return nil
+end
+
 function HUD.showIntro(glyph: string)
 	if not gui then
 		return
@@ -208,36 +229,95 @@ function HUD.showIntro(glyph: string)
 		existing:Destroy()
 	end
 
-	local card = Instance.new("TextLabel")
+	local letter = letterByGlyph(glyph)
+	local picture = if letter and letter.picture ~= "" then letter.picture else nil
+
+	--[[
+		Буква нарисована штрихами (UI/Glyph.strokeCanvas): TextScaled не рисует
+		шрифт крупнее 100 пикселей, и на карточке в пол-экрана буква оставалась
+		крошкой посередине. Карточка собирается маленькой и растёт через UIScale —
+		это и есть её выезд. CanvasGroup — чтобы всё гасло одним свойством.
+
+		Стоит ниже середины экрана: над ней остаётся место для тоста
+		«Новый друг — буквёнок А!», который раньше пропадал под карточкой.
+	]]
+	local designHeight = 140
+	local card = Instance.new("CanvasGroup")
 	card.Name = "Intro"
-	card.Size = UDim2.fromScale(0.36, 0.42)
-	card.Position = UDim2.fromScale(0.32, 0.24)
+	card.AnchorPoint = Vector2.new(0.5, 0.5)
+	card.Position = UDim2.fromScale(0.5, 0.67)
+	card.Size = UDim2.fromOffset(if picture then 115 else 130, designHeight)
 	card.BackgroundColor3 = Color3.fromRGB(255, 250, 240)
-	card.BackgroundTransparency = 0.05
-	card.TextColor3 = Color3.fromRGB(40, 40, 55)
-	card.Text = glyph
-	card.TextScaled = true
-	card.Font = Enum.Font.FredokaOne
 	card.Parent = gui
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 28)
+	corner.CornerRadius = UDim.new(0.1, 0)
 	corner.Parent = card
 
-	card.Size = UDim2.fromScale(0.05, 0.06)
-	TweenService:Create(
-		card,
-		TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{ Size = UDim2.fromScale(0.36, 0.42) }
-	):Play()
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.1
+	scale.Parent = card
 
-	task.delay(3.2, function()
+	local holder = Instance.new("Frame")
+	holder.Name = "Glyph"
+	holder.Position = UDim2.fromScale(0.05, 0.03)
+	holder.Size = UDim2.fromScale(0.9, if picture then 0.62 else 0.94)
+	holder.BackgroundTransparency = 1
+	holder.Parent = card
+	if letter and StrokeGlyphs.has(letter.id) then
+		Glyph.strokeCanvas(StrokeGlyphs.strokes(letter.id), letter.color).Parent = holder
+	else
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = if letter then letter.color else Color3.fromRGB(40, 40, 55)
+		label.Text = glyph
+		label.TextScaled = true
+		label.Font = Enum.Font.FredokaOne
+		label.Parent = holder
+	end
+
+	if picture and letter then
+		local strip = Instance.new("Frame")
+		strip.Name = "Picture"
+		strip.Position = UDim2.fromScale(0.08, 0.64)
+		strip.Size = UDim2.fromScale(0.84, 0.3)
+		strip.BackgroundColor3 = Color3.fromRGB(245, 236, 215)
+		strip.Parent = card
+		local stripCorner = Instance.new("UICorner")
+		stripCorner.CornerRadius = UDim.new(0.25, 0)
+		stripCorner.Parent = strip
+
+		local emoji = Instance.new("TextLabel")
+		emoji.Size = UDim2.fromScale(0.42, 0.9)
+		emoji.Position = UDim2.fromScale(0.03, 0.05)
+		emoji.BackgroundTransparency = 1
+		emoji.Text = picture
+		emoji.TextScaled = true
+		emoji.Font = Enum.Font.FredokaOne
+		emoji.Parent = strip
+
+		local word = Instance.new("TextLabel")
+		word.Size = UDim2.fromScale(0.52, 0.5)
+		word.Position = UDim2.fromScale(0.45, 0.25)
+		word.BackgroundTransparency = 1
+		word.Text = letter.example
+		word.TextColor3 = Color3.fromRGB(90, 80, 70)
+		word.TextScaled = true
+		word.Font = Enum.Font.FredokaOne
+		word.TextXAlignment = Enum.TextXAlignment.Left
+		word.Parent = strip
+	end
+
+	local screenHeight = if gui.AbsoluteSize.Y > 0 then gui.AbsoluteSize.Y else 600
+	TweenService:Create(scale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Scale = screenHeight * 0.5 / designHeight,
+	}):Play()
+
+	-- С картинкой карточку рассматривают дольше: буква, потом арбуз, потом снова буква.
+	task.delay(if picture then 4 else 3.2, function()
 		if card.Parent then
-			local out = TweenService:Create(
-				card,
-				TweenInfo.new(0.35),
-				{ TextTransparency = 1, BackgroundTransparency = 1 }
-			)
+			local out = TweenService:Create(card, TweenInfo.new(0.35), { GroupTransparency = 1 })
 			out.Completed:Connect(function()
 				card:Destroy()
 			end)

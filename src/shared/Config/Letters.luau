@@ -30,6 +30,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_a" },
 		example = "АРБУЗ",
+		picture = "🍉",
 		confusableWith = {},
 	},
 	b = {
@@ -42,6 +43,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_b" },
 		example = "БАНАН",
+		picture = "🍌",
 		confusableWith = { "v" },
 	},
 	v = {
@@ -54,6 +56,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_v" },
 		example = "ВОЛК",
+		picture = "🐺",
 		confusableWith = { "b" },
 	},
 
@@ -67,7 +70,8 @@ local Letters: { [string]: Types.Letter } = {
 		stage = 2,
 		color = COLOR_HARD,
 		vo = { name = "letter_g" },
-		example = "ГУСЬ",
+		example = "ГРИБ",
+		picture = "🍄",
 		confusableWith = { "t" },
 	},
 	d = {
@@ -80,6 +84,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_d" },
 		example = "ДОМ",
+		picture = "🏠",
 		confusableWith = {},
 	},
 	ye = {
@@ -92,6 +97,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_ye" },
 		example = "ЕЛЬ",
+		picture = "🌲",
 		confusableWith = { "yo" },
 	},
 
@@ -106,6 +112,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_yo" },
 		example = "ЁЖ",
+		picture = "🦔",
 		confusableWith = { "ye" },
 	},
 	zh = {
@@ -118,6 +125,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_zh" },
 		example = "ЖУК",
+		picture = "🐞",
 		confusableWith = {},
 	},
 	z = {
@@ -130,6 +138,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_z" },
 		example = "ЗОНТ",
+		picture = "☂️",
 		confusableWith = { "e" },
 	},
 
@@ -143,7 +152,8 @@ local Letters: { [string]: Types.Letter } = {
 		stage = 4,
 		color = COLOR_VOWEL,
 		vo = { name = "letter_i" },
-		example = "ИГЛА",
+		example = "ИНДЮК",
+		picture = "🦃",
 		confusableWith = { "j", "n" },
 	},
 	j = {
@@ -156,6 +166,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_j" },
 		example = "ЧАЙ",
+		picture = "🍵",
 		confusableWith = { "i" },
 	},
 	k = {
@@ -168,6 +179,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_k" },
 		example = "КОТ",
+		picture = "🐱",
 		confusableWith = {},
 	},
 
@@ -182,6 +194,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_l" },
 		example = "ЛУНА",
+		picture = "🌙",
 		confusableWith = {},
 	},
 	m = {
@@ -194,6 +207,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_m" },
 		example = "МЯЧ",
+		picture = "⚽",
 		confusableWith = {},
 	},
 	n = {
@@ -206,6 +220,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_n" },
 		example = "НОС",
+		picture = "👃",
 		confusableWith = { "i", "p" },
 	},
 
@@ -220,6 +235,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_o" },
 		example = "ОБЛАКО",
+		picture = "☁️",
 		confusableWith = { "s" },
 	},
 	p = {
@@ -232,6 +248,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_p" },
 		example = "ПАПА",
+		picture = "👨",
 		confusableWith = { "n" },
 	},
 	r = {
@@ -244,6 +261,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_r" },
 		example = "РЫБА",
+		picture = "🐟",
 		confusableWith = {},
 	},
 
@@ -258,6 +276,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_s" },
 		example = "СОК",
+		picture = "🧃",
 		confusableWith = { "o" },
 	},
 	t = {
@@ -270,6 +289,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_t" },
 		example = "ТОРТ",
+		picture = "🎂",
 		confusableWith = { "g" },
 	},
 	u = {
@@ -282,6 +302,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_u" },
 		example = "УТКА",
+		picture = "🦆",
 		confusableWith = {},
 	},
 
@@ -296,6 +317,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_f" },
 		example = "ФОНАРЬ",
+		picture = "🔦",
 		confusableWith = {},
 	},
 	h = {
@@ -308,6 +330,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_h" },
 		example = "ХЛЕБ",
+		picture = "🍞",
 		confusableWith = {},
 	},
 	c = {
@@ -320,6 +343,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_c" },
 		example = "ЦВЕТОК",
+		picture = "🌷",
 		confusableWith = { "shch" },
 	},
 
@@ -333,7 +357,8 @@ local Letters: { [string]: Types.Letter } = {
 		stage = 9,
 		color = COLOR_HARD,
 		vo = { name = "letter_ch" },
-		example = "ЧАЙНИК",
+		example = "ЧАСЫ",
+		picture = "⏰",
 		confusableWith = {},
 	},
 	sh = {
@@ -346,6 +371,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_HARD,
 		vo = { name = "letter_sh" },
 		example = "ШАР",
+		picture = "🎈",
 		confusableWith = { "shch" },
 	},
 	shch = {
@@ -357,7 +383,8 @@ local Letters: { [string]: Types.Letter } = {
 		stage = 9,
 		color = COLOR_HARD,
 		vo = { name = "letter_shch" },
-		example = "ЩЁТКА",
+		example = "ЩЕНОК",
+		picture = "🐶",
 		confusableWith = { "sh", "c" },
 	},
 
@@ -372,6 +399,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_SIGN,
 		vo = { name = "letter_hard" },
 		example = "ПОДЪЕЗД",
+		picture = "🏢",
 		confusableWith = { "soft" },
 	},
 	y = {
@@ -384,6 +412,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_y" },
 		example = "СЫР",
+		picture = "🧀",
 		confusableWith = { "soft" },
 	},
 	soft = {
@@ -396,6 +425,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_SIGN,
 		vo = { name = "letter_soft" },
 		example = "СОЛЬ",
+		picture = "🧂",
 		confusableWith = { "hard", "y" },
 	},
 
@@ -410,6 +440,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_e" },
 		example = "ЭСКИМО",
+		picture = "🍦",
 		confusableWith = { "z" },
 	},
 	yu = {
@@ -421,7 +452,8 @@ local Letters: { [string]: Types.Letter } = {
 		stage = 11,
 		color = COLOR_VOWEL,
 		vo = { name = "letter_yu" },
-		example = "ЮЛА",
+		example = "ЮПИТЕР",
+		picture = "🪐",
 		confusableWith = {},
 	},
 	ya = {
@@ -434,6 +466,7 @@ local Letters: { [string]: Types.Letter } = {
 		color = COLOR_VOWEL,
 		vo = { name = "letter_ya" },
 		example = "ЯБЛОКО",
+		picture = "🍎",
 		confusableWith = {},
 	},
 }
