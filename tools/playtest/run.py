@@ -52,6 +52,8 @@ attrs["ZZ_ProbePort"] = port
 attrs["ZZ_Mode"] = "play"
 if os.environ.get("ZZ_ONLY"):
     attrs["ZZ_Only"] = os.environ["ZZ_ONLY"]
+if os.environ.get("ZZ_YARD"):
+    attrs["ZZ_Yard"] = True
 (build / "playtest.project.json").write_text(json.dumps(project, ensure_ascii=False, indent=2), encoding="utf-8")
 place = build / "playtest.rbxl"
 subprocess.run(["rojo", "build", str(build / "playtest.project.json"), "-o", str(place)], check=True)

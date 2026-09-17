@@ -129,7 +129,12 @@ local function trim(p: BasePart): BasePart
 	return p
 end
 
-local function caption(parent: BasePart, text: string, height: number, size: number?)
+--[[
+	Подпись над деталью. size — ширина в пикселях, а со studs = true — сторона
+	квадрата в студах: так подписываются буквы на флажках и плитках. Флажки
+	стоят через студ-два, и пиксельные буквы издалека слипались в «АГЁИ».
+]]
+local function caption(parent: BasePart, text: string, height: number, size: number?, studs: boolean?)
 	local existing = parent:FindFirstChild("Caption")
 	if existing then
 		existing:Destroy()
@@ -137,7 +142,9 @@ local function caption(parent: BasePart, text: string, height: number, size: num
 
 	local billboard = Instance.new("BillboardGui")
 	billboard.Name = "Caption"
-	billboard.Size = UDim2.fromOffset(size or 260, 80)
+	billboard.Size = if studs
+		then UDim2.fromScale(size or 1, size or 1)
+		else UDim2.fromOffset(size or 260, 80)
 	billboard.StudsOffset = Vector3.new(0, height, 0)
 	billboard.LightInfluence = 0
 	billboard.MaxDistance = 70
@@ -168,10 +175,227 @@ end
 -- ===== Постройки =================================================================
 
 --[[
+	Размеры дома по уровням: ширина (x), высота стен, глубина (z). Крыша, флаги
+	на коньке и печная труба считаются от них же. Пятна под домом не меняются
+	с прошлых версий: мебель, комнаты букв и пады стоят вокруг этих габаритов.
+]]
+local HOUSE_SIZES = {
+	Vector3.new(10, 6, 10), -- шалаш
+	Vector3.new(14, 8, 14), -- домик
+	Vector3.new(16, 14, 16), -- двухэтажный
+	Vector3.new(14, 20, 14), -- башенка
+}
+local ROOF_OVERHANG = 0.8
+
+-- Высота двускатной крыши над стенами: одинаковый уклон у всех домов.
+local function roofRise(houseLevel: number): number
+	return HOUSE_SIZES[houseLevel].X * 0.42
+end
+
+local HOUSE_WHITE = Color3.fromRGB(250, 248, 240)
+local HOUSE_DARK_WOOD = Color3.fromRGB(120, 85, 60)
+local HOUSE_DOOR = Color3.fromRGB(160, 100, 70)
+local HOUSE_STONE = Color3.fromRGB(185, 180, 190)
+local HOUSE_GLASS = Color3.fromRGB(150, 205, 240)
+local FLOWERS = { Color3.fromRGB(245, 120, 150), Color3.fromRGB(255, 215, 90), Color3.fromRGB(170, 130, 230) }
+
+local function wedge(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): BasePart
+	local p = Instance.new("WedgePart")
+	p.Name = name
+	p.Size = size
+	p.CFrame = cframe
+	p.Color = color
+	p.Anchored = true
+	p.Material = Enum.Material.SmoothPlastic
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
+-- Бревно, конёк, перекладина: цилиндр лежит вдоль локальной оси X детали.
+local function log(
+	name: string,
+	length: number,
+	diameter: number,
+	cframe: CFrame,
+	color: Color3,
+	parent: Instance
+)
+	local p = part(name, Vector3.new(length, diameter, diameter), cframe, color, parent)
+	p.Shape = Enum.PartType.Cylinder
+	return p
+end
+
+--[[
+	Окно на стене. face — точка в центре окна на поверхности стены, её −Z смотрит
+	наружу. Рама, стекло с крестовиной, по желанию ставни и ящик с цветами:
+	из этих мелочей коробка и становится домом.
+]]
+local function houseWindow(
+	plot: Model,
+	face: CFrame,
+	name: string,
+	width: number,
+	height: number,
+	shutters: Color3?,
+	flowers: boolean?
+)
+	trim(
+		part(
+			`{name}Frame`,
+			Vector3.new(width + 0.6, height + 0.6, 0.3),
+			face * CFrame.new(0, 0, -0.15),
+			HOUSE_WHITE,
+			plot
+		)
+	)
+	local glass = trim(
+		part(`{name}Glass`, Vector3.new(width, height, 0.3), face * CFrame.new(0, 0, -0.3), HOUSE_GLASS, plot)
+	)
+	glass.Material = Enum.Material.Glass
+	glass.Reflectance = 0.15
+	trim(
+		part(`{name}Cross`, Vector3.new(0.25, height, 0.2), face * CFrame.new(0, 0, -0.5), HOUSE_WHITE, plot)
+	)
+	trim(
+		part(
+			`{name}CrossBar`,
+			Vector3.new(width, 0.25, 0.2),
+			face * CFrame.new(0, 0, -0.5),
+			HOUSE_WHITE,
+			plot
+		)
+	)
+	if shutters then
+		for _, side in { -1, 1 } do
+			trim(
+				part(
+					`{name}Shutter_{side}`,
+					Vector3.new(width * 0.5, height + 0.5, 0.25),
+					face * CFrame.new(side * (width * 0.75 + 0.35), 0, -0.2),
+					shutters,
+					plot
+				)
+			)
+		end
+	end
+	if flowers then
+		trim(
+			part(
+				`{name}FlowerBox`,
+				Vector3.new(width + 0.8, 0.7, 0.9),
+				face * CFrame.new(0, -height / 2 - 0.65, -0.55),
+				HOUSE_DARK_WOOD,
+				plot
+			)
+		)
+		for index = 1, 3 do
+			trim(
+				ball(
+					`{name}Flower_{index}`,
+					0.75,
+					face * CFrame.new((index - 2) * width * 0.34, -height / 2 - 0.1, -0.55),
+					FLOWERS[index],
+					plot
+				)
+			)
+		end
+	end
+end
+
+-- Дверь: полотно, рама, ручка; arched — полукруглый верх, как у башенки.
+local function houseDoor(plot: Model, face: CFrame, width: number, height: number, arched: boolean?)
+	local frame = part(
+		"DoorFrame",
+		Vector3.new(width + 0.7, height + 0.35, 0.3),
+		face * CFrame.new(0, (height + 0.35) / 2, -0.15),
+		HOUSE_WHITE,
+		plot
+	)
+	trim(frame)
+	local door = part(
+		"Door",
+		Vector3.new(width, height, 0.4),
+		face * CFrame.new(0, height / 2, -0.3),
+		HOUSE_DOOR,
+		plot
+	)
+	door.Material = Enum.Material.WoodPlanks
+	trim(door)
+	if arched then
+		for index, spec in { { width + 0.7, 0.3, HOUSE_WHITE }, { width, 0.4, HOUSE_DOOR } } do
+			local top = log(
+				`DoorArch_{index}`,
+				spec[2],
+				spec[1],
+				face * CFrame.new(0, height, -0.15 - (index - 1) * 0.15) * CFrame.Angles(0, math.pi / 2, 0),
+				spec[3],
+				plot
+			)
+			trim(top)
+		end
+	end
+	trim(
+		ball(
+			"DoorKnob",
+			0.45,
+			face * CFrame.new(width * 0.32, height * 0.45, -0.6),
+			Color3.fromRGB(240, 200, 90),
+			plot
+		)
+	)
+end
+
+-- Печная труба сквозь крышу, с дымком: дом, в котором живут.
+local function chimney(plot: Model, at: CFrame, x: number, z: number, houseLevel: number)
+	local size = HOUSE_SIZES[houseLevel]
+	local halfWidth = size.X / 2 + ROOF_OVERHANG
+	-- Над скатом в этой точке на полтора студа, даже если крыши ещё нет.
+	local top = FLOOR + size.Y + roofRise(houseLevel) * (1 - math.abs(x) / halfWidth) + 1.6
+	local bottom = FLOOR + size.Y - 1
+	local stack = part(
+		"Chimney",
+		Vector3.new(1.6, top - bottom, 1.6),
+		at * CFrame.new(x, (top + bottom) / 2, z),
+		Color3.fromRGB(175, 95, 80),
+		plot
+	)
+	stack.Material = Enum.Material.Brick
+	local cap = part(
+		"ChimneyCap",
+		Vector3.new(2.1, 0.4, 2.1),
+		at * CFrame.new(x, top + 0.2, z),
+		HOUSE_DARK_WOOD,
+		plot
+	)
+
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Rate = 1.2
+	smoke.Lifetime = NumberRange.new(3, 4.5)
+	smoke.Speed = NumberRange.new(1.5, 2.5)
+	smoke.SpreadAngle = Vector2.new(12, 12)
+	smoke.EmissionDirection = Enum.NormalId.Top
+	smoke.Size =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 2.6) })
+	smoke.Transparency =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
+	smoke.Color = ColorSequence.new(Color3.fromRGB(235, 235, 240))
+	smoke.Parent = cap
+end
+
+--[[
 	Дом: четыре уровня, каждый ЗАМЕНЯЕТ предыдущий.
 
 	Уровень 0 — пустая площадка с колышками: ребёнок видит место под дом,
 	а не пустоту, и понимает, что здесь что-то будет.
+
+	Раньше каждый уровень был окрашенным ящиком с дверью и одним окном, и
+	«башенка» за тысячу звёздочек выглядела серым кубом. Теперь у каждого уровня
+	свой характер: сруб из брёвен, беленький домик со ставнями и трубой,
+	двухэтажный с крыльцом, каменная башенка с круглой башней и флажком.
+	Габариты прежние — вокруг них стоят мебель, комнаты букв и пады.
 ]]
 local function buildHouse(plot: Model, at: CFrame, level: number)
 	if level <= 0 then
@@ -189,50 +413,292 @@ local function buildHouse(plot: Model, at: CFrame, level: number)
 		return
 	end
 
-	local sizes = {
-		Vector3.new(10, 6, 10), -- шалаш
-		Vector3.new(14, 8, 14), -- домик
-		Vector3.new(16, 14, 16), -- двухэтажный
-		Vector3.new(14, 20, 14), -- башенка
-	}
-	local colors = {
-		Color3.fromRGB(205, 175, 140),
-		Color3.fromRGB(235, 205, 165),
-		Color3.fromRGB(240, 225, 200),
-		Color3.fromRGB(225, 215, 240),
-	}
+	local size = HOUSE_SIZES[level]
+	local halfX, halfZ = size.X / 2, size.Z / 2
 
-	local size = sizes[level]
-	local walls = part("House", size, at * CFrame.new(0, FLOOR + size.Y / 2, 0), colors[level], plot)
-	walls.Material = Enum.Material.WoodPlanks
+	-- Точка на стене: front — фасад к площади, side(±1) — боковые стены.
+	local function front(x: number, y: number): CFrame
+		return at * CFrame.new(x, FLOOR + y, -halfZ)
+	end
+	local function side(sign: number, z: number, y: number): CFrame
+		return at * CFrame.new(sign * halfX, FLOOR + y, z) * CFrame.Angles(0, -sign * math.pi / 2, 0)
+	end
 
-	-- Дверь и окно: дом обязан читаться домом, а не ящиком.
-	local door = part(
-		"Door",
-		Vector3.new(3, 5, 0.4),
-		at * CFrame.new(0, FLOOR + 2.5, -size.Z / 2 - 0.2),
-		Color3.fromRGB(150, 110, 80),
+	local plinth = part(
+		"HousePlinth",
+		Vector3.new(size.X + 1.2, 0.6, size.Z + 1.2),
+		at * CFrame.new(0, FLOOR + 0.3, 0),
+		HOUSE_STONE,
 		plot
 	)
-	door.Material = Enum.Material.Wood
+	plinth.Material = Enum.Material.Slate
 
-	local window = part(
-		"Window",
-		Vector3.new(3, 3, 0.4),
-		at * CFrame.new(-size.X / 3, FLOOR + size.Y * 0.6, -size.Z / 2 - 0.2),
-		Color3.fromRGB(170, 220, 245),
-		plot
-	)
-	window.Material = Enum.Material.Glass
-
-	if level >= 3 then
-		part(
-			"SecondFloorBand",
-			Vector3.new(size.X + 1, 0.8, size.Z + 1),
-			at * CFrame.new(0, FLOOR + size.Y * 0.55, 0),
-			Color3.fromRGB(190, 150, 120),
+	if level == 1 then
+		-- Сруб: брёвна двух оттенков внахлёст, в фасаде проём под дверь.
+		local core = part(
+			"House",
+			Vector3.new(size.X - 0.8, size.Y, size.Z - 0.8),
+			at * CFrame.new(0, FLOOR + size.Y / 2, 0),
+			Color3.fromRGB(150, 110, 75),
 			plot
 		)
+		core.Material = Enum.Material.Wood
+		local rows = 6
+		for row = 1, rows do
+			local y = FLOOR + 0.6 + (row - 0.5) * (size.Y - 0.6) / rows
+			local color = if row % 2 == 0 then Color3.fromRGB(200, 150, 100) else Color3.fromRGB(180, 130, 85)
+			log(`LogBack_{row}`, size.X + 0.8, 1.05, at * CFrame.new(0, y, halfZ - 0.4), color, plot).Material =
+				Enum.Material.Wood
+			for _, sign in { -1, 1 } do
+				log(
+					`LogSide_{sign}_{row}`,
+					size.Z + 0.8,
+					1.05,
+					at * CFrame.new(sign * (halfX - 0.4), y, 0) * CFrame.Angles(0, math.pi / 2, 0),
+					color,
+					plot
+				).Material =
+					Enum.Material.Wood
+			end
+			if y - FLOOR < 4.8 then
+				local length = (size.X + 0.8) / 2 - 1.9
+				for _, sign in { -1, 1 } do
+					log(
+						`LogFront_{sign}_{row}`,
+						length,
+						1.05,
+						at * CFrame.new(sign * (1.9 + length / 2), y, -halfZ + 0.4),
+						color,
+						plot
+					).Material =
+						Enum.Material.Wood
+				end
+			else
+				log(`LogFront_{row}`, size.X + 0.8, 1.05, at * CFrame.new(0, y, -halfZ + 0.4), color, plot).Material =
+					Enum.Material.Wood
+			end
+		end
+		houseDoor(plot, at * CFrame.new(0, FLOOR + 0.6, -halfZ + 0.4), 2.8, 4)
+		houseWindow(plot, side(1, 0, 3.4) * CFrame.new(0, 0, -0.55), "WindowSide", 1.8, 1.6)
+		return
+	end
+
+	local wallColors = {
+		nil,
+		Color3.fromRGB(250, 242, 225), -- белёный домик
+		Color3.fromRGB(255, 225, 165), -- тёплый жёлтый
+		Color3.fromRGB(215, 205, 235), -- сиреневый камень
+	}
+	local walls = part("House", size, at * CFrame.new(0, FLOOR + size.Y / 2, 0), wallColors[level], plot)
+	walls.Material = if level == 4 then Enum.Material.Slate else Enum.Material.Plaster
+
+	if level == 2 then
+		-- Фахверк: тёмные балки по углам и под крышей.
+		for _, sx in { -1, 1 } do
+			for _, sz in { -1, 1 } do
+				part(
+					`CornerBeam_{sx}_{sz}`,
+					Vector3.new(0.9, size.Y, 0.9),
+					at * CFrame.new(sx * halfX, FLOOR + size.Y / 2, sz * halfZ),
+					HOUSE_DARK_WOOD,
+					plot
+				).Material =
+					Enum.Material.Wood
+			end
+		end
+		part(
+			"TopBeam",
+			Vector3.new(size.X + 0.5, 0.7, size.Z + 0.5),
+			at * CFrame.new(0, FLOOR + size.Y - 0.35, 0),
+			HOUSE_DARK_WOOD,
+			plot
+		).Material =
+			Enum.Material.Wood
+
+		houseDoor(plot, front(0, 0), 3, 5)
+		trim(
+			part(
+				"Doorstep",
+				Vector3.new(4, 0.4, 1.4),
+				front(0, 0.2) * CFrame.new(0, 0, -0.7),
+				HOUSE_STONE,
+				plot
+			)
+		)
+		local awning = part(
+			"DoorAwning",
+			Vector3.new(4.4, 0.3, 1.8),
+			front(0, 5.9) * CFrame.new(0, 0, -0.8) * CFrame.Angles(math.rad(-18), 0, 0),
+			Color3.fromRGB(200, 90, 80),
+			plot
+		)
+		trim(awning)
+		local green = Color3.fromRGB(110, 170, 120)
+		for _, x in { -4.3, 4.3 } do
+			houseWindow(plot, front(x, 4.4), `Window_{x}`, 2.4, 2.4, green, true)
+		end
+		for _, sign in { -1, 1 } do
+			houseWindow(plot, side(sign, 0, 4.4), `WindowSide_{sign}`, 2.2, 2.2, green)
+		end
+		chimney(plot, at, 3.2, 3.2, level)
+	elseif level == 3 then
+		part(
+			"FloorBand",
+			Vector3.new(size.X + 0.6, 0.6, size.Z + 0.6),
+			at * CFrame.new(0, FLOOR + 7, 0),
+			HOUSE_WHITE,
+			plot
+		)
+		part(
+			"Cornice",
+			Vector3.new(size.X + 0.6, 0.6, size.Z + 0.6),
+			at * CFrame.new(0, FLOOR + size.Y - 0.3, 0),
+			HOUSE_WHITE,
+			plot
+		)
+
+		-- Крыльцо с навесом на двух столбиках.
+		local porch = part(
+			"Porch",
+			Vector3.new(7, 0.6, 3),
+			front(0, 0.3) * CFrame.new(0, 0, -1.5),
+			Color3.fromRGB(200, 160, 120),
+			plot
+		)
+		porch.Material = Enum.Material.WoodPlanks
+		for _, x in { -3, 3 } do
+			trim(
+				part(
+					`PorchPost_{x}`,
+					Vector3.new(0.5, 5, 0.5),
+					front(x, 3) * CFrame.new(0, 0, -2.6),
+					HOUSE_WHITE,
+					plot
+				)
+			)
+		end
+		trim(
+			part(
+				"PorchRoof",
+				Vector3.new(8, 0.4, 3.8),
+				front(0, 5.6) * CFrame.new(0, 0, -1.7) * CFrame.Angles(math.rad(-12), 0, 0),
+				Color3.fromRGB(200, 90, 80),
+				plot
+			)
+		)
+		houseDoor(plot, front(0, 0.6), 3, 4.8)
+
+		local blue = Color3.fromRGB(90, 140, 205)
+		for _, x in { -5, 5 } do
+			houseWindow(plot, front(x, 3.4), `Window1_{x}`, 2.4, 2.4, blue)
+		end
+		for _, x in { -5, 0, 5 } do
+			houseWindow(plot, front(x, 10.4), `Window2_{x}`, 2.4, 2.4, blue, x == 0)
+		end
+		for _, sign in { -1, 1 } do
+			houseWindow(plot, side(sign, 0, 3.4), `WindowSide1_{sign}`, 2.2, 2.2)
+			houseWindow(plot, side(sign, 0, 10.4), `WindowSide2_{sign}`, 2.2, 2.2)
+		end
+		chimney(plot, at, 4.5, 4, level)
+	else
+		-- Башенка: каменный дом, круглая башня на переднем углу, зубцы и флажок.
+		local stone = Color3.fromRGB(195, 185, 220)
+		for _, y in { 6.8, 13.6 } do
+			part(
+				`StoneBand_{y}`,
+				Vector3.new(size.X + 0.5, 0.6, size.Z + 0.5),
+				at * CFrame.new(0, FLOOR + y, 0),
+				HOUSE_WHITE,
+				plot
+			).Material =
+				Enum.Material.Slate
+		end
+		for _, corner in { { 1, -1 }, { -1, 1 }, { 1, 1 } } do
+			cylinder(
+				`CornerColumn_{corner[1]}_{corner[2]}`,
+				size.Y,
+				1.8,
+				at * CFrame.new(corner[1] * halfX, FLOOR + size.Y / 2, corner[2] * halfZ),
+				stone,
+				plot
+			).Material =
+				Enum.Material.Slate
+		end
+
+		local turretAt = at * CFrame.new(-halfX, 0, -halfZ)
+		local turretHeight = size.Y + 6
+		cylinder(
+			"Turret",
+			turretHeight,
+			6,
+			turretAt * CFrame.new(0, FLOOR + turretHeight / 2, 0),
+			stone,
+			plot
+		).Material =
+			Enum.Material.Slate
+		cylinder(
+			"TurretRing",
+			1,
+			6.8,
+			turretAt * CFrame.new(0, FLOOR + turretHeight - 0.5, 0),
+			HOUSE_WHITE,
+			plot
+		).Material =
+			Enum.Material.Slate
+		for tooth = 1, 8 do
+			local angle = (tooth - 1) / 8 * math.pi * 2
+			part(
+				`TurretTooth_{tooth}`,
+				Vector3.new(1.1, 1.3, 1.1),
+				turretAt * CFrame.Angles(0, angle, 0) * CFrame.new(0, FLOOR + turretHeight + 0.65, -2.9),
+				HOUSE_WHITE,
+				plot
+			).Material =
+				Enum.Material.Slate
+		end
+		trim(
+			part(
+				"TurretFlagPole",
+				Vector3.new(0.25, 5, 0.25),
+				turretAt * CFrame.new(0, FLOOR + turretHeight + 2.5, 0),
+				HOUSE_WHITE,
+				plot
+			)
+		)
+		local flag = trim(
+			part(
+				"TurretFlag",
+				Vector3.new(2.4, 1.4, 0.12),
+				turretAt * CFrame.new(1.3, FLOOR + turretHeight + 4.2, 0),
+				Color3.fromRGB(230, 80, 80),
+				plot
+			)
+		)
+		flag.Material = Enum.Material.Fabric
+		for _, y in { 9, 17 } do
+			-- Узкие окна башни смотрят по диагонали, наружу от угла.
+			houseWindow(
+				plot,
+				turretAt
+					* CFrame.new(0, FLOOR + y, 0)
+					* CFrame.Angles(0, math.rad(45), 0)
+					* CFrame.new(0, 0, -2.95),
+				`TurretWindow_{y}`,
+				1.2,
+				2.2
+			)
+		end
+
+		houseDoor(plot, front(1.5, 0), 3.2, 5, true)
+		houseWindow(plot, front(5, 3.6), "Window1", 2, 2.4)
+		for _, x in { -1.5, 4.5 } do
+			houseWindow(plot, front(x, 10.2), `Window2_{x}`, 2, 2.6, nil, true)
+			houseWindow(plot, front(x, 17), `Window3_{x}`, 2, 2.6)
+		end
+		for _, y in { 10.2, 17 } do
+			houseWindow(plot, side(1, 0, y), `WindowSide_{y}`, 2, 2.6)
+		end
+		houseWindow(plot, side(-1, 2, 10.2), "WindowLeft", 2, 2.6)
 	end
 end
 
@@ -241,44 +707,135 @@ end
 
 	Это единственная зависимость между категориями, и она односторонняя —
 	купленный уровень крыши не пропадает, он просто ждёт дом.
+
+	Двускатная, конёк вдоль участка: к площади смотрит треугольник фронтона —
+	тот самый дом, который дети рисуют. Раньше крыша была плитой и кубиком
+	на ней. Материал и цвет — от уровня крыши, размер — от уровня дома.
 ]]
+local ROOF_STYLES = {
+	{ -- солома
+		colors = { Color3.fromRGB(225, 190, 110) },
+		material = Enum.Material.Grass,
+		ridge = Color3.fromRGB(175, 135, 75),
+	},
+	{ -- черепица
+		colors = { Color3.fromRGB(195, 95, 75) },
+		material = Enum.Material.ClayRoofTiles,
+		ridge = Color3.fromRGB(150, 70, 55),
+	},
+	{ -- цветная: полосы поперёк ската
+		colors = {
+			Color3.fromRGB(235, 100, 100),
+			Color3.fromRGB(250, 190, 80),
+			Color3.fromRGB(120, 200, 130),
+			Color3.fromRGB(100, 165, 235),
+			Color3.fromRGB(175, 120, 220),
+		},
+		material = Enum.Material.SmoothPlastic,
+		ridge = HOUSE_WHITE,
+	},
+	{ -- светящаяся: золото, гирлянда по карнизу и звезда
+		colors = { Color3.fromRGB(255, 200, 80) },
+		material = Enum.Material.Foil,
+		ridge = Color3.fromRGB(255, 240, 170),
+	},
+}
+
 local function buildRoof(plot: Model, at: CFrame, level: number, houseLevel: number)
 	if level <= 0 or houseLevel <= 0 then
 		return
 	end
 
-	local heights = { 6, 8, 14, 20 }
-	local widths = { 11, 15, 17, 15 }
-	local colors = {
-		Color3.fromRGB(215, 185, 110), -- солома
-		Color3.fromRGB(190, 105, 90), -- черепица
-		Color3.fromRGB(150, 190, 230), -- цветная
-		Color3.fromRGB(255, 235, 160), -- светящаяся
-	}
+	local size = HOUSE_SIZES[houseLevel]
+	local width = size.X + ROOF_OVERHANG * 2
+	local depth = size.Z + ROOF_OVERHANG * 2
+	local rise = roofRise(houseLevel)
+	local base = FLOOR + size.Y
+	local style = ROOF_STYLES[level]
+	local stripes = #style.colors
 
-	local top = heights[houseLevel]
-	local width = widths[houseLevel]
-
-	local roof = part(
-		"Roof",
-		Vector3.new(width + 2, 3, width + 2),
-		at * CFrame.new(0, FLOOR + top + 1.5, 0),
-		colors[level],
-		plot
-	)
-	if level >= 4 then
-		roof.Material = Enum.Material.Neon
+	for _, sign in { -1, 1 } do
+		for stripe = 1, stripes do
+			local stripeDepth = depth / stripes
+			-- Клин высокой гранью к коньку: локальная +Z клина развёрнута к центру дома.
+			local slope = wedge(
+				`Roof_{sign}_{stripe}`,
+				Vector3.new(stripeDepth, rise, width / 2),
+				at
+					* CFrame.new(sign * width / 4, base + rise / 2, -depth / 2 + (stripe - 0.5) * stripeDepth)
+					* CFrame.Angles(0, -sign * math.pi / 2, 0),
+				style.colors[stripe],
+				plot
+			)
+			slope.Material = style.material
+		end
 	end
 
-	local cap = part(
-		"RoofCap",
-		Vector3.new(width * 0.6, 2.5, width * 0.6),
-		at * CFrame.new(0, FLOOR + top + 4, 0),
-		colors[level],
+	local ridge = log(
+		"RoofRidge",
+		depth + 0.4,
+		0.9,
+		at * CFrame.new(0, base + rise, 0) * CFrame.Angles(0, math.pi / 2, 0),
+		style.ridge,
 		plot
 	)
+	trim(ridge)
+
+	-- Круглое чердачное окошко во фронтоне.
+	if level >= 2 then
+		local diameter = rise * 0.42
+		for index, spec in { { diameter, HOUSE_WHITE }, { diameter * 0.7, HOUSE_GLASS } } do
+			local disc = log(
+				`AtticWindow_{index}`,
+				0.3,
+				spec[1],
+				at
+					* CFrame.new(0, base + rise * 0.33, -depth / 2 - 0.1 - index * 0.08)
+					* CFrame.Angles(0, math.pi / 2, 0),
+				spec[2],
+				plot
+			)
+			trim(disc)
+		end
+	end
+
 	if level >= 4 then
-		cap.Material = Enum.Material.Neon
+		ridge.Material = Enum.Material.Neon
+		local bulbs =
+			{ Color3.fromRGB(255, 230, 120), Color3.fromRGB(255, 150, 190), Color3.fromRGB(140, 220, 255) }
+		local count = math.floor(depth / 1.8)
+		for _, sign in { -1, 1 } do
+			for index = 1, count do
+				local bulb = ball(
+					`RoofBulb_{sign}_{index}`,
+					0.8,
+					at
+						* CFrame.new(
+							sign * (width / 2 - 0.15),
+							base - 0.05,
+							-depth / 2 + (index - 0.5) * depth / count
+						),
+					bulbs[(index - 1) % #bulbs + 1],
+					plot
+				)
+				bulb.Material = Enum.Material.Neon
+				trim(bulb)
+			end
+		end
+		local star = ball(
+			"RoofStar",
+			1.6,
+			at * CFrame.new(0, base + rise + 1.2, -depth / 2 + 0.6),
+			Color3.fromRGB(255, 225, 90),
+			plot
+		)
+		star.Material = Enum.Material.Neon
+		trim(star)
+		local light = Instance.new("PointLight")
+		light.Color = Color3.fromRGB(255, 220, 140)
+		light.Range = 16
+		light.Brightness = 1.2
+		light.Parent = star
 	end
 end
 
@@ -484,21 +1041,47 @@ local function buildDecor(plot: Model, at: CFrame, level: number)
 	}
 
 	if level >= 1 then
-		-- Гирлянда над калиткой: её видно с дорожки раньше самого дома.
-		for index = 1, 7 do
-			local flag = part(
-				`YardFlag_{index}`,
-				Vector3.new(1.2, 1.2, 0.15),
-				at
-					* CFrame.new(
-						(index - 4) * 2.2,
-						FLOOR + 6 - math.abs(index - 4) * 0.25,
-						-Base.PLOT_SIZE / 2 + 2
-					),
-				colors[(index - 1) % #colors + 1],
+		--[[
+			Гирлянда над калиткой: её видно с дорожки раньше самого дома.
+			Треугольные флажки на верёвке между двумя столбиками — раньше это были
+			семь плоских квадратов, висевших в воздухе перед фасадом.
+		]]
+		local gateZ = -Base.PLOT_SIZE / 2 + 2
+		for _, side in { -1, 1 } do
+			part(
+				`BuntingPole_{side}`,
+				Vector3.new(0.4, 7, 0.4),
+				at * CFrame.new(side * 9, FLOOR + 3.5, gateZ),
+				Color3.fromRGB(180, 140, 100),
+				plot
+			).Material =
+				Enum.Material.Wood
+		end
+		trim(
+			part(
+				"BuntingRope",
+				Vector3.new(18, 0.12, 0.12),
+				at * CFrame.new(0, FLOOR + 6.6, gateZ),
+				Color3.fromRGB(240, 235, 220),
 				plot
 			)
-			flag.CanCollide = false
+		)
+		for index = 1, 7 do
+			local top = at * CFrame.new((index - 4) * 2.3, FLOOR + 6.55, gateZ)
+			-- Флажок из двух клиньев: вертикальные рёбра сходятся в середине, остриё вниз.
+			for _, half in { -1, 1 } do
+				local flag = wedge(
+					`YardFlag_{index}_{half}`,
+					Vector3.new(0.12, 1.5, 0.7),
+					top
+						* CFrame.new(half * 0.35, -0.75, 0)
+						* CFrame.Angles(0, half * math.pi / 2, 0)
+						* CFrame.Angles(math.pi, 0, 0),
+					colors[(index - 1) % #colors + 1],
+					plot
+				)
+				flag.CanCollide = false
+			end
 		end
 	end
 
@@ -525,11 +1108,17 @@ local function buildDecor(plot: Model, at: CFrame, level: number)
 	end
 
 	if level >= 3 then
-		for index = 1, 4 do
+		--[[
+			Фонарики по обе стороны дорожки. Раньше они стояли столбиком при x = −5
+			у самого фасада — внутри стен любого дома от «Домика» и выше.
+		]]
+		local spots =
+			{ Vector2.new(-5.5, -12), Vector2.new(5.5, -12), Vector2.new(-5.5, -22), Vector2.new(5.5, -22) }
+		for index, spot in spots do
 			local post = part(
 				`LanternPost_{index}`,
 				Vector3.new(0.4, 4, 0.4),
-				at * CFrame.new(-5, FLOOR + 2, -14 + index * 3),
+				at * CFrame.new(spot.X, FLOOR + 2, spot.Y),
 				Color3.fromRGB(120, 110, 100),
 				plot
 			)
@@ -537,7 +1126,7 @@ local function buildDecor(plot: Model, at: CFrame, level: number)
 			local lamp = part(
 				`Lantern_{index}`,
 				Vector3.new(1.4, 1.4, 1.4),
-				at * CFrame.new(-5, FLOOR + 4.6, -14 + index * 3),
+				at * CFrame.new(spot.X, FLOOR + 4.6, spot.Y),
 				Color3.fromRGB(255, 230, 160),
 				plot
 			)
@@ -586,52 +1175,235 @@ local function buildDecor(plot: Model, at: CFrame, level: number)
 end
 
 --[[
-	Забор по краю участка. На верхнем уровне столбики — буквы: это витрина
-	обучения, вынесенная на границу двора, и её видно соседям.
+	Забор по краю участка. Четыре уровня: колышки с верёвкой, белый штакетник,
+	каменная стена со столбами и буквенный забор.
+
+	Буквенный забор — это алфавит: 33 кубика с буквами по порядку. Первая, А,
+	стоит справа от калитки, если смотреть на дом с дорожки, и дальше буквы идут
+	по кругу, как читают, слева направо, — последняя, Я, встаёт слева от калитки.
+	Витрина обучения на границе двора, и её видно соседям.
+
+	Раньше все уровни были одними и теми же столбиками разной высоты, а верхний
+	светился жёлтым неоном.
 ]]
+local function fenceRuns(): { { Vector2 } }
+	local half = Base.PLOT_SIZE / 2 - 1
+	local gate = 3.5
+	-- Отрезки по порядку обхода: от калитки вправо (для зрителя с дорожки) и по кругу.
+	return {
+		{ Vector2.new(-gate, -half), Vector2.new(-half, -half) },
+		{ Vector2.new(-half, -half), Vector2.new(-half, half) },
+		{ Vector2.new(-half, half), Vector2.new(half, half) },
+		{ Vector2.new(half, half), Vector2.new(half, -half) },
+		{ Vector2.new(half, -half), Vector2.new(gate, -half) },
+	}
+end
+
+-- Кадр в точке отрезка: локальная −Z смотрит наружу участка, +X — вдоль обхода.
+local function fenceFrame(at: CFrame, a: Vector2, b: Vector2, t: number, y: number): CFrame
+	local point = a:Lerp(b, t)
+	local direction = (b - a).Unit
+	local outward = Vector2.new(direction.Y, -direction.X)
+	if outward:Dot(point) < 0 then
+		outward = -outward
+	end
+	local position = Vector3.new(point.X, FLOOR + y, point.Y)
+	return at * CFrame.lookAt(position, position + Vector3.new(outward.X, 0, outward.Y))
+end
+
+-- Длинная деталь вдоль всего отрезка: верёвка, перекладина, стена.
+local function fenceRail(
+	plot: Model,
+	at: CFrame,
+	name: string,
+	a: Vector2,
+	b: Vector2,
+	y: number,
+	thickness: Vector2,
+	color: Color3
+): BasePart
+	local length = (b - a).Magnitude
+	return part(
+		name,
+		Vector3.new(length, thickness.Y, thickness.X),
+		fenceFrame(at, a, b, 0.5, y),
+		color,
+		plot
+	)
+end
+
 local function buildFence(plot: Model, at: CFrame, level: number)
 	if level <= 0 then
 		return
 	end
 
-	local heights = { 1.6, 3, 4, 4 }
-	local colors = {
-		Color3.fromRGB(180, 150, 110),
-		Color3.fromRGB(225, 215, 195),
-		Color3.fromRGB(170, 170, 175),
-		Color3.fromRGB(255, 214, 102),
-	}
+	local runs = fenceRuns()
 
-	local half = Base.PLOT_SIZE / 2 - 1
-	local step = 4
-	local height = heights[level]
-
-	for offset = -half, half, step do
-		for _, side in { -1, 1 } do
-			-- Проём в переднем заборе: калитка ровно там, где дорожка.
-			local isFrontGate = side == -1 and math.abs(offset) <= 3
-			if not isFrontGate then
-				local post = part(
-					`Post_{side}_{math.floor(offset)}`,
-					Vector3.new(0.8, height, 0.8),
-					at * CFrame.new(offset, FLOOR + height / 2, side * half),
-					colors[level],
-					plot
-				)
-				if level >= 4 then
-					post.Material = Enum.Material.Neon
+	if level == 1 then
+		for index, run in runs do
+			local length = (run[2] - run[1]).Magnitude
+			local count = math.max(1, math.round(length / 4))
+			for step = 0, count do
+				-- Угловой колышек ставит следующий отрезок: не дублируем.
+				if step < count or index == #runs then
+					local peg = part(
+						`Peg_{index}_{step}`,
+						Vector3.new(0.6, 1.8, 0.6),
+						fenceFrame(at, run[1], run[2], step / count, 0.9),
+						Color3.fromRGB(175, 135, 90),
+						plot
+					)
+					peg.Material = Enum.Material.Wood
 				end
 			end
-
-			local post = part(
-				`PostSide_{side}_{math.floor(offset)}`,
-				Vector3.new(0.8, height, 0.8),
-				at * CFrame.new(side * half, FLOOR + height / 2, offset),
-				colors[level],
-				plot
+			trim(
+				fenceRail(
+					plot,
+					at,
+					`Rope_{index}`,
+					run[1],
+					run[2],
+					1.3,
+					Vector2.new(0.15, 0.15),
+					Color3.fromRGB(235, 215, 165)
+				)
 			)
-			if level >= 4 then
-				post.Material = Enum.Material.Neon
+		end
+	elseif level == 2 then
+		for index, run in runs do
+			local length = (run[2] - run[1]).Magnitude
+			local count = math.max(1, math.round(length / 2.2))
+			for step = 0, count - 1 do
+				part(
+					`Picket_{index}_{step}`,
+					Vector3.new(0.9, 3, 0.25),
+					fenceFrame(at, run[1], run[2], (step + 0.5) / count, 1.5),
+					HOUSE_WHITE,
+					plot
+				)
+			end
+			for rail, y in { 1, 2.3 } do
+				fenceRail(
+					plot,
+					at,
+					`Rail_{index}_{rail}`,
+					run[1],
+					run[2],
+					y,
+					Vector2.new(0.3, 0.35),
+					HOUSE_WHITE
+				)
+			end
+		end
+	elseif level == 3 then
+		for index, run in runs do
+			local wall = fenceRail(
+				plot,
+				at,
+				`StoneWall_{index}`,
+				run[1],
+				run[2],
+				1.1,
+				Vector2.new(1, 2.2),
+				Color3.fromRGB(170, 165, 160)
+			)
+			wall.Material = Enum.Material.Cobblestone
+			local cap = fenceRail(
+				plot,
+				at,
+				`StoneWallCap_{index}`,
+				run[1],
+				run[2],
+				2.35,
+				Vector2.new(1.3, 0.35),
+				Color3.fromRGB(205, 200, 195)
+			)
+			cap.Material = Enum.Material.Slate
+			local length = (run[2] - run[1]).Magnitude
+			local count = math.max(1, math.round(length / 8))
+			for step = 0, count do
+				if step < count or index == #runs then
+					local frame = fenceFrame(at, run[1], run[2], step / count, 0)
+					part(
+						`StonePillar_{index}_{step}`,
+						Vector3.new(1.8, 3.2, 1.8),
+						frame * CFrame.new(0, 1.6, 0),
+						HOUSE_STONE,
+						plot
+					).Material =
+						Enum.Material.Slate
+					part(
+						`StonePillarCap_{index}_{step}`,
+						Vector3.new(2.2, 0.4, 2.2),
+						frame * CFrame.new(0, 3.4, 0),
+						Color3.fromRGB(215, 210, 205),
+						plot
+					).Material =
+						Enum.Material.Slate
+				end
+			end
+		end
+	else
+		for index, run in runs do
+			for rail, y in { 0.7, 1.5 } do
+				trim(
+					fenceRail(
+						plot,
+						at,
+						`LetterRail_{index}_{rail}`,
+						run[1],
+						run[2],
+						y,
+						Vector2.new(0.25, 0.3),
+						HOUSE_WHITE
+					)
+				)
+			end
+		end
+
+		-- Кубики с буквами на равных расстояниях по всему обходу.
+		local total = 0
+		for _, run in runs do
+			total += (run[2] - run[1]).Magnitude
+		end
+		local letters = Letters.ordered()
+		local spacing = total / #letters
+		for order, letterId in letters do
+			local letter = Letters.expect(letterId)
+			local distance = (order - 0.5) * spacing
+			for _, run in runs do
+				local length = (run[2] - run[1]).Magnitude
+				if distance <= length then
+					local cube = part(
+						`LetterBlock_{letterId}`,
+						Vector3.new(2.2, 2.2, 2.2),
+						fenceFrame(at, run[1], run[2], distance / length, 1.1),
+						letter.color:Lerp(Color3.new(1, 1, 1), 0.15),
+						plot
+					)
+					for _, face in { Enum.NormalId.Front, Enum.NormalId.Back } do
+						local gui = Instance.new("SurfaceGui")
+						gui.Face = face
+						gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+						gui.PixelsPerStud = 40
+						gui.LightInfluence = 0
+						gui.MaxDistance = 80
+						gui.Parent = cube
+						local label = Instance.new("TextLabel")
+						label.Size = UDim2.fromScale(1, 1)
+						label.BackgroundTransparency = 1
+						label.Text = letter.glyph
+						label.TextColor3 = Color3.fromRGB(255, 255, 255)
+						label.TextStrokeColor3 = Color3.fromRGB(35, 30, 50)
+						label.TextStrokeTransparency = 0
+						label.TextScaled = true
+						label.Font = Enum.Font.FredokaOne
+						label.Parent = gui
+					end
+					cube.Material = Enum.Material.SmoothPlastic
+					break
+				end
+				distance -= length
 			end
 		end
 	end
@@ -1751,7 +2523,7 @@ local function buildFlags(plot: Model, at: CFrame, count: number)
 				plot
 			)
 			cloth.CanCollide = false
-			caption(cloth, first.glyph, 1.4, 60)
+			caption(cloth, first.glyph, 1.4, 1.5, true)
 		end
 	end
 end
@@ -1819,7 +2591,7 @@ local function buildMathFlags(plot: Model, at: CFrame, count: number)
 			plot
 		)
 		cloth.CanCollide = false
-		caption(cloth, tostring(index), 1.4, 60)
+		caption(cloth, tostring(index), 1.4, 1.5, true)
 	end
 end
 
@@ -1928,7 +2700,7 @@ local function buildRoom(
 			plot
 		)
 		tilePart.CanCollide = false
-		caption(tilePart, tile.glyph, 1.2, 90)
+		caption(tilePart, tile.glyph, 1.2, 1.2, true)
 
 		--[[
 			Нажал на плитку — буква называет себя. Любому, кто нажал, а не только
@@ -1989,12 +2761,10 @@ local function buildRooms(plot: Model, at: CFrame, earned: Awards.Earned, houseL
 end
 
 --[[
-	Флаги ступеней на крыше (docs/15-HOME-BASE.md § 5): флажок за каждую ступень
+	Флаги ступеней на коньке крыши (docs/15-HOME-BASE.md § 5): флажок за каждую ступень
 	алфавита, все буквы которой освоены. Цвет — первой буквы ступени, как у флагов
 	пройденных уровней вдоль забора. Без дома и крыши их ставить некуда.
 ]]
-local HOUSE_TOPS = { 6, 8, 14, 20 }
-local ROOF_WIDTHS = { 11, 15, 17, 15 }
 
 local function buildRoofFlags(
 	plot: Model,
@@ -2007,16 +2777,15 @@ local function buildRoofFlags(
 	if houseLevel <= 0 or roofLevel <= 0 or #flags == 0 then
 		return
 	end
-	local half = ROOF_WIDTHS[houseLevel] / 2 + 0.6
-	local y = FLOOR + HOUSE_TOPS[houseLevel] + 3
-	for order, stageIndex in flags do
+	-- По коньку крыши, от фасада назад: у каждой ступени своё место, флаги видно с дорожки.
+	local size = HOUSE_SIZES[houseLevel]
+	local depth = size.Z + ROOF_OVERHANG * 2
+	local y = FLOOR + size.Y + roofRise(houseLevel) + 0.4
+	for _, stageIndex in flags do
 		local stage = Stages.get(stageIndex)
 		if stage then
-			-- По периметру крыши, начиная с фасада: флаги видно с дорожки.
-			local t = (order - 0.5) / Stages.count()
-			local angle = t * math.pi * 2 + math.pi / 2
-			local x = math.clamp(math.cos(angle) * half * 1.42, -half, half)
-			local z = math.clamp(-math.sin(angle) * half * 1.42, -half, half)
+			local x = 0
+			local z = -depth / 2 + 0.8 + (stageIndex - 0.5) / Stages.count() * (depth - 1.6)
 			local first = Letters.expect(stage.letters[1])
 			local pole = part(
 				`RoofFlagPole_{stageIndex}`,
@@ -2028,13 +2797,14 @@ local function buildRoofFlags(
 			pole.CanCollide = false
 			local cloth = part(
 				`RoofFlag_{stageIndex}`,
-				Vector3.new(1.3, 0.8, 0.1),
-				at * CFrame.new(x + 0.7, y + 2.2, z),
+				-- Полотнище вдоль конька: флаги стоят через студ и поперёк закрыли бы друг друга.
+				Vector3.new(0.1, 0.8, 0.9),
+				at * CFrame.new(x, y + 2.2, z + 0.5),
 				first.color,
 				plot
 			)
 			cloth.CanCollide = false
-			caption(cloth, first.glyph, 0.9, 50)
+			caption(cloth, first.glyph, 0.9, 0.9, true)
 		end
 	end
 end
@@ -2054,6 +2824,33 @@ local function renderAwards(plot: Plot, earned: Awards.Earned)
 end
 
 -- ===== Пады улучшений ============================================================
+
+--[[
+	Подпись пада — в студах, а не в пикселях. Пады стоят рядком через шесть
+	студов, и пиксельные подписи издалека сливались в кашу «Мебель готово
+	Транспорт готово». В студах подпись не шире своего пада, а достроенная
+	категория показывает только эмодзи и ✅ — читать ребёнку всё равно нечего.
+]]
+local function padCaption(pad: BasePart, text: string)
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "Caption"
+	billboard.Size = UDim2.fromScale(5.6, 2.4)
+	billboard.StudsOffset = Vector3.new(0, 3.2, 0)
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = 60
+	billboard.Parent = pad
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextStrokeColor3 = Color3.fromRGB(35, 30, 50)
+	label.TextStrokeTransparency = 0
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.Parent = billboard
+end
 
 --[[
 	Пад улучшения — по одному на категорию, вдоль фасада участка.
@@ -2091,12 +2888,12 @@ local function buildUpgradePad(
 	local nextTitle = Base.nextTitle(categoryId, level)
 
 	if not price or not nextTitle then
-		caption(pad, `{category.emoji} {category.title}\nготово`, 4)
+		padCaption(pad, `{category.emoji} ✅`)
 		pad.Color = Color3.fromRGB(200, 230, 200)
 		return
 	end
 
-	caption(pad, `{category.emoji} {nextTitle}\n{price} ⭐`, 4)
+	padCaption(pad, `{category.emoji} {nextTitle}\n{price} ⭐`)
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Построить"
