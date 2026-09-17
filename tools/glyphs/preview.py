@@ -15,7 +15,6 @@ from PIL import Image, ImageDraw
 
 root = Path(__file__).resolve().parents[2]
 source = (root / "src/shared/Logic/StrokeGlyphs.luau").read_text(encoding="utf-8")
-out = Path(sys.argv[1]) if len(sys.argv) > 1 else root / "build" / "glyphs.png"
 
 T, M, B = (float(v) for v in re.search(r"local T, M, B = ([\d.]+), ([\d.]+), ([\d.]+)", source).groups())
 WIDTH = float(re.search(r"StrokeGlyphs.WIDTH = ([\d.]+)", source).group(1))
@@ -94,48 +93,50 @@ def difference(a, b):
     return only / either if either else 0
 
 
-CELL = 150
-cols = 4
-image = Image.new("RGB", (CELL * cols, CELL * len(letters)), (250, 248, 240))
-draw = ImageDraw.Draw(image)
+if __name__ == "__main__":
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else root / "build" / "glyphs.png"
+    CELL = 150
+    cols = 4
+    image = Image.new("RGB", (CELL * cols, CELL * len(letters)), (250, 248, 240))
+    draw = ImageDraw.Draw(image)
 
 
-def render(strokes, ox, oy, color, pad=15):
-    size = CELL - 2 * pad
-    to = lambda p: (ox + pad + p[0] * size, oy + pad + p[1] * size)
-    for width, fill in ((WIDTH + OUTLINE, (35, 30, 50)), (WIDTH, color)):
-        w = width * size
-        for stroke in strokes:
-            pts = [to(p) for p in stroke]
-            for a, b in zip(pts, pts[1:]):
-                draw.line([a, b], fill=fill, width=int(w))
-            for p in pts:
-                draw.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=fill)
+    def render(strokes, ox, oy, color, pad=15):
+        size = CELL - 2 * pad
+        to = lambda p: (ox + pad + p[0] * size, oy + pad + p[1] * size)
+        for width, fill in ((WIDTH + OUTLINE, (35, 30, 50)), (WIDTH, color)):
+            w = width * size
+            for stroke in strokes:
+                pts = [to(p) for p in stroke]
+                for a, b in zip(pts, pts[1:]):
+                    draw.line([a, b], fill=fill, width=int(w))
+                for p in pts:
+                    draw.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=fill)
 
 
-for row, (letter_id, glyph) in enumerate(letters):
-    y = row * CELL
-    if letter_id not in shapes:
-        draw.text((10, y + 10), f"{glyph} {letter_id}: НЕТ ШТРИХОВ", fill=(200, 0, 0))
-        continue
-    plain = shapes[letter_id]
-    mirrored = transform(plain, True)
-    diff = difference(plain, mirrored)
-    render(plain, 0, y, (52, 116, 214))
-    render(mirrored, CELL, y, (214, 69, 65))
-    render(transform(plain, False, 180), CELL * 2, y, (120, 120, 130))
-    render(transform(plain, False, 90), CELL * 3, y, (120, 120, 130))
-    draw.text((4, y + 2), f"{glyph} {letter_id}", fill=(0, 0, 0))
-    draw.text((CELL + 4, y + 2), f"{diff:.2f}", fill=(0, 0, 0))
-    if diff < THRESHOLD:
-        draw.rectangle([CELL, y, CELL * 2 - 1, y + CELL - 1], outline=(220, 0, 0), width=3)
-    draw.line([(0, y), (CELL * cols, y)], fill=(200, 200, 200))
+    for row, (letter_id, glyph) in enumerate(letters):
+        y = row * CELL
+        if letter_id not in shapes:
+            draw.text((10, y + 10), f"{glyph} {letter_id}: НЕТ ШТРИХОВ", fill=(200, 0, 0))
+            continue
+        plain = shapes[letter_id]
+        mirrored = transform(plain, True)
+        diff = difference(plain, mirrored)
+        render(plain, 0, y, (52, 116, 214))
+        render(mirrored, CELL, y, (214, 69, 65))
+        render(transform(plain, False, 180), CELL * 2, y, (120, 120, 130))
+        render(transform(plain, False, 90), CELL * 3, y, (120, 120, 130))
+        draw.text((4, y + 2), f"{glyph} {letter_id}", fill=(0, 0, 0))
+        draw.text((CELL + 4, y + 2), f"{diff:.2f}", fill=(0, 0, 0))
+        if diff < THRESHOLD:
+            draw.rectangle([CELL, y, CELL * 2 - 1, y + CELL - 1], outline=(220, 0, 0), width=3)
+        draw.line([(0, y), (CELL * cols, y)], fill=(200, 200, 200))
 
-out.parent.mkdir(parents=True, exist_ok=True)
-# Две половины: одна длинная картинка плохо читается.
-half = (len(letters) + 1) // 2
-image.crop((0, 0, CELL * cols, CELL * half)).save(out.with_name(out.stem + "_1.png"))
-image.crop((0, CELL * half, CELL * cols, CELL * len(letters))).save(out.with_name(out.stem + "_2.png"))
-print("mirror differs:", " ".join(g for i, g in letters if i in shapes and difference(shapes[i], transform(shapes[i], True)) >= THRESHOLD))
-print("mirror same:   ", " ".join(g for i, g in letters if i in shapes and difference(shapes[i], transform(shapes[i], True)) < THRESHOLD))
-print(out.with_name(out.stem + "_1.png"))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # Две половины: одна длинная картинка плохо читается.
+    half = (len(letters) + 1) // 2
+    image.crop((0, 0, CELL * cols, CELL * half)).save(out.with_name(out.stem + "_1.png"))
+    image.crop((0, CELL * half, CELL * cols, CELL * len(letters))).save(out.with_name(out.stem + "_2.png"))
+    print("mirror differs:", " ".join(g for i, g in letters if i in shapes and difference(shapes[i], transform(shapes[i], True)) >= THRESHOLD))
+    print("mirror same:   ", " ".join(g for i, g in letters if i in shapes and difference(shapes[i], transform(shapes[i], True)) < THRESHOLD))
+    print(out.with_name(out.stem + "_1.png"))

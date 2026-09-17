@@ -96,6 +96,14 @@ def capture_window(name):
     if user32.IsIconic(hwnd):
         user32.ShowWindow(hwnd, 4)  # SW_SHOWNOACTIVATE
         time.sleep(1.5)
+    # ZZ_WINDOW=2300x1320 — окно крупнее для снимков витрины (превью 1920×1080).
+    # Растягивается один раз, без фокуса; сцена успевает перерисоваться за паузу.
+    wanted = os.environ.get("ZZ_WINDOW")
+    if wanted and not getattr(capture_window, "resized", False):
+        w, h = (int(v) for v in wanted.split("x"))
+        user32.SetWindowPos(hwnd, 0, 0, 0, w, h, 0x0010 | 0x0004)  # SWP_NOACTIVATE | SWP_NOZORDER
+        capture_window.resized = True
+        time.sleep(3)
     rect = wintypes.RECT()
     user32.GetClientRect(hwnd, ctypes.byref(rect))
     width, height = rect.right, rect.bottom

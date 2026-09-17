@@ -75,6 +75,7 @@ rojo serve
 | Прогнать тесты | `run-in-roblox --place build/test.rbxl --script tools/TestRunner.server.luau` |
 | Формат кода | `stylua src tests tools` |
 | Проверка в настоящем Play | `python tools/playtest/run.py walk` — Studio сама открывает место, персонаж ходит к падам и порталам, отчёт в консоль |
+| Иконка и превью страницы игры | `ZZ_WINDOW=2300x1320 python tools/playtest/run.py store`, затем `python tools/store/make.py` |
 | Снимок сцены в PNG | `python tools/render/run.py tools/render/PlotCheck.server.luau build/render` |
 | Линтер | `selene src tests tools` |
 | Проверить озвучку | `python tools/audio/prepare_vo.py --check` |
