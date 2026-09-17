@@ -818,14 +818,19 @@ function WorldService.build()
 		end
 	end
 
-	-- Дорожки от площади к кольцу участков: ребёнок видит, куда идти к домам.
+	--[[
+		Дорожки от площади к кольцу участков: ребёнок видит, куда идти к домам.
+		Длина лежит вдоль X: на первой проверке сверху дорожки оказались поперёк
+		направления — квадратом вокруг площади, а фонари стояли вдоль настоящего пути.
+		Кончается дорожка у калитки участка, а не посреди двора.
+	]]
 	for i = 1, 4 do
 		local angle = (i - 1) / 4 * math.pi * 2
-		local length = Base.RING_RADIUS - PLAZA_RADIUS
+		local length = Base.RING_RADIUS - Base.PLOT_SIZE / 2 - PLAZA_RADIUS
 		local at = (PLAZA_RADIUS + length / 2)
 		part(
 			`Path_{i}`,
-			Vector3.new(10, 0.4, length),
+			Vector3.new(length, 0.4, 10),
 			CFrame.new(math.cos(angle) * at, 1.1, math.sin(angle) * at) * CFrame.Angles(0, -angle, 0),
 			Color3.fromRGB(230, 215, 185),
 			hub
