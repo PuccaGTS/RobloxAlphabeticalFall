@@ -113,6 +113,7 @@ export type ObstacleKind =
 	| "trampoline"
 	| "ice"
 	| "stones"
+	| "bridge"
 	| "roller"
 	| "pistons"
 	| "comb"

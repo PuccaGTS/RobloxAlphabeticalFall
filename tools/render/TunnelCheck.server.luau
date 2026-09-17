@@ -18,13 +18,20 @@ local fake = { UserId = 1, Name = "Smoke", DisplayName = "Smoke", Character = ni
 local LEVEL = 1
 local SHOTS = 6
 
-local spec = TunnelRun.Rebuild({
-	letters = { "a", "b", "v" },
-	difficulty = 3,
-	seed = 4242,
-	checkpoint = 0,
-	level = LEVEL,
-})
+-- Какое препятствие обязательно должно попасть в забег (для крупного плана), или nil.
+local FOCUS = "bridge"
+
+local spec
+for attempt = 0, 40 do
+	spec = TunnelRun.Rebuild({ letters = { "a", "b", "v" }, difficulty = 3, seed = 4242 + attempt, checkpoint = 0, level = LEVEL })
+	local found = FOCUS == nil
+	for _, obstacle in spec.params.obstacles do
+		found = found or obstacle.kind == FOCUS
+	end
+	if found then
+		break
+	end
+end
 local ok, err = pcall(TunnelService.spawn, fake, spec)
 if not ok then
 	print("FAIL " .. tostring(err))
@@ -101,6 +108,14 @@ print("INFO scenery sizes " .. table.concat(line, " "))
 -- Вид на долину сверху сбоку: что стоит внизу по обе стороны трассы.
 local low = base * sampler.flat(spec.params.length * 0.55)
 Render.shot("tunnel_valley", CFrame.lookAt((low * CFrame.new(-70, 30, 40)).Position, (low * CFrame.new(-20, -30, -40)).Position), 480, 300, 65, guards)
+for _, obstacle in spec.params.obstacles do
+	if obstacle.kind == FOCUS then
+		local at = base * sampler.flat(obstacle.z) * CFrame.new(Tunnel.laneOffset(obstacle.lane), 0, 0)
+		Render.shot(`focus_{FOCUS}`, CFrame.lookAt((at * CFrame.new(9, 7, 8)).Position, (at * CFrame.new(0, 0, -7)).Position), 420, 280, 65, guards)
+		Render.shot(`focus_{FOCUS}_run`, CFrame.lookAt((at * CFrame.new(0, 6, 12)).Position, (at * CFrame.new(0, 1, -10)).Position), 420, 280, 65, guards)
+		break
+	end
+end
 local mid = base * sampler.flat(spec.params.length * 0.3)
 Render.shot(
 	"tunnel_side",

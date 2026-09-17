@@ -144,6 +144,8 @@ local function laneHoles(obstacles: { any }): { { { from: number, to: number } }
 			table.insert(holes[obstacle.lane], { from = obstacle.z, to = obstacle.z + Tunnel.FADE_SPAN })
 		elseif obstacle.kind == "stones" and obstacle.lane >= 1 then
 			table.insert(holes[obstacle.lane], { from = obstacle.z, to = obstacle.z + Tunnel.STONES_SPAN })
+		elseif obstacle.kind == "bridge" and obstacle.lane >= 1 then
+			table.insert(holes[obstacle.lane], { from = obstacle.z, to = obstacle.z + Tunnel.BRIDGE_SPAN })
 		elseif obstacle.kind == "beam" then
 			for lane = 1, Tunnel.LANE_COUNT do
 				table.insert(holes[lane], { from = obstacle.z, to = obstacle.z + Tunnel.BEAM_LENGTH })
@@ -1655,6 +1657,89 @@ local OBSTACLE_BUILDERS: { [string]: (Model, CFrame, any, number) -> () } = {
 				model
 			)
 			part.Material = Enum.Material.Slate
+		end
+	end,
+
+	--[[
+		Подвесной мост. Доски лежат по провисающей дуге и покачиваются волной
+		на пол-студа — мост живой, но идти по нему спокойно. Перила — верёвки
+		от столбов к середине, по пояс ребёнку, и они сталкиваются: оступиться
+		в яму с моста нельзя, только спрыгнуть нарочно.
+	]]
+	bridge = function(model: Model, origin: CFrame, obstacle: any, index: number)
+		local x = Tunnel.laneOffset(obstacle.lane)
+		local span = Tunnel.BRIDGE_SPAN
+		local half = Tunnel.BRIDGE_WIDTH / 2
+		local wood = Color3.fromRGB(175, 125, 80)
+		local rope = Color3.fromRGB(225, 200, 150)
+
+		local function sagAt(t: number): number
+			return Tunnel.BRIDGE_SAG * (1 - (2 * t - 1) ^ 2)
+		end
+
+		local step = span / Tunnel.BRIDGE_PLANKS
+		for plank = 1, Tunnel.BRIDGE_PLANKS do
+			local t = (plank - 0.5) / Tunnel.BRIDGE_PLANKS
+			local board = build(
+				`BridgePlank_{index}_{plank}`,
+				Vector3.new(Tunnel.BRIDGE_WIDTH, 0.4, step - 0.2),
+				origin * CFrame.new(x, -0.2 - sagAt(t), -(obstacle.z + (plank - 0.5) * step)),
+				if plank % 2 == 0 then wood else Color3.fromRGB(195, 145, 95),
+				model
+			)
+			board.Material = Enum.Material.WoodPlanks
+			-- Волна по доскам: у каждой своя задержка, поэтому качается весь мост, а не одна доска.
+			task.delay((plank - 1) * 0.15, function()
+				if board.Parent then
+					TweenService:Create(
+						board,
+						TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+						{ CFrame = board.CFrame * CFrame.new(0, -0.25, 0) }
+					):Play()
+				end
+			end)
+		end
+
+		for _, side in { -1, 1 } do
+			for _, edge in { obstacle.z, obstacle.z + span } do
+				local post = build(
+					`BridgePost_{index}_{side}_{math.floor(edge)}`,
+					Vector3.new(0.6, Tunnel.BRIDGE_RAIL_HEIGHT + 1.4, 0.6),
+					origin
+						* CFrame.new(
+							x + side * (half + 0.3),
+							(Tunnel.BRIDGE_RAIL_HEIGHT + 1.4) / 2 - 0.6,
+							-edge
+						),
+					Color3.fromRGB(140, 100, 65),
+					model
+				)
+				post.Material = Enum.Material.Wood
+			end
+			-- Верёвка провисает к середине вместе с досками, двумя кусками.
+			for _, from in { 0, 0.5 } do
+				local a = Vector3.new(
+					x + side * (half + 0.3),
+					Tunnel.BRIDGE_RAIL_HEIGHT - sagAt(from),
+					-(obstacle.z + from * span)
+				)
+				local b = Vector3.new(
+					x + side * (half + 0.3),
+					Tunnel.BRIDGE_RAIL_HEIGHT - sagAt(from + 0.5),
+					-(obstacle.z + (from + 0.5) * span)
+				)
+				local middle = (a + b) / 2
+				local length = (b - a).Magnitude
+				local tilt = math.atan2(b.Y - a.Y, -(b.Z - a.Z))
+				local rail = build(
+					`BridgeRope_{index}_{side}_{from}`,
+					Vector3.new(0.3, 0.3, length + 0.3),
+					origin * CFrame.new(middle) * CFrame.Angles(tilt, 0, 0),
+					rope,
+					model
+				)
+				rail.Material = Enum.Material.Fabric
+			end
 		end
 	end,
 

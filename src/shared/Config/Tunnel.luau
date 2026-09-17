@@ -257,6 +257,13 @@ Tunnel.STONES_SPAN = 12
 Tunnel.STONE_SIZE = 3
 Tunnel.STONE_COUNT = 3
 
+-- Подвесной мост: яма в одну дорожку, мост из досок провисает к середине.
+Tunnel.BRIDGE_SPAN = 14
+Tunnel.BRIDGE_PLANKS = 8
+Tunnel.BRIDGE_WIDTH = 6 -- уже дорожки: мост читается мостом, а не полом
+Tunnel.BRIDGE_SAG = 0.8
+Tunnel.BRIDGE_RAIL_HEIGHT = 2.6 -- перила по пояс: сквозь них не шагнуть, перепрыгнуть можно
+
 -- Бревно: крутится на месте поперёк дорожки. Высотой с барьер — перепрыгивается.
 Tunnel.ROLLER_DIAMETER = 2.5
 Tunnel.ROLLER_SECONDS = 2 -- пол-оборота; бревно круглое, крутится только на вид
@@ -346,6 +353,7 @@ local SECONDS: { [string]: number } = {
 	trampoline = 2,
 	ice = 1.5,
 	stones = 3, -- три прыжка подряд
+	bridge = 2, -- по мосту идут, а не бегут
 	roller = 1.5,
 	pistons = 3,
 	comb = 2,
@@ -423,6 +431,7 @@ local LENGTHS: { [string]: number } = {
 	trampoline = Tunnel.TRAMPOLINE_LENGTH,
 	ice = Tunnel.ICE_LENGTH,
 	stones = Tunnel.STONES_SPAN,
+	bridge = Tunnel.BRIDGE_SPAN,
 	roller = Tunnel.ROLLER_DIAMETER,
 	pistons = Tunnel.PISTON_DEPTH,
 	comb = Tunnel.COMB_THICKNESS,
