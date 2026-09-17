@@ -99,7 +99,8 @@ return function()
 		local PAD_HALF = Base.PAD_WIDTH / 2
 		local RESERVED = {
 			{ "дом и комнаты", -12, -8, 12, 15 },
-			{ "Башня и табличка", -18, 10, -8, 19.5 },
+			-- Сама Башня круглая — она в RESERVED_CIRCLES, здесь её табличка.
+			{ "табличка Башни", -17, 19.4, -7, 20.2 },
 			{ "дорожка и фонтан", -4, -HALF, 4, -8 },
 			{ "ряд падов", -ROW_HALF, -HALF + 5 - PAD_HALF, ROW_HALF, -HALF + 5 + PAD_HALF },
 			{ "мебель", 8, -13, 16, 7 },
@@ -110,6 +111,11 @@ return function()
 			{ "шпили", HALF - 9, HALF - 16.5, HALF - 5, HALF - 5.5 },
 			{ "кусты справа от калитки", 19, -HALF, HALF, -HALF + 4.5 },
 			{ "кусты слева от калитки", -HALF, -HALF, -19, -HALF + 4.5 },
+		}
+
+		-- Круглые постройки: прямоугольник вокруг спирали Башни задел бы огород и площадку.
+		local RESERVED_CIRCLES = {
+			{ "Башня", -16.5, 14.5, 4.4 },
 		}
 
 		local function circleHitsRect(x, z, r, rect)
@@ -153,6 +159,14 @@ return function()
 					for _, rect in RESERVED do
 						if circleHitsRect(spot.x, spot.z, spot.r, rect) then
 							error(`{category.id}[{level}] задевает «{rect[1]}»`)
+						end
+					end
+					for _, circle in RESERVED_CIRCLES do
+						if
+							(Vector2.new(spot.x, spot.z) - Vector2.new(circle[2], circle[3])).Magnitude
+							< spot.r + circle[4]
+						then
+							error(`{category.id}[{level}] задевает «{circle[1]}»`)
 						end
 					end
 				end

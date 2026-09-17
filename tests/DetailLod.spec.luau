@@ -5,10 +5,13 @@ local DetailLod = require(ReplicatedStorage.SourceClientControllers.DetailLodCon
 
 return function()
 	describe("DetailLodController", function()
-		it("прячет детали далёкого участка и показывает близкого", function()
-			expect(DetailLod.isFar(DetailLod.HIDE_DISTANCE + 1, false)).to.equal(true)
-			expect(DetailLod.isFar(DetailLod.SHOW_DISTANCE - 1, true)).to.equal(false)
-		end)
+		it(
+			"прячет детали далёкого участка и показывает близкого",
+			function()
+				expect(DetailLod.isFar(DetailLod.HIDE_DISTANCE + 1, false)).to.equal(true)
+				expect(DetailLod.isFar(DetailLod.SHOW_DISTANCE - 1, true)).to.equal(false)
+			end
+		)
 
 		-- Между порогами решение не меняется: у границы детали не мигают при каждом шаге.
 		it("между порогами оставляет как было", function()

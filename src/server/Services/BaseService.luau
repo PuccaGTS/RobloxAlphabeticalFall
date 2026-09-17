@@ -65,8 +65,12 @@ local SOIL = Color3.fromRGB(178, 160, 130)
 ]]
 local FLOOR = 1.4
 
--- Где на участке стоит Азбучная Башня: за домом, у дальнего угла двора.
-local TOWER_SPOT = CFrame.new(-13, 4, 13)
+--[[
+	Где на участке стоит Азбучная Башня: за домом, между огородом и комнатой букв.
+	Спираль Башни (TowerController) — круг радиусом 4.4; раньше точка была
+	на полтора студа в комнате букв, и Башня росла прямо из её стены.
+]]
+local TOWER_SPOT = CFrame.new(-16.5, 4, 14.5)
 
 local function part(name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): BasePart
 	local p = Instance.new("Part")
