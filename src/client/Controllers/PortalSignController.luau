@@ -43,7 +43,9 @@ local function signOn(arch: BasePart): TextLabel
 	-- Размер в пикселях по той же причине, что у подписей падов: Scale у билборда
 	-- считается от детали, и на широкой арке табличка раздулась бы.
 	billboard.Size = UDim2.fromOffset(300, 56)
-	billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+	billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+	-- Сдвиг в долях собственного размера: под подписью портала на любом расстоянии.
+	billboard.SizeOffset = Vector2.new(0, -0.4)
 	billboard.LightInfluence = 0
 	billboard.MaxDistance = 70
 	billboard.Parent = arch

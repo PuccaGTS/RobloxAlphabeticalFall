@@ -417,7 +417,8 @@ local function buildPortal(hub: Folder, portal: any)
 	)
 	platform.Shape = Enum.PartType.Cylinder
 	platform.Material = Enum.Material.Slate
-	caption(platform, portal.caption, PORTAL_RADIUS * 2 + 7)
+	-- Выше таблички уровня (PortalSignController): раньше они наезжали друг на друга.
+	caption(platform, portal.caption, PORTAL_RADIUS * 2 + 12)
 
 	local step = part(
 		`PortalStep_{portal.id}`,
@@ -570,28 +571,66 @@ local function buildChallengePad(hub: Folder, pad: any, slot: number)
 	-- Арка над падом, чтобы портал читался как вход, а не как плитка на полу.
 	-- Смотрит на центр площади: у крайних падов столб стоял поперёк пути от спавна.
 	local facing = CFrame.lookAt(position, Vector3.new(0, position.Y, 0))
-	local frameColor = Color3.fromRGB(90, 140, 210)
-	part(
-		`PadArch_{pad.challengeId}`,
-		Vector3.new(14, 1.2, 1.2),
-		facing * CFrame.new(0, 9, 0),
-		frameColor,
+	--[[
+		Полукруглая арка цвета занятия: белые колонны с золотыми шариками и дуга
+		из цветных камней. Раньше это были три синих бруска над каждым падом,
+		и семь падов подряд выглядели как ряд турников.
+	]]
+	platform.Material = Enum.Material.SmoothPlastic
+	local accent = pad.color:Lerp(Color3.new(0, 0, 0), 0.12)
+	for _, side in { -1, 1 } do
+		local pillar = part(
+			`Pad{if side < 0 then "Left" else "Right"}_{pad.challengeId}`,
+			Vector3.new(8, 1.4, 1.4),
+			facing * CFrame.new(side * 6.3, 4.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			Color3.fromRGB(250, 248, 240),
+			hub
+		)
+		pillar.Shape = Enum.PartType.Cylinder
+		local knob = part(
+			`PadKnob_{pad.challengeId}_{side}`,
+			Vector3.new(1.8, 1.8, 1.8),
+			facing * CFrame.new(side * 6.3, 0.9, 0),
+			Color3.fromRGB(250, 248, 240),
+			hub
+		)
+		knob.Shape = Enum.PartType.Ball
+		knob.CanCollide = false
+	end
+	for segment = 1, 9 do
+		local angle = math.pi * (segment - 0.5) / 9
+		local stone = part(
+			if segment == 5 then `PadArch_{pad.challengeId}` else `PadArchStone_{pad.challengeId}_{segment}`,
+			Vector3.new(1.6, 2.4, 1.6),
+			facing
+				* CFrame.new(-math.cos(angle) * 6.3, 8.5 + math.sin(angle) * 3.2, 0)
+				* CFrame.Angles(0, 0, math.pi / 2 - angle),
+			if segment % 2 == 0 then accent else Color3.fromRGB(250, 248, 240),
+			hub
+		)
+		stone.CanCollide = false
+	end
+	local crown = part(
+		`PadCrown_{pad.challengeId}`,
+		Vector3.new(1.6, 1.6, 1.6),
+		facing * CFrame.new(0, 12.9, 0),
+		Color3.fromRGB(255, 205, 70),
 		hub
 	)
-	part(
-		`PadLeft_{pad.challengeId}`,
-		Vector3.new(1.2, 9, 1.2),
-		facing * CFrame.new(-6.4, 4.5, 0),
-		frameColor,
-		hub
-	)
-	part(
-		`PadRight_{pad.challengeId}`,
-		Vector3.new(1.2, 9, 1.2),
-		facing * CFrame.new(6.4, 4.5, 0),
-		frameColor,
-		hub
-	)
+	crown.Shape = Enum.PartType.Ball
+	crown.Material = Enum.Material.Neon
+	crown.CanCollide = false
+	-- Белая кромка пада: плитка занятия отделена от площади.
+	for index = 1, 4 do
+		local edge = part(
+			`PadEdge_{pad.challengeId}_{index}`,
+			Vector3.new(14.8, 1.1, 0.8),
+			CFrame.new(position) * CFrame.Angles(0, index * math.pi / 2, 0) * CFrame.new(0, 0.05, -7.2),
+			Color3.fromRGB(250, 248, 240),
+			hub
+		)
+		edge.CanCollide = false
+	end
 
 	-- Выход — на шаг ближе к центру площади, лицом к паду: рядом, но не на нём.
 	local flat = Vector3.new(position.X, 0, position.Z)
@@ -694,12 +733,17 @@ local function effect(className: string, apply: (Instance) -> ())
 end
 
 local function styleLighting()
-	Lighting.Brightness = 2.6
-	Lighting.Ambient = Color3.fromRGB(120, 120, 140)
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 150, 170)
+	--[[
+		Свет мягче, чем был: на снимках из Play площадь слепила белым, трава
+		выгорала до салатовой, и игрушки терялись на фоне. Меньше яркости
+		и дымки — цвета остаются цветами.
+	]]
+	Lighting.Brightness = 2.1
+	Lighting.Ambient = Color3.fromRGB(105, 105, 120)
+	Lighting.OutdoorAmbient = Color3.fromRGB(125, 125, 140)
 	Lighting.ClockTime = 14
 	Lighting.GeographicLatitude = 12 -- солнце повыше: длинные тени поперёк площади не нужны
-	Lighting.ExposureCompensation = 0.15
+	Lighting.ExposureCompensation = -0.1
 	-- Мягкий край тени: жёсткая ступенька от дерева на плитке выглядит грязью.
 	Lighting.ShadowSoftness = 0.35
 
@@ -707,9 +751,9 @@ local function styleLighting()
 
 	effect("Atmosphere", function(instance)
 		local atmosphere = instance :: Atmosphere
-		atmosphere.Density = 0.32
+		atmosphere.Density = 0.26
 		atmosphere.Offset = 0.1
-		atmosphere.Haze = 1.4
+		atmosphere.Haze = 0.7
 		atmosphere.Glare = 0.2
 		atmosphere.Color = Color3.fromRGB(215, 228, 245)
 		atmosphere.Decay = Color3.fromRGB(150, 175, 210)
@@ -739,8 +783,8 @@ local function styleLighting()
 	effect("ColorCorrectionEffect", function(instance)
 		local color = instance :: ColorCorrectionEffect
 		color.Brightness = 0.02
-		color.Contrast = 0.06
-		color.Saturation = 0.08
+		color.Contrast = 0.1
+		color.Saturation = 0.14
 		color.TintColor = Color3.fromRGB(255, 251, 245)
 	end)
 
@@ -842,16 +886,74 @@ function WorldService.build()
 		"Ground",
 		Vector3.new(Base.GROUND_SIZE, 2, Base.GROUND_SIZE),
 		CFrame.new(0, 0, 0),
-		Color3.fromRGB(150, 205, 140),
+		Color3.fromRGB(105, 170, 85),
 		hub
-	)
-	part(
+	).Material =
+		Enum.Material.Grass
+	local plaza = part(
 		"Plaza",
 		Vector3.new(PLAZA_RADIUS * 2, 2, PLAZA_RADIUS * 2),
 		CFrame.new(0, 0.6, 0),
-		Color3.fromRGB(235, 225, 200),
+		Color3.fromRGB(222, 205, 172),
 		hub
 	)
+	plaza.Material = Enum.Material.Pavement
+
+	--[[
+		Мозаика в середине площади: цветные кольца из плитки вокруг порталов
+		и радужные лучи к падам. Раньше площадь была белым квадратом, и с высоты
+		роста ребёнка это читалось как пустая парковка.
+	]]
+	local mosaic = {
+		{ 44, Color3.fromRGB(240, 225, 190) },
+		{ 40, Color3.fromRGB(150, 195, 230) },
+		{ 37, Color3.fromRGB(245, 232, 200) },
+		{ 26, Color3.fromRGB(250, 205, 120) },
+		{ 23, Color3.fromRGB(245, 232, 200) },
+	}
+	for index, ring in mosaic do
+		local disc = part(
+			`PlazaRing_{index}`,
+			Vector3.new(0.06 + index * 0.02, ring[1] * 2, ring[1] * 2),
+			CFrame.new(0, 1.6 + index * 0.01, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			ring[2],
+			hub
+		)
+		disc.Shape = Enum.PartType.Cylinder
+		disc.Material = Enum.Material.Pavement
+		disc.CanCollide = false
+	end
+	local rayColors = {
+		Color3.fromRGB(240, 130, 130),
+		Color3.fromRGB(250, 180, 100),
+		Color3.fromRGB(245, 215, 100),
+		Color3.fromRGB(140, 205, 130),
+		Color3.fromRGB(120, 180, 235),
+		Color3.fromRGB(180, 140, 225),
+	}
+	for index = 1, 12 do
+		local angle = (index - 0.5) / 12 * math.pi * 2
+		local ray = part(
+			`PlazaRay_{index}`,
+			Vector3.new(2.2, 0.1, 14),
+			CFrame.Angles(0, angle, 0) * CFrame.new(0, 1.68, -30.5),
+			rayColors[(index - 1) % #rayColors + 1],
+			hub
+		)
+		ray.Material = Enum.Material.Pavement
+		ray.CanCollide = false
+	end
+	-- Бортик по краю площади: плитка кончается, начинается трава — это видно.
+	for index = 1, 4 do
+		local border = part(
+			`PlazaBorder_{index}`,
+			Vector3.new(PLAZA_RADIUS * 2 + 2, 0.8, 1.6),
+			CFrame.Angles(0, index * math.pi / 2, 0) * CFrame.new(0, 1.4, -PLAZA_RADIUS - 0.2),
+			Color3.fromRGB(190, 170, 140),
+			hub
+		)
+		border.Material = Enum.Material.Cobblestone
+	end
 
 	--[[
 		Край мира. За домами земля кончалась обрывом: ребёнок, обежавший свой
@@ -903,9 +1005,10 @@ function WorldService.build()
 			`Path_{i}`,
 			Vector3.new(length, 0.4, 10),
 			CFrame.new(math.cos(angle) * at, 1.1, math.sin(angle) * at) * CFrame.Angles(0, -angle, 0),
-			Color3.fromRGB(230, 215, 185),
+			Color3.fromRGB(200, 180, 150),
 			hub
-		)
+		).Material =
+			Enum.Material.Cobblestone
 	end
 
 	for _, portal in PORTALS do
