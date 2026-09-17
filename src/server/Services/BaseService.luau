@@ -37,6 +37,7 @@ local ProgressService = require(script.Parent.ProgressService)
 local RateLimiter = require(script.Parent.RateLimiter)
 local DecorService = require(script.Parent.DecorService)
 local Teleport = require(script.Parent.Parent.World.Teleport)
+local Letter3D = require(script.Parent.Parent.World.Letter3D)
 
 local BaseService = {}
 
@@ -2558,7 +2559,24 @@ local function buildArch(plot: Model, at: CFrame)
 	local beam =
 		part("AlphabetArch", Vector3.new(10.2, 1.2, 1), at * CFrame.new(0, FLOOR + 7.6, z), gold, plot)
 	beam.Material = Enum.Material.Neon
-	caption(beam, "А Б В Г Д Е Ё Ж З И", 2.2, 320)
+	--[[
+		Над перекладиной — первые десять букв объёмными (World/Letter3D), а не
+		строкой текста: арка за десять букв подряд должна быть видна как вещь.
+		Для гостя у калитки А слева, И справа. Детали мелкие: у далёких участков
+		клиент их не рисует.
+	]]
+	local letters = Letters.ordered()
+	local step = 1.05
+	for index = 1, 10 do
+		local model = Letter3D.build(
+			letters[index],
+			1.25,
+			at * CFrame.new((5.5 - index) * step, FLOOR + 9, z),
+			Letters.expect(letters[index]).color,
+			{ detailTag = DETAIL_TAG }
+		)
+		model.Parent = plot
+	end
 end
 
 local function buildSpire(plot: Model, at: CFrame)

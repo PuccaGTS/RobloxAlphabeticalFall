@@ -26,6 +26,7 @@ local ChallengeService = require(script.Parent.ChallengeService)
 local ProgressService = require(script.Parent.ProgressService)
 local DecorService = require(script.Parent.DecorService)
 local Teleport = require(script.Parent.Parent.World.Teleport)
+local Letter3D = require(script.Parent.Parent.World.Letter3D)
 
 local TunnelService = {}
 
@@ -992,31 +993,52 @@ local function buildSecret(model: Model, origin: CFrame, secret: any, player: Pl
 	)
 	pedestal.Material = Enum.Material.Cobblestone
 
+	--[[
+		Касание ловит невидимая плитка; видна объёмная золотая буква (World/Letter3D).
+		Раньше это была золотая плитка с надписью в один студ — издалека просто
+		жёлтый квадрат. Буква покачивается и чуть поворачивается, но не крутится
+		кругом: крутясь, она полпути была бы зеркальной — ровно то, от чего
+		отучает Зеркало.
+	]]
 	local tile = build(
 		"SecretTile",
-		Vector3.new(Tunnel.SECRET_SIZE, Tunnel.SECRET_SIZE, 0.6),
+		Vector3.new(Tunnel.SECRET_SIZE, Tunnel.SECRET_SIZE, 1.2),
 		origin * CFrame.new(x, Tunnel.SECRET_PEDESTAL.Y + Tunnel.SECRET_LIFT, -secret.z),
 		SECRET_GOLD,
 		model
 	)
 	tile.CanCollide = false
-	tile.Material = Enum.Material.Neon
+	tile.Transparency = 1
 
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "Glyph"
-	billboard.Size = UDim2.fromScale(1, 1)
-	billboard.LightInfluence = 0
-	billboard.MaxDistance = 140
-	billboard.Parent = tile
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Text = secret.glyph
-	label.TextColor3 = Color3.fromRGB(120, 70, 10)
-	label.TextScaled = true
-	label.Font = Enum.Font.FredokaOne
-	label.Parent = billboard
+	if secret.letterId then
+		-- Буква смотрит на бегущего: он приближается с +Z пути.
+		local facing = tile.CFrame * CFrame.Angles(0, math.pi, 0)
+		local letter = Letter3D.build(secret.letterId, Tunnel.SECRET_SIZE * 1.2, facing, SECRET_GOLD, {
+			material = Enum.Material.Foil,
+			reflectance = 0.1,
+		})
+		letter.Parent = model
+		-- Детали приварены к невидимой анкерной втулке: качается одна она.
+		local hub = build("SecretLetterHub", Vector3.one * 0.2, facing, SECRET_GOLD, model)
+		hub.Transparency = 1
+		hub.CanCollide = false
+		for _, letterPart in letter:GetChildren() do
+			if letterPart:IsA("BasePart") then
+				letterPart.Anchored = false
+				letterPart.Massless = true
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = hub
+				weld.Part1 = letterPart
+				weld.Parent = hub
+			end
+		end
+		hub.CFrame = facing * CFrame.Angles(0, math.rad(-22), 0)
+		TweenService:Create(
+			hub,
+			TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+			{ CFrame = facing * CFrame.new(0, 0.5, 0) * CFrame.Angles(0, math.rad(22), 0) }
+		):Play()
+	end
 
 	-- Искры: секрет должно быть видно издалека, иначе это не секрет, а пропажа.
 	local sparkle = Instance.new("ParticleEmitter")
