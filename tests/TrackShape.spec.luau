@@ -9,7 +9,6 @@ local TrackShape = require(ReplicatedStorage.Shared.Logic.TrackShape)
 local Tunnel = require(ReplicatedStorage.Shared.Config.Tunnel)
 local Levels = require(ReplicatedStorage.Shared.Config.Levels)
 local TunnelRun = require(ReplicatedStorage.ServerChallenges.TunnelRun)
-local ObstacleCourse = require(ReplicatedStorage.ServerChallenges.ObstacleCourse)
 local MathGates = require(ReplicatedStorage.ServerChallenges.MathGates)
 
 local function runsEvery(count, pitch, gap)
@@ -28,7 +27,7 @@ local function specs()
 		table.insert(list, TunnelRun.Build(nil, { "a", "b", "v" }, 3, level.index))
 	end
 	for difficulty = 1, 5 do
-		table.insert(list, ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty))
+		table.insert(list, TunnelRun.Build(nil, { "m", "a", "u" }, difficulty, 11))
 	end
 	table.insert(list, MathGates.Build(nil, { "a" }, 3, 3))
 	return list

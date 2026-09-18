@@ -13,7 +13,7 @@ local TARGETS = {
 	"Pad_mirror",
 	"Pad_alphabet_ladder",
 	"Pad_scales",
-	"Pad_obstacle_course",
+	"Pad_lava_floor",
 	"PortalVeil_letters",
 	"PortalVeil_math",
 }

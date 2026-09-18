@@ -28,6 +28,7 @@ local Props = require(script.Parent.Parent.UI.Props)
 local LiveWorldController = require(script.Parent.LiveWorldController)
 local ScalesController = require(script.Parent.ScalesController)
 local BerryController = require(script.Parent.BerryController)
+local LavaController = require(script.Parent.LavaController)
 local PetController = require(script.Parent.PetController)
 local HUD = require(script.Parent.Parent.UI.HUD)
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
@@ -422,6 +423,7 @@ local function stopControllers()
 	MirrorController.stop()
 	ScalesController.stop()
 	BerryController.stop()
+	LavaController.stop()
 end
 
 --[[
@@ -541,12 +543,17 @@ local function onSpec(newSpec: any)
 		BerryController.start(newSpec)
 		return
 	end
+	if newSpec.challengeId == "lava_floor" then
+		activeChallengeId = newSpec.challengeId
+		LavaController.start(newSpec)
+		return
+	end
 
 	--[[
 		Забеги рисует сервер: ворота, стены и препятствия — настоящая геометрия мира,
 		а не клиентские декорации. Клиенту остаётся только показать, что искать.
 	]]
-	if newSpec.challengeId == "tunnel_run" or newSpec.challengeId == "obstacle_course" then
+	if newSpec.challengeId == "tunnel_run" then
 		activeChallengeId = newSpec.challengeId
 		activeTargetGlyph = newSpec.params.targetGlyph
 		HUD.showTarget(newSpec.params.targetGlyph, 0, newSpec.targetCount)
@@ -644,6 +651,10 @@ local function onFeedback(feedback: any)
 		BerryController.feedback(feedback)
 		return
 	end
+	if activeChallengeId == "lava_floor" then
+		LavaController.feedback(feedback)
+		return
+	end
 
 	if activeChallengeId == "math_gates" then
 		local prompt = feedback.nextPrompt
@@ -659,7 +670,7 @@ local function onFeedback(feedback: any)
 		return
 	end
 
-	if activeChallengeId == "tunnel_run" or activeChallengeId == "obstacle_course" then
+	if activeChallengeId == "tunnel_run" then
 		if not feedback.correct and feedback.tappedLetterId then
 			local tapped = Letters.get(feedback.tappedLetterId)
 			if tapped then

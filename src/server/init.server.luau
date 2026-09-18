@@ -28,6 +28,7 @@ local WorldService = require(Services.WorldService)
 local BaseService = require(Services.BaseService)
 local TunnelService = require(Services.TunnelService)
 local VenueService = require(Services.VenueService)
+local LavaFloorService = require(Services.LavaFloorService)
 local ParentService = require(Services.ParentService)
 local TutorialService = require(Services.TutorialService)
 local PlayLimitService = require(Services.PlayLimitService)
@@ -104,6 +105,7 @@ start("ProgressService", ProgressService.start)
 start("ChallengeService", ChallengeService.start)
 start("TunnelService", TunnelService.start) -- подписывается на хуки испытаний, поэтому после ChallengeService
 start("VenueService", VenueService.start) -- поляны занятий: одно задание — одна локация
+start("LavaFloorService", LavaFloorService.start) -- раунды «Пол — это лава!»: после полян, точка сцены уже в задании
 start("CosmeticsService", CosmeticsService.start)
 start("ShopService", ShopService.start)
 start("WorldService", WorldService.start)

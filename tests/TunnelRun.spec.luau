@@ -2,7 +2,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local TunnelRun = require(ReplicatedStorage.ServerChallenges.TunnelRun)
-local ObstacleCourse = require(ReplicatedStorage.ServerChallenges.ObstacleCourse)
 local Tunnel = require(ReplicatedStorage.Shared.Config.Tunnel)
 local Letters = require(ReplicatedStorage.Shared.Config.Letters)
 local Obstacles = require(ReplicatedStorage.Shared.Config.Obstacles)
@@ -172,7 +171,6 @@ return function()
 			function()
 				expect(DifficultyCurve.pick(Tunnel.PARAMS.obstacleTier, 4)).to.equal(2)
 				expect(DifficultyCurve.pick(Tunnel.PARAMS.obstacleTier, 5)).to.equal(3)
-				expect(DifficultyCurve.pick(Tunnel.COURSE_PARAMS.obstacleTier, 5)).to.equal(3)
 			end
 		)
 
@@ -188,7 +186,7 @@ return function()
 					for _, spec in
 						{
 							build(nil, difficulty, 11),
-							ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty),
+							build(Letters.ordered(), difficulty, 10),
 						}
 					do
 						for _, obstacle in spec.params.obstacles do
@@ -217,7 +215,7 @@ return function()
 
 		it("соседние элементы не касаются друг друга", function()
 			for difficulty = 1, 5 do
-				local spec = ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty)
+				local spec = build(Letters.ordered(), difficulty, 10)
 				for index = 2, #spec.params.obstacles do
 					local previous = spec.params.obstacles[index - 1]
 					local current = spec.params.obstacles[index]
@@ -230,9 +228,7 @@ return function()
 
 		it("поршень встаёт только в крайнюю дорожку", function()
 			for difficulty = 1, 5 do
-				for _, spec in
-					{ build(nil, difficulty, 11), ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty) }
-				do
+				for _, spec in { build(nil, difficulty, 11), build(Letters.ordered(), difficulty, 10) } do
 					for _, obstacle in spec.params.obstacles do
 						if Obstacles.expect(obstacle.id).edge then
 							expect(obstacle.lane == 1 or obstacle.lane == Tunnel.LANE_COUNT).to.equal(true)
@@ -259,9 +255,7 @@ return function()
 		]]
 		it("живых элементов на отрезке не больше двух", function()
 			for difficulty = 1, 5 do
-				for _, spec in
-					{ build(nil, difficulty), ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty) }
-				do
+				for _, spec in { build(nil, difficulty), build(Letters.ordered(), difficulty, 10) } do
 					local previousZ = 0
 					for _, gate in spec.params.gates do
 						local moving = 0
@@ -744,10 +738,6 @@ return function()
 			end
 		)
 
-		it("у свободной полосы секрета нет", function()
-			expect(ObstacleCourse.Build(nil, { "m", "a", "u" }, 3).params.secret).to.equal(nil)
-		end)
-
 		it(
 			"постамент никому не мешает: ни элементам, ни аттракционам, ни воротам",
 			function()
@@ -827,71 +817,6 @@ return function()
 		Проверяем ровно это: что она осталась забегом с буквами, а не превратилась
 		в паркур ради паркура.
 	]]
-	describe("ObstacleCourse", function()
-		it(
-			"на отрезок препятствий больше, а ворот меньше, чем в туннеле",
-			function()
-				-- Сравниваем пропорции, а не итог: длина туннеля задана уровнем, полосы — нет.
-				local course = ObstacleCourse.Build(nil, { "m", "a", "u" }, 3)
-				local courseRatio = #course.params.obstacles / #course.params.gates
-
-				for _, level in Levels.all do
-					local tunnel = TunnelRun.Build(nil, { "m", "a", "u" }, 3, level.index)
-					expect(courseRatio > #tunnel.params.obstacles / #tunnel.params.gates).to.equal(true)
-					expect(#course.params.gates < #tunnel.params.gates).to.equal(true)
-				end
-			end
-		)
-
-		it(
-			"ворота с буквами есть всё равно: звёздочки идут только за них",
-			function()
-				for difficulty = 1, 5 do
-					local spec = ObstacleCourse.Build(nil, { "m", "a", "u" }, difficulty)
-					expect(#spec.params.gates >= 2).to.equal(true)
-					for _, gate in spec.params.gates do
-						local targets = 0
-						for _, opening in gate.openings do
-							if opening.isTarget then
-								targets += 1
-							end
-						end
-						expect(targets).to.equal(1)
-					end
-				end
-			end
-		)
-
-		-- Полоса — не уровень: буква на ней одна, первая из очереди повторений.
-		it("целевая буква одна на весь забег", function()
-			local spec = ObstacleCourse.Build(nil, { "m", "a", "u" }, 3)
-			expect(spec.level).to.equal(nil)
-			for _, gate in spec.params.gates do
-				expect(gate.targetLetter).to.equal("m")
-			end
-		end)
-
-		it("строится на любой паре букв алфавита", function()
-			local ids = Letters.ordered()
-			for _, first in ids do
-				for _, second in ids do
-					if first ~= second then
-						local ok = pcall(function()
-							return ObstacleCourse.Build(nil, { first, second }, 3)
-						end)
-						expect(ok).to.equal(true)
-					end
-				end
-			end
-		end)
-
-		it("отрезок длиннее, когда препятствий больше", function()
-			local spec = ObstacleCourse.Build(nil, { "m", "a", "u" }, 5)
-			local first = spec.params.gates[1]
-			expect(first.z > Tunnel.MIN_GATE_SPACING).to.equal(true)
-		end)
-	end)
-
 	--[[
 		Особый участок уровня: лестница по алфавиту перед воротами одного отрезка.
 	]]
@@ -918,10 +843,6 @@ return function()
 				end
 			end
 		)
-
-		it("у свободной полосы лестницы нет", function()
-			expect(ObstacleCourse.Build(nil, { "m", "a", "u" }, 5).params.stairs).to.equal(nil)
-		end)
 
 		it(
 			"ступени идут подряд по алфавиту и только по открытым буквам",

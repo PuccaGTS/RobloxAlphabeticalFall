@@ -1,24 +1,19 @@
 --!nonstrict
 --[[
-	Общий план забега: и «Азбучный туннель», и «Полоса препятствий».
+	План забега мира букв — «Азбучный туннель» за порталом.
 	См. docs/14-TUNNEL-MODE.md и docs/19-OBSTACLES.md.
 
-	Оба режима — это один и тот же коридор с воротами и препятствиями, отличаются
-	они только пропорциями: в туннеле ворота часто и препятствий мало, на полосе
-	наоборот. Держать под это два похожих модуля значило бы чинить каждую ошибку
-	дважды, поэтому здесь фабрика, а рядом — две тонкие обёртки.
+	Модуль отвечает за буквы на воротах и станциях и за правила. Расстояния,
+	препятствия и аттракционы раскладывает CourseLayout — он же обслуживает
+	ворота с числами. Геометрию из плана строит TunnelService.
 
-	Модуль отвечает за буквы на воротах и за правила. Расстояния и препятствия
-	раскладывает CourseLayout — он же обслуживает ворота с числами. Геометрию
-	из плана строит TunnelService.
+	Забег — это уровень мира букв (docs/14-TUNNEL-MODE.md § 3.3): отрезков
+	столько, сколько у уровня, и у каждого отрезка своя буква — новые буквы
+	ступени, потом повторение (Config/Levels).
 
-	Забег бывает двух видов:
-	  · уровень мира букв (docs/14-TUNNEL-MODE.md § 3.3) — «Азбучный туннель»
-	    за порталом. Отрезков столько, сколько у уровня, и у каждого отрезка
-	    своя буква: новые буквы ступени, потом повторение (Config/Levels);
-	  · свободный забег — «Полоса препятствий» на паде. Буква одна на весь
-	    забег, первая из очереди повторений.
-	Правила ворот у них одни и те же; разница только в том, откуда берутся буквы.
+	Раньше рядом жил «свободный забег» — «Полоса препятствий» на паде, с одной
+	буквой на весь забег. Её пад занял «Пол — это лава!» (Challenges/LavaFloor):
+	полосу не отличали от портала.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -157,17 +152,15 @@ end
 
 	id — идентификатор испытания (он же ключ в Config/Challenges),
 	params — блок параметров из Config/Tunnel,
-	options.levels — забег идёт по уровням мира букв (Config/Levels).
 ]]
-function RunCourse.new(id: string, params, options: { levels: boolean? }?)
+function RunCourse.new(id: string, params)
 	local Module = {}
-	local usesLevels = options ~= nil and options.levels == true
 
 	Module.id = id
 	Module.trains = { "recognize" }
 	Module.minLetters = 2
 	-- Просит у ChallengeService уровень мира букв: его выбирает не ребёнок, а пройденный путь.
-	Module.usesLevel = usesLevels
+	Module.usesLevel = true
 
 	--[[
 		Собирает план забега по рецепту: буквы, сложность, сид и — у уровня — его номер.
@@ -177,9 +170,8 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 		в профиле лежит не геометрия, а эти несколько чисел (см. Types.SavedRun).
 		Ничего случайного, кроме Random.new(seed), здесь появляться не должно.
 
-		letters — очередь повторений. У свободного забега первая буква становится
-		целью на весь забег; у уровня из очереди берётся повторение для отрезков
-		после новых букв.
+		letters — очередь повторений: из неё берётся повторение для отрезков
+		после новых букв уровня.
 
 		resumeFrom — с какой сохранки продолжаем. 0 — забег с начала.
 	]]
@@ -192,84 +184,48 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 	)
 		assert(#letters >= Module.minLetters, `{id}: нужно минимум две буквы`)
 
-		local level = if usesLevels then Levels.get(levelIndex) else nil
-		assert(level or not usesLevels, `{id}: нет уровня {tostring(levelIndex)}`)
+		local level = Levels.get(levelIndex)
+		assert(level, `{id}: нет уровня {tostring(levelIndex)}`)
 
 		--[[
 			У уровня отрезков столько, сколько записано в нём самом: длина пути —
 			часть уровня, а не настроение адаптивной сложности. Проёмов же столько,
 			сколько разрешают сразу и сложность, и уровень, и дорожки.
 		]]
-		local gateCount = if level then level.segments else DifficultyCurve.pick(params.gates, difficulty)
-		local choiceCount = math.min(DifficultyCurve.pick(params.choices, difficulty), Tunnel.LANE_COUNT)
-		if level then
-			choiceCount = math.min(choiceCount, level.maxChoices)
-		end
+		local gateCount = level.segments
+		local choiceCount =
+			math.min(DifficultyCurve.pick(params.choices, difficulty), Tunnel.LANE_COUNT, level.maxChoices)
 		--[[
 			Паркур уровня растёт вместе с путём (docs/19-OBSTACLES.md § 3.3): сколько
 			элементов и какого ряда, решает уровень, а сложность двигает внутри его рамок.
-			Свободный забег (полоса препятствий на паде) живёт по одной сложности.
 		]]
-		local obstacleCount = if level
-			then Levels.obstacleCount(level.index, difficulty)
-			else DifficultyCurve.pick(params.obstacles, difficulty)
-		local obstacleTier = DifficultyCurve.pick(params.obstacleTier, difficulty)
-		if level then
-			obstacleTier = Levels.obstacleTier(level.index, obstacleTier)
-		end
+		local obstacleCount = Levels.obstacleCount(level.index, difficulty)
+		local obstacleTier =
+			Levels.obstacleTier(level.index, DifficultyCurve.pick(params.obstacleTier, difficulty))
 		local slowSeconds = DifficultyCurve.pick(params.missSlowSeconds, difficulty)
 		local slowFactor = DifficultyCurve.pick(params.missSlowFactor, difficulty)
 
-		local targets: { string }
-		if level then
-			targets = Levels.targets(level.index, letters)
-		else
-			targets = table.create(gateCount, letters[1])
-		end
-
-		-- Отвлекающие буквы свободного забега: остаток очереди, а если его нет — весь алфавит.
-		local distractorPool: { string } = {}
-		for index = 2, #letters do
-			if letters[index] ~= letters[1] then
-				table.insert(distractorPool, letters[index])
-			end
-		end
-		if #distractorPool == 0 then
-			for _, other in Letters.ordered() do
-				if other ~= letters[1] then
-					table.insert(distractorPool, other)
-				end
-			end
-		end
+		local targets = Levels.targets(level.index, letters)
 
 		local random = Random.new(seed)
 
 		--[[
 			Секрет уровня (docs/18-CONTENT-BACKLOG.md § 8): золотая буква ступени
-			на постаменте в стороне от пути. Только у уровней мира букв: свободная
-			полоса — это «побегать», а секрет — часть пути, который продолжается.
+			на постаменте в стороне от пути.
 		]]
-		local secretRandom = if level then Random.new(seed + SECRET_SEED_SALT) else nil
-		local secretSegment = if secretRandom then secretRandom:NextInteger(1, gateCount) else nil
+		local secretRandom = Random.new(seed + SECRET_SEED_SALT)
+		local secretSegment = secretRandom:NextInteger(1, gateCount)
 
 		--[[
 			Особый участок уровня: лестница по алфавиту на одном из средних отрезков.
 			Не на первом — там ребёнок только разбегается, и не на последнем —
 			перед финишем ему нужен ровный ритм. Уровню в два отрезка её не хватит места.
 		]]
-		local specialRandom = if level and gateCount >= 3 then Random.new(seed + SPECIAL_SEED_SALT) else nil
+		local specialRandom = if gateCount >= 3 then Random.new(seed + SPECIAL_SEED_SALT) else nil
 		local specialSegment = if specialRandom then specialRandom:NextInteger(2, gateCount - 1) else nil
 
-		--[[
-			Аттракционы: у уровня сила и число — свои (Config/Levels), свободный
-			забег живёт по сложности и получает всё, что игра умеет.
-		]]
-		local heat, perSegment
-		if level then
-			heat, perSegment = Levels.attractions(level.index)
-		else
-			heat, perSegment = difficulty, 2
-		end
+		-- Аттракционы: у уровня сила и число — свои (Config/Levels).
+		local heat, perSegment = Levels.attractions(level.index)
 
 		local course = CourseLayout.layout(random, {
 			gateCount = gateCount,
@@ -278,9 +234,9 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 			secretSegment = secretSegment,
 			secretRandom = secretRandom,
 			specialSegment = specialSegment,
-			stations = usesLevels,
+			stations = true,
 			attractions = {
-				unlocked = Attractions.unlocked(if level then level.index else Levels.count()),
+				unlocked = Attractions.unlocked(level.index),
 				heat = heat,
 				perSegment = perSegment,
 				random = Random.new(seed + ATTRACTION_SEED_SALT),
@@ -289,19 +245,12 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 				local targetId = targets[index]
 				local target = Letters.expect(targetId)
 
-				local openings
-				if level then
-					local picked = levelDistractors(level.index, targetId, gateRandom, choiceCount - 1)
-					local taken = 0
-					openings = buildOpenings(gateRandom, #picked + 1, targetId, function()
-						taken += 1
-						return picked[taken]
-					end)
-				else
-					openings = buildOpenings(gateRandom, choiceCount, targetId, function()
-						return distractorPool[gateRandom:NextInteger(1, #distractorPool)]
-					end)
-				end
+				local picked = levelDistractors(level.index, targetId, gateRandom, choiceCount - 1)
+				local taken = 0
+				local openings = buildOpenings(gateRandom, #picked + 1, targetId, function()
+					taken += 1
+					return picked[taken]
+				end)
 
 				return {
 					-- Буква отрезка живёт в самих воротах: у уровня она своя на каждом отрезке.
@@ -324,7 +273,7 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 			station.vo = letter.vo.name
 		end
 
-		if secret and secretRandom and level then
+		if secret then
 			local fresh = Levels.stage(level.index).letters
 			local letter = Letters.expect(fresh[secretRandom:NextInteger(1, #fresh)])
 			secret.letterId = letter.id
@@ -344,7 +293,7 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 			seed = seed,
 			letters = table.clone(letters),
 			difficulty = difficulty,
-			level = if level then level.index else nil,
+			level = level.index,
 			targetCount = gateCount,
 			params = {
 				resumeFrom = from,

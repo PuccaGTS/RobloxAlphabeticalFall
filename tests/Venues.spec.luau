@@ -10,7 +10,7 @@ local Venues = require(Shared.Config.Venues)
 local Challenges = require(Shared.Config.Challenges)
 
 -- Забеги живут в своём туннеле, поляна им не нужна.
-local RUNS = { tunnel_run = true, obstacle_course = true, math_gates = true }
+local RUNS = { tunnel_run = true, math_gates = true }
 
 return function()
 	describe("Config: локации занятий", function()

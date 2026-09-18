@@ -53,7 +53,7 @@ export type Venue = {
 	чтобы они не сливались в одну: ребёнок должен узнавать место, куда попал,
 	раньше, чем услышит задание.
 
-	Забеги (туннель, полоса, ворота с числами) сюда не входят: у них свой мир
+	Забеги (туннель, ворота с числами) сюда не входят: у них свой мир
 	длиной в несколько сотен студов, он строится отдельно (Services/TunnelService).
 ]]
 Venues.all = {
@@ -91,6 +91,13 @@ Venues.all = {
 		ground = Color3.fromRGB(215, 200, 165),
 		accent = Color3.fromRGB(170, 145, 105),
 		decor = { "number_cubes", "bench", "tree_pine", "fountain" },
+	},
+	{
+		id = "lava_floor",
+		title = "🌋 Лавовая площадка",
+		ground = Color3.fromRGB(120, 105, 100),
+		accent = Color3.fromRGB(240, 110, 60),
+		decor = { "rock_small", "tree_pine", "letter_cubes", "lamp" },
 	},
 	{
 		id = "berries",

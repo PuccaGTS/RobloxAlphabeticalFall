@@ -94,11 +94,12 @@ local PORTALS = {
 	на четвёртой минуте.
 ]]
 local PADS = {
+	-- Узнать букву на бегу, пока пол не стал лавой.
 	{
-		challengeId = "obstacle_course",
-		caption = "🏃 Полоса препятствий",
-		action = "Прыгать",
-		color = Color3.fromRGB(250, 200, 120),
+		challengeId = "lava_floor",
+		caption = "🌋 Пол — это лава!",
+		action = "Спасаться",
+		color = Color3.fromRGB(245, 140, 90),
 	},
 	{
 		challengeId = "letter_rain",

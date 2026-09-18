@@ -9,11 +9,9 @@
 	Ошибка не убивает и ничего не отнимает — она замедляет на секунду с небольшим,
 	и за это время звучит подсказка. Это то же правило, что в «Буквопаде».
 
-	Устройство забега общее с «Полосой препятствий» — см. RunCourse.
-	Отличий два: пропорции (ворота часто, препятствий между ними немного)
-	и путь. Туннель стоит за порталом мира букв и идёт по уровням: сколько
-	отрезков и какая буква на каждом, решает уровень (Config/Levels),
-	а какой уровень — пройденный путь, а не ребёнок.
+	План собирает RunCourse. Туннель стоит за порталом мира букв и идёт
+	по уровням: сколько отрезков и какая буква на каждом, решает уровень
+	(Config/Levels), а какой уровень — пройденный путь, а не ребёнок.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,4 +21,4 @@ local Tunnel = require(Shared.Config.Tunnel)
 
 local RunCourse = require(script.Parent.RunCourse)
 
-return RunCourse.new("tunnel_run", Tunnel.PARAMS, { levels = true })
+return RunCourse.new("tunnel_run", Tunnel.PARAMS)

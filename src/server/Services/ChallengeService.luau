@@ -23,7 +23,7 @@ local RateLimiter = require(script.Parent.RateLimiter)
 local LetterRain = require(script.Parent.Parent.Challenges.LetterRain)
 local AlphabetLadder = require(script.Parent.Parent.Challenges.AlphabetLadder)
 local TunnelRun = require(script.Parent.Parent.Challenges.TunnelRun)
-local ObstacleCourse = require(script.Parent.Parent.Challenges.ObstacleCourse)
+local LavaFloor = require(script.Parent.Parent.Challenges.LavaFloor)
 local MathGates = require(script.Parent.Parent.Challenges.MathGates)
 local Bubbles = require(script.Parent.Parent.Challenges.Bubbles)
 local Mirror = require(script.Parent.Parent.Challenges.Mirror)
@@ -36,7 +36,7 @@ local MODULES = {
 	[LetterRain.id] = LetterRain,
 	[AlphabetLadder.id] = AlphabetLadder,
 	[TunnelRun.id] = TunnelRun,
-	[ObstacleCourse.id] = ObstacleCourse,
+	[LavaFloor.id] = LavaFloor,
 	[MathGates.id] = MathGates,
 	[Bubbles.id] = Bubbles,
 	[Mirror.id] = Mirror,
@@ -84,6 +84,18 @@ function ChallengeService.addStartGuard(guard: (player: Player, challengeId: str
 end
 
 -- Идёт ли у игрока испытание. Лимит времени ждёт его конца, а не обрывает на бегу.
+--[[
+	Поле состояния идущего испытания, которое знает только сервер. Нужно сервисам,
+	которые сами присылают действия (LavaFloorService): их токен лежит здесь,
+	а в задание, уходящее клиенту, не попадает.
+]]
+function ChallengeService.setStateField(player: Player, key: string, value: any)
+	local state = active[player]
+	if state then
+		state[key] = value
+	end
+end
+
 function ChallengeService.isBusy(player: Player): boolean
 	return active[player] ~= nil
 end

@@ -7,6 +7,8 @@
 python tools/playtest/run.py walk     # пешком к каждому паду и в порталы
 python tools/playtest/run.py shots    # снимки экрана в build/shots
 python tools/playtest/run.py basic    # первые 20 секунд: где персонаж, есть ли панель
+python tools/playtest/run.py run      # забег: станция и аттракционы, возврат к флажку (ZZ_ONLY=уровень)
+python tools/playtest/run.py lava     # «Пол — это лава!»: верная плита, чужая, конец игры
 ```
 
 - Сценарии — `scenarios/<имя>.luau`: функция `(player, note)`, снимок кадра — `_G.ZZ_Shot(player, name, cframe, fov)`.
