@@ -61,6 +61,7 @@ return function()
 				local previous = Levels.all[index - 1]
 				local level = Levels.all[index]
 				expect(level.maxTier >= previous.maxTier).to.equal(true)
+				expect(level.heat >= previous.heat).to.equal(true)
 				expect(level.obstacles[1] >= previous.obstacles[1]).to.equal(true)
 				expect(level.obstacles[2] >= level.obstacles[1]).to.equal(true)
 			end

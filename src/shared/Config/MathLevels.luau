@@ -24,6 +24,7 @@ export type MathLevel = {
 		но дорожек в туннеле три, и потолок срезает это до трёх, как у мира букв.
 	]]
 	maxChoices: number,
+	heat: number, -- сила аттракционов пути (Config/Attractions), на ступень ниже мира букв
 }
 
 local MathLevels = {}
@@ -31,17 +32,17 @@ local MathLevels = {}
 MathLevels.WORLD = "math"
 
 MathLevels.all = {
-	{ index = 1, title = "Полянка счёта", gates = 4, maxChoices = 2 },
-	{ index = 2, title = "Тропа цифр", gates = 4, maxChoices = 3 },
-	{ index = 3, title = "Ягодный лес", gates = 5, maxChoices = 3 },
-	{ index = 4, title = "Весы", gates = 5, maxChoices = 2 },
-	{ index = 5, title = "Мост чисел", gates = 5, maxChoices = 3 },
-	{ index = 6, title = "Прибавляй", gates = 5, maxChoices = 3 },
-	{ index = 7, title = "Сложение", gates = 6, maxChoices = 3 },
-	{ index = 8, title = "Вычитание", gates = 6, maxChoices = 3 },
-	{ index = 9, title = "Состав числа", gates = 6, maxChoices = 3 },
-	{ index = 10, title = "Равные группы", gates = 6, maxChoices = 3 },
-	{ index = 11, title = "Умножение", gates = 6, maxChoices = 3 },
+	{ index = 1, title = "Полянка счёта", gates = 4, maxChoices = 2, heat = 1 },
+	{ index = 2, title = "Тропа цифр", gates = 4, maxChoices = 3, heat = 1 },
+	{ index = 3, title = "Ягодный лес", gates = 5, maxChoices = 3, heat = 1 },
+	{ index = 4, title = "Весы", gates = 5, maxChoices = 2, heat = 2 },
+	{ index = 5, title = "Мост чисел", gates = 5, maxChoices = 3, heat = 2 },
+	{ index = 6, title = "Прибавляй", gates = 5, maxChoices = 3, heat = 2 },
+	{ index = 7, title = "Сложение", gates = 6, maxChoices = 3, heat = 3 },
+	{ index = 8, title = "Вычитание", gates = 6, maxChoices = 3, heat = 3 },
+	{ index = 9, title = "Состав числа", gates = 6, maxChoices = 3, heat = 4 },
+	{ index = 10, title = "Равные группы", gates = 6, maxChoices = 3, heat = 4 },
+	{ index = 11, title = "Умножение", gates = 6, maxChoices = 3, heat = 4 },
 } :: { MathLevel }
 
 function MathLevels.count(): number

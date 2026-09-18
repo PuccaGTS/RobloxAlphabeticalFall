@@ -27,6 +27,8 @@ local ProgressService = require(script.Parent.ProgressService)
 local DecorService = require(script.Parent.DecorService)
 local Teleport = require(script.Parent.Parent.World.Teleport)
 local Letter3D = require(script.Parent.Parent.World.Letter3D)
+local RunAttractions = require(script.Parent.Parent.World.RunAttractions)
+local RateLimiter = require(script.Parent.RateLimiter)
 
 local TunnelService = {}
 
@@ -130,10 +132,17 @@ end
 	на длинный забег набежали бы сотни, а кусков всегда на два-три больше,
 	чем ям.
 ]]
-local function laneHoles(obstacles: { any }): { { { from: number, to: number } } }
+local function laneHoles(obstacles: { any }, attractions: { any }?): { { { from: number, to: number } } }
 	local holes = {}
 	for lane = 1, Tunnel.LANE_COUNT do
 		holes[lane] = {}
+	end
+
+	-- Под островками, лавой и молотами пола нет во всю ширину: падать есть куда.
+	for _, hole in RunAttractions.holes(attractions) do
+		for lane = 1, Tunnel.LANE_COUNT do
+			table.insert(holes[lane], hole)
+		end
 	end
 
 	for _, obstacle in obstacles or {} do
@@ -209,6 +218,12 @@ local function pieces(path, from: number, to: number, chunk: number, piece: (num
 			table.insert(cuts, z)
 		end
 	end
+	-- Края аттракционов: разметка обрывается ровно там, где кончается пол.
+	for _, z in path.cuts or {} do
+		if z > from and z < to then
+			table.insert(cuts, z)
+		end
+	end
 	for _, zone in path.sampler.zones do
 		if zone.from > from and zone.from < to then
 			table.insert(cuts, zone.from)
@@ -280,8 +295,8 @@ local function floorColor(path, z: number): Color3
 	return SEGMENT_FLOORS[(segmentAt(path, z) - 1) % #SEGMENT_FLOORS + 1]
 end
 
-local function buildFloor(model: Model, path, length: number, obstacles: { any })
-	local holes = laneHoles(obstacles)
+local function buildFloor(model: Model, path, length: number, obstacles: { any }, attractions: { any }?)
+	local holes = laneHoles(obstacles, attractions)
 
 	--[[
 		В зонах формы ям не бывает никогда (там ничего не стоит), поэтому пол
@@ -342,10 +357,11 @@ local GUARD_SAMPLE = 5 -- шаг, с которым меряется разма�
 local GUARD_MAX_TURN = 0.07 -- радиан поворота внутри одного куска стенки, около четырёх градусов
 local GUARD_MIN_PIECE = 1.5
 
-local function buildCorridor(model: Model, path, length: number, obstacles: { any })
+local function buildCorridor(model: Model, path, length: number, obstacles: { any }, attractions: { any }?)
 	local half = Tunnel.WIDTH / 2
 
-	buildFloor(model, path, length, obstacles)
+	buildFloor(model, path, length, obstacles, attractions)
+	local voids = RunAttractions.holes(attractions)
 
 	for _, side in { -1, 1 } do
 		local x = side * (half + Tunnel.WALL_THICKNESS / 2)
@@ -443,6 +459,12 @@ local function buildCorridor(model: Model, path, length: number, obstacles: { an
 		pieces(path, 0, length, CURVE_CHUNK, function(mid: number, size: number, curved: boolean)
 			if curved then
 				return
+			end
+			-- Над пропастью аттракциона разметке лежать не на чем.
+			for _, void in voids do
+				if mid + size / 2 > void.from and mid - size / 2 < void.to then
+					return
+				end
 			end
 			local stripe = build(
 				`LaneStripe_{lane}_{math.floor(mid)}`,
@@ -713,84 +735,6 @@ local function buildGate(model: Model, origin: CFrame, gate: any, player: Player
 			)
 			door.Material = Enum.Material.WoodPlanks
 			dressDoor(model, at, `GateDoor_{gate.index}_{lane}`)
-		end
-	end
-end
-
---[[
-	Ряды букв на дорожке (docs/14-TUNNEL-MODE.md § 4.2): плитки с буквами
-	по пояс ребёнку. Касание засчитывается только у буквы своего отрезка —
-	у отвлекающей триггера нет, пробежать сквозь неё ничего не стоит.
-
-	Буква на плитке своего размера и не поверх всего, в отличие от букв ворот:
-	рядов на забеге много, и висящие сквозь стены буквы превратили бы туннель
-	в кашу из значков.
-]]
-local function buildRows(model: Model, origin: CFrame, rows: { any }, player: Player, resumeFrom: number)
-	for _, row in rows do
-		-- Ряды пройденных до выхода отрезков не строим: их «монетки» уже взяты или упущены.
-		if row.segment > resumeFrom then
-			for slot, item in row.items do
-				--[[
-					Плитка светлая, а цвет буквы живёт в рамке и в самой букве.
-					Раньше плитка была целиком цвета буквы, а надпись висела
-					билбордом в один студ: на бегу это читалось как «синий
-					и красный квадратики», без единой буквы. Буква обязана
-					быть видна раньше, чем ребёнок до плитки добежал.
-				]]
-				local frame = build(
-					`CollectFrame_{row.index}_{slot}`,
-					Vector3.new(Tunnel.COLLECT_SIZE + 0.5, Tunnel.COLLECT_SIZE + 0.5, 0.3),
-					origin * CFrame.new(Tunnel.laneOffset(item.lane), Tunnel.COLLECT_HEIGHT, -row.z),
-					item.color,
-					model
-				)
-				frame.CanCollide = false
-				frame.Material = Enum.Material.Neon
-
-				local tile = build(
-					`Collect_{row.index}_{slot}`,
-					Vector3.new(Tunnel.COLLECT_SIZE, Tunnel.COLLECT_SIZE, 0.5),
-					origin * CFrame.new(Tunnel.laneOffset(item.lane), Tunnel.COLLECT_HEIGHT, -row.z),
-					Color3.fromRGB(252, 250, 245),
-					model
-				)
-				tile.CanCollide = false
-
-				local billboard = Instance.new("BillboardGui")
-				billboard.Name = "Glyph"
-				-- Размер в пикселях, как у букв над воротами: в студах билборд
-				-- получался с ноготь и на бегу не читался вовсе.
-				billboard.Size = UDim2.fromOffset(150, 150)
-				billboard.AlwaysOnTop = true
-				billboard.LightInfluence = 0
-				billboard.MaxDistance = 220
-				billboard.Parent = tile
-
-				local label = Instance.new("TextLabel")
-				label.Size = UDim2.fromScale(1, 1)
-				label.BackgroundTransparency = 1
-				label.Text = item.glyph
-				label.TextColor3 = item.color
-				label.TextStrokeColor3 = Color3.fromRGB(30, 26, 45)
-				label.TextStrokeTransparency = 0
-				label.TextScaled = true
-				label.Font = Enum.Font.FredokaOne
-				label.Parent = billboard
-
-				if item.isTarget then
-					tile.Touched:Connect(function(hit: BasePart)
-						local character = hit.Parent
-						if not character or Players:GetPlayerFromCharacter(character) ~= player then
-							return
-						end
-						ChallengeService.submitAction(
-							player,
-							{ kind = "collect", row = row.index, slot = slot }
-						)
-					end)
-				end
-			end
 		end
 	end
 end
@@ -2330,6 +2274,28 @@ end
 	Ни жизней, ни счётчика падений, ни потери звёздочек: падение стоит нескольких
 	секунд пути и ничего больше. См. docs/17-CONTENT-PLAN.md § 3.1.
 ]]
+--[[
+	Возврат к последней отметке: арке за воротами или флажку перед аттракционом.
+	Зовут его мягкое дно (упал) и клиент (сбил валун, молот, обжёгся лавой).
+
+	Ни жизней, ни счётчика падений, ни потери звёздочек: падение стоит нескольких
+	секунд пути и ничего больше. См. docs/19-OBSTACLES.md § 2.
+]]
+function TunnelService.returnToCheckpoint(player: Player)
+	local run = runs[player]
+	if not run or os.clock() < run.fallingUntil then
+		return
+	end
+	-- Пока идёт возврат, повторные касания игнорируем: иначе ребёнка
+	-- телепортирует несколько раз подряд от одного падения.
+	run.fallingUntil = os.clock() + 1
+
+	-- Звук мягкий: внизу трава, а не смерть, и звук обязан это подтверждать.
+	RemoteDefs.event("PlaySfx"):FireClient(player, "fall")
+
+	Teleport.to(player, run.origin * CFrame.new(0, 4, -run.checkpointZ))
+end
+
 local VALLEY_DROP = Tunnel.FALL_DEPTH + 10 -- ниже самой глубокой ямки трассы
 local VALLEY_WIDTH = Tunnel.WIDTH + 140
 local VALLEY_CHUNK = 40
@@ -2341,21 +2307,7 @@ local function buildSoftBottom(model: Model, path, length: number, player: Playe
 			return
 		end
 
-		local run = runs[player]
-		if not run or os.clock() < run.fallingUntil then
-			return
-		end
-		-- Пока идёт возврат, повторные касания дна игнорируем: иначе ребёнка
-		-- телепортирует несколько раз подряд от одного падения.
-		run.fallingUntil = os.clock() + 1
-
-		--[[
-			Звук падения мягкий и водяной: внизу трава, а не смерть, и звук
-			обязан подтверждать это, а не пугать.
-		]]
-		RemoteDefs.event("PlaySfx"):FireClient(player, "fall")
-
-		Teleport.to(player, run.origin * CFrame.new(0, 4, -run.checkpointZ))
+		TunnelService.returnToCheckpoint(player)
 	end
 
 	--[[
@@ -2668,6 +2620,12 @@ local function buildGarlands(model: Model, path, spec: any)
 	for _, zone in path.sampler.zones do
 		block(zone.from - 4, zone.to + 4)
 	end
+	for _, station in params.stations or {} do
+		block(station.z - 4, station.z + Tunnel.STATION_PITCH + 4)
+	end
+	for _, ride in params.attractions or {} do
+		block(ride.flagZ - 4, ride.z + ride.length + 4)
+	end
 	local stairs = params.stairs
 	if stairs and #stairs.steps > 0 then
 		block(stairs.z - 6, stairStepZ(stairs, #stairs.steps) + Tunnel.STAIR_DEPTH + 6)
@@ -2810,6 +2768,91 @@ local function buildFinish(model: Model, origin: CFrame, length: number, player:
 	end
 end
 
+--[[
+	Станции и аттракционы с флажками (World/RunAttractions). Станция открывается,
+	когда ребёнок встал в круг: голос называет букву отрезка. Пройденные в прошлый
+	заход станции стоят открытыми, флажки — горят.
+]]
+local function touchedBy(player: Player, hit: BasePart): boolean
+	local character = hit.Parent
+	return character ~= nil and Players:GetPlayerFromCharacter(character) == player
+end
+
+--[[
+	Отметка пройдена: сюда вернёт следующее падение. Отметки идут только вперёд —
+	вернуться к прошлому флажку и «сбросить» дальнюю арку нельзя.
+]]
+local function markReached(player: Player, z: number): boolean
+	local run = runs[player]
+	if not run or run.checkpointZ >= z then
+		return false
+	end
+	run.checkpointZ = z
+	Teleport.setSafe(player, run.origin * CFrame.new(0, 4, -z))
+	return true
+end
+
+local function buildStations(model: Model, path, spec: any, player: Player)
+	local resumeFrom = spec.params.resumeFrom or 0
+	for _, station in spec.params.stations or {} do
+		local passed = station.segment <= resumeFrom
+		local open = RunAttractions.buildStation(model, path, station, passed)
+		if passed then
+			continue
+		end
+		local trigger = build(
+			`StationTrigger_{station.index}`,
+			Vector3.new(Tunnel.WIDTH, Tunnel.HEIGHT * 0.6, 3),
+			path * CFrame.new(0, Tunnel.HEIGHT * 0.3, -(station.z + Tunnel.STATION_TRIGGER_Z)),
+			station.color,
+			model
+		)
+		trigger.CanCollide = false
+		trigger.Transparency = 1
+		local done = false
+		trigger.Touched:Connect(function(hit: BasePart)
+			if done or not touchedBy(player, hit) or not runs[player] then
+				return
+			end
+			done = true
+			markReached(player, station.z + Tunnel.STATION_TRIGGER_Z - 2)
+			RemoteDefs.event("PlayVO"):FireClient(player, station.vo, true)
+			RemoteDefs.event("PlaySfx"):FireClient(player, "checkpoint")
+			open()
+		end)
+	end
+end
+
+local function buildAttractions(model: Model, path, spec: any, player: Player)
+	local resumeFrom = spec.params.resumeFrom or 0
+	for _, ride in spec.params.attractions or {} do
+		RunAttractions.buildAttraction(model, path, ride)
+		local pennant = RunAttractions.buildFlag(model, path, ride)
+		if ride.segment <= resumeFrom then
+			RunAttractions.lightFlag(pennant)
+			continue
+		end
+		local trigger = build(
+			`FlagTrigger_{ride.index}`,
+			Vector3.new(Tunnel.WIDTH, Tunnel.HEIGHT * 0.6, 2),
+			path * CFrame.new(0, Tunnel.HEIGHT * 0.3, -ride.flagZ),
+			Color3.fromRGB(255, 200, 70),
+			model
+		)
+		trigger.CanCollide = false
+		trigger.Transparency = 1
+		trigger.Touched:Connect(function(hit: BasePart)
+			if not touchedBy(player, hit) then
+				return
+			end
+			if markReached(player, ride.flagZ) then
+				RunAttractions.lightFlag(pennant)
+				RemoteDefs.event("PlaySfx"):FireClient(player, "checkpoint")
+			end
+		end)
+	end
+end
+
 local function humanoidOf(player: Player): Humanoid?
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -2827,17 +2870,21 @@ function TunnelService.spawn(player: Player, spec: any)
 	for _, gate in spec.params.gates do
 		table.insert(origin.seams, gate.z)
 	end
+	origin.cuts = {}
+	for _, void in RunAttractions.holes(spec.params.attractions) do
+		table.insert(origin.cuts, void.from)
+		table.insert(origin.cuts, void.to)
+	end
 
 	local model = Instance.new("Model")
 	model.Name = `Tunnel_{player.UserId}`
 	model.Parent = ensureContainer()
 
-	buildCorridor(model, origin, length, spec.params.obstacles)
+	buildCorridor(model, origin, length, spec.params.obstacles, spec.params.attractions)
 	for _, gate in spec.params.gates do
 		buildGate(model, origin, gate, player)
 	end
 	buildObstacles(model, origin, spec.params.obstacles)
-	buildRows(model, origin, spec.params.rows or {}, player, spec.params.resumeFrom or 0)
 	buildSecret(model, origin, spec.params.secret, player, spec.params.resumeFrom or 0)
 	buildStairs(model, origin, spec.params.stairs, player, spec.params.resumeFrom or 0)
 	buildBalance(model, origin, spec.params.balance, player, spec.params.resumeFrom or 0)
@@ -2868,6 +2915,8 @@ function TunnelService.spawn(player: Player, spec: any)
 	for _, checkpoint in spec.params.checkpoints or {} do
 		buildCheckpoint(model, origin, checkpoint, player, checkpoint.index <= resumeFrom)
 	end
+	buildStations(model, origin, spec, player)
+	buildAttractions(model, origin, spec, player)
 	buildSoftBottom(model, origin, length, player)
 	buildScenery(model, origin, length, spec.seed or 0)
 	buildZoneDecor(model, origin, player)
@@ -3010,18 +3059,6 @@ function TunnelService.start()
 			return
 		end
 
-		-- Подобранная буква исчезает вместе с рамкой: второй раз её не взять.
-		if result.collect then
-			local run = runs[player]
-			for _, name in { `Collect_{result.row}_{result.slot}`, `CollectFrame_{result.row}_{result.slot}` } do
-				local part = run and run.model:FindFirstChild(name)
-				if part then
-					part:Destroy()
-				end
-			end
-			return
-		end
-
 		if result.stair then
 			onStairAnswer(player, result)
 			return
@@ -3035,6 +3072,14 @@ function TunnelService.start()
 		if not result.correct and (result.cooldown or 0) > 0 then
 			TunnelService.slow(player, result.cooldown, result.slowFactor or 0.5)
 		end
+	end)
+
+	-- Клиент видит, что валун, молот или лава задели ребёнка (World/RunAttractions).
+	RemoteDefs.event("RunHazard").OnServerEvent:Connect(function(player: Player)
+		if not RateLimiter.allow(player, "RunHazard", RemoteDefs.RATE_LIMITS.RunHazard) then
+			return
+		end
+		TunnelService.returnToCheckpoint(player)
 	end)
 
 	Players.PlayerRemoving:Connect(function(player: Player)

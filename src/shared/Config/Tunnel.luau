@@ -7,8 +7,6 @@
 	скорости — есть только расстояния, из которых складывается ритм забега.
 ]]
 
-local Obstacles = require(script.Parent.Obstacles)
-
 local Tunnel = {}
 
 Tunnel.LANE_COUNT = 3
@@ -31,29 +29,16 @@ Tunnel.FINISH_RUNWAY = 35
 Tunnel.MIN_GATE_SPACING = 55
 
 --[[
-	Длина отрезка мерится временем, а не студами (docs/14-TUNNEL-MODE.md § 3.4).
+	Беговая клетка: отрезок трассы, на котором трасса меняет форму (Logic/TrackShape).
+	Одна на отрезок, прямо перед зоной ворот: горка или вираж — и впереди ворота.
 
-	Нижняя граница была сорок секунд, и на первой проверке отрезок назвали
-	«слишком длинным и скучным»: паркур кончался, а дальше шли сотни студов
-	ровного пола. Теперь граница тридцать секунд, а пустого пола нет вовсе —
-	каждая беговая клетка получает форму (Logic/TrackShape): горку, ямку,
-	вираж или змейку.
-]]
-Tunnel.SEGMENT_SECONDS_MIN = 30
-Tunnel.SEGMENT_SECONDS_MAX = 70
-
---[[
-	Беговая клетка: отрезок трассы между связками паркура, на котором трасса
-	меняет форму. Клетки идут ПОСЛЕ элементов, поэтому последняя всегда
-	упирается в зону ворот, а ворота стоят на ровном.
-
-	Две клетки на отрезке есть всегда, даже на последних уровнях, где паркура
-	хватает на всё время: без них трасса снова стала бы прямой доской.
-	Больше пяти не бывает — длинная пробежка скучна даже с горками.
+	Раньше клеток было от двух до пяти: отрезок мерился временем и добирал свои
+	тридцать секунд пустым бегом. На живой проверке это назвали «бежать очень
+	много». Теперь время отрезка набирают станция буквы и аттракцион, а бег
+	остался связкой.
 ]]
 Tunnel.RUN_PITCH = 50
-Tunnel.MIN_RUN_CELLS = 2
-Tunnel.MAX_RUN_CELLS = 5
+Tunnel.RUN_CELLS = 1
 --[[
 	Отрезок между воротами режется на клетки. В клетке препятствия элемент
 	начинается с отступом OBSTACLE_LEAD и обязан кончиться до конца клетки —
@@ -61,19 +46,26 @@ Tunnel.MAX_RUN_CELLS = 5
 	отъезжает назад от своей ямы, есть куда отъехать. Длины элементов —
 	Tunnel.obstacleLength, и тест держит, что каждый влезает в клетку.
 
-	Ряд букв (docs/14-TUNNEL-MODE.md § 4.2) получает свою клетку на целом полу:
-	раньше ряды вставали между препятствиями, и плитка могла повиснуть над
-	ямой у балки или утонуть в ступенях.
+	Секрет уровня получает свою клетку SECRET_PITCH на целом полу.
 ]]
 Tunnel.OBSTACLE_PITCH = 20
 Tunnel.OBSTACLE_LEAD = 3
-Tunnel.ROW_PITCH = 8 -- клетка ряда букв; плитка стоит в её середине
+Tunnel.SECRET_PITCH = 8
 Tunnel.CLEARANCE_AFTER_GATE = 10 -- сколько ровного пола сразу за воротами
 Tunnel.CLEARANCE_BEFORE_GATE = 14 -- ворота видно заранее, и под ними ничего не крутится
 Tunnel.CHECKPOINT_OFFSET = 6 -- насколько сохранка стоит дальше своих ворот
-Tunnel.COLLECT_HEIGHT = 2.5 -- на какой высоте висит буква на дорожке: по пояс ребёнку
-Tunnel.COLLECT_SIZE = 2.6 -- сторона плитки с буквой
-Tunnel.ROW_PLACE = 3 -- где в клетке ряда стоит плитка: подальше от платформы следующей клетки
+
+--[[
+	Станция буквы (docs/14-TUNNEL-MODE.md § 3.4.2): в начале каждого отрезка мира
+	букв стоит беседка с огромной объёмной буквой отрезка, а за ней дверь.
+	Подошёл к букве — голос её называет, буква подпрыгивает, дверь открывается.
+	Мимо не пробежать: буква отрезка звучит до паркура, а не посреди него.
+]]
+Tunnel.STATION_PITCH = 26
+Tunnel.STATION_LETTER = 9 -- высота объёмной буквы
+Tunnel.STATION_DOOR_Z = 20 -- где в клетке станции стоит дверь
+Tunnel.STATION_TRIGGER_Z = 13 -- где ребёнок «подошёл к букве»: круг под ней
+Tunnel.STATION_OPEN_DELAY = 1.4 -- дверь открывается, когда буква уже прозвучала
 
 --[[
 	Секрет уровня: постамент в крайней дорожке и золотая буква над ним
@@ -127,12 +119,6 @@ Tunnel.PLOT_ORIGIN = Vector3.new(2000, 200, 0)
 ]]
 Tunnel.PARAMS = {
 	gates = { 4, 4, 5, 5, 6 },
-	--[[
-		Рядов букв на дорожке между воротами (docs/14-TUNNEL-MODE.md § 4.2).
-		Ряд встаёт только в просвет между препятствиями, поэтому на отрезке
-		их не больше, чем препятствий, — сколько бы здесь ни было написано.
-	]]
-	collect = { 2, 2, 3, 3, 3 },
 	choices = { 2, 2, 3, 3, 4 }, -- сколько проёмов в воротах
 	obstacles = { 3, 3, 4, 4, 5 }, -- элементов между воротами
 	-- Средние элементы — не с первого дня, сложные — только уверенным.
@@ -145,7 +131,6 @@ Tunnel.PARAMS = {
 
 Tunnel.COURSE_PARAMS = {
 	gates = { 2, 2, 3, 3, 3 },
-	collect = { 2, 3, 3, 3, 4 },
 	choices = { 2, 2, 3, 3, 4 },
 	-- Полоса обязана оставаться паркурнее туннеля: даже поздние уровни мира букв
 	-- с их 11–14 элементами на отрезке не должны её догонять.
@@ -177,12 +162,12 @@ Tunnel.MATH_PARAMS = {
 Tunnel.WALK_SPEED = 20 -- базовая скорость персонажа в туннеле
 Tunnel.JUMP_POWER = 55
 
--- Размеры элементов полосы. Прыжок персонажа Roblox берёт около 7 студов —
--- всё, что ниже и уже этого, проходится с запасом, и запас тут намеренный.
+-- Размеры элементов полосы. Прыжок персонажа Roblox берёт около 7 студов.
+-- Запас был огромный, и барьер с ямой проходились не глядя: оба подросли.
 -- Ни один элемент не длиннее OBSTACLE_PITCH, иначе они наложатся друг на друга.
-Tunnel.BARRIER_HEIGHT = 2.5
+Tunnel.BARRIER_HEIGHT = 3.2
 Tunnel.BARRIER_LENGTH = 1.5
-Tunnel.GAP_LENGTH = 5 -- длина ямы вдоль бега: перепрыгивается с разбега и без него
+Tunnel.GAP_LENGTH = 6.5 -- длина ямы вдоль бега: с разбега, с места уже не перешагнуть
 Tunnel.ARCH_CLEARANCE = 4 -- высота, ниже которой свод не пропускает
 Tunnel.BEAM_LENGTH = 12
 Tunnel.BEAM_WIDTH = 3
@@ -320,97 +305,6 @@ Tunnel.FALL_DEPTH = 20
 
 function Tunnel.laneOffset(lane: number): number
 	return (lane - (Tunnel.LANE_COUNT + 1) / 2) * Tunnel.LANE_WIDTH
-end
-
--- Длина отрезка между воротами: клетки препятствий, рядов букв и пробежек.
-function Tunnel.segmentLength(obstacleCount: number, rowCount: number?, runCount: number?): number
-	local needed = Tunnel.CLEARANCE_AFTER_GATE
-		+ obstacleCount * Tunnel.OBSTACLE_PITCH
-		+ (rowCount or 0) * Tunnel.ROW_PITCH
-		+ (runCount or 0) * Tunnel.RUN_PITCH
-		+ Tunnel.CLEARANCE_BEFORE_GATE
-	return math.max(needed, Tunnel.MIN_GATE_SPACING)
-end
-
---[[
-	Сколько секунд элемент отнимает сверх пробега своей клетки: подойти, примерить
-	прыжок, подождать, пока шар отойдёт или платформа вернётся. Числа взяты из
-	самих элементов — маятник ходит дугу за PENDULUM_SECONDS, плита держит
-	FADE_SOLID_SECONDS, — и округлены вниз: ребёнок редко ждёт полный цикл.
-
-	Это оценка для раскладки, а не замер. Точные числа подбираются на детях,
-	и менять их здесь безопасно: длина отрезка пересчитается сама.
-]]
-local SECONDS: { [string]: number } = {
-	barrier = 1,
-	gap = 1,
-	arch = 1.5, -- перепрыгнуть нельзя, надо заранее сменить дорожку
-	beam = 2.5, -- по узкой балке идут шагом, а не бегут
-	steps = 3,
-	pendulum = 3,
-	platform = 4, -- единственный элемент, где ждать приходится по-настоящему
-	fading = 3.5,
-	trampoline = 2,
-	ice = 1.5,
-	stones = 3, -- три прыжка подряд
-	bridge = 2, -- по мосту идут, а не бегут
-	roller = 1.5,
-	pistons = 3,
-	comb = 2,
-	hump = 1, -- двенадцать студов вверх и вниз: на подъёме бег замедляется
-	cones = 2, -- петлять между конусами дольше, чем бежать прямо
-	carousel = 2.5, -- пропустить перекладину
-	lift = 5, -- дождаться площадки, подняться, пройти мостик и спрыгнуть
-	spiral = 3,
-}
-
-function Tunnel.obstacleSeconds(kind: string): number
-	return SECONDS[kind] or 0
-end
-
---[[
-	Средняя цена элемента ряда: раскладка ещё не знает, что ей выпадет, а длину
-	отрезка считать уже надо. Берём среднее по каталогу, доступному на этом ряду.
-]]
-function Tunnel.tierSeconds(tier: number): number
-	local ids = Obstacles.upToTier(tier)
-	if #ids == 0 then
-		return 0
-	end
-	local total = 0
-	for _, id in ids do
-		total += Tunnel.obstacleSeconds(Obstacles.expect(id).kind)
-	end
-	return total / #ids
-end
-
--- Сколько секунд занимает отрезок: пробег всей его длины плюс цена препятствий.
-function Tunnel.segmentSeconds(
-	obstacleCount: number,
-	tier: number,
-	rowCount: number?,
-	runCount: number?
-): number
-	local length = Tunnel.segmentLength(obstacleCount, rowCount, runCount)
-	return length / Tunnel.WALK_SPEED + obstacleCount * Tunnel.tierSeconds(tier)
-end
-
---[[
-	Сколько беговых клеток добавить, чтобы отрезок дотянул до нижней границы
-	бюджета. Паркур считается первым: клетки добирают остаток, а не заменяют
-	собой элементы. Выше потолка не бывает, и лишней клетки, из-за которой
-	отрезок перевалил бы за верхнюю границу, тоже: последняя добавляется,
-	только пока отрезок короче минимума.
-]]
-function Tunnel.runCells(obstacleCount: number, tier: number, rowCount: number?): number
-	local count = Tunnel.MIN_RUN_CELLS
-	while count < Tunnel.MAX_RUN_CELLS do
-		if Tunnel.segmentSeconds(obstacleCount, tier, rowCount, count) >= Tunnel.SEGMENT_SECONDS_MIN then
-			break
-		end
-		count += 1
-	end
-	return count
 end
 
 --[[

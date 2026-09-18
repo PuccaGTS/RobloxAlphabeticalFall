@@ -1,7 +1,7 @@
 --!nocheck
 --[[
 	Форма трассы забега. Главное, что держат эти тесты: горки и виражи живут
-	только на беговых клетках, а ворота, препятствия и ряды букв стоят на ровном.
+	только на беговых клетках, а ворота, препятствия и аттракционы стоят на ровном.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -149,7 +149,7 @@ return function()
 		it("у каждого забега есть форма трассы", function()
 			for _, spec in specs() do
 				expect(typeof(spec.params.track)).to.equal("table")
-				expect(#spec.params.track >= Tunnel.MIN_RUN_CELLS).to.equal(true)
+				expect(#spec.params.track >= Tunnel.RUN_CELLS).to.equal(true)
 			end
 		end)
 
@@ -158,7 +158,7 @@ return function()
 			плитка с буквой не висит на склоне.
 		]]
 		it(
-			"ворота, препятствия и ряды букв стоят вне зон формы",
+			"ворота, препятствия, станции и аттракционы стоят вне зон формы",
 			function()
 				for _, spec in specs() do
 					local sampler = TrackShape.sampler(spec.params.track, spec.params.length)
@@ -173,8 +173,15 @@ return function()
 							expect(sampler.zoneAt(z)).to.equal(nil)
 						end
 					end
-					for _, row in spec.params.rows or {} do
-						expect(sampler.zoneAt(row.z)).to.equal(nil)
+					for _, ride in spec.params.attractions or {} do
+						for z = ride.flagZ, ride.z + ride.length, 1 do
+							expect(sampler.zoneAt(z)).to.equal(nil)
+						end
+					end
+					for _, station in spec.params.stations or {} do
+						for z = station.z, station.z + Tunnel.STATION_PITCH, 1 do
+							expect(sampler.zoneAt(z)).to.equal(nil)
+						end
 					end
 					for _, checkpoint in spec.params.checkpoints do
 						expect(sampler.zoneAt(checkpoint.z)).to.equal(nil)

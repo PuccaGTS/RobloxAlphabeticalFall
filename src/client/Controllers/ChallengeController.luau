@@ -550,6 +550,11 @@ local function onSpec(newSpec: any)
 		activeChallengeId = newSpec.challengeId
 		activeTargetGlyph = newSpec.params.targetGlyph
 		HUD.showTarget(newSpec.params.targetGlyph, 0, newSpec.targetCount)
+		-- Где есть станции, букву отрезка называет станция: беги к ней.
+		if #(newSpec.params.stations or {}) > 0 then
+			HUD.toast(`Беги к большой букве {newSpec.params.targetGlyph}!`, 4)
+			return
+		end
 		HUD.toast(`Беги в ворота с буквой {newSpec.params.targetGlyph}`, 4)
 		task.delay(0.6, function()
 			AudioController.speak(newSpec.params.targetVO)

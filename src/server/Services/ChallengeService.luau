@@ -487,13 +487,6 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		return
 	end
 
-	if result.collect then
-		ProgressService.awardCollect(player, result.letterId)
-		fire(answerHooks, player, state.spec, result)
-		RemoteDefs.event("PlaySfx"):FireClient(player, "correct")
-		return
-	end
-
 	-- «Тихое» действие (пересечение финиша) прогресс не двигает и наград не приносит.
 	if result.silent then
 		if result.finished then

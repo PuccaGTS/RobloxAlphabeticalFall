@@ -25,6 +25,7 @@ local LiveWorldController = require(Controllers.LiveWorldController)
 local DevController = require(Controllers.DevController)
 local PlaygroundController = require(Controllers.PlaygroundController)
 local DetailLodController = require(Controllers.DetailLodController)
+local RunHazardController = require(Controllers.RunHazardController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -55,6 +56,7 @@ PetController.init()
 LiveWorldController.init()
 PlaygroundController.init()
 DetailLodController.init()
+RunHazardController.init()
 DevController.init() -- панель появится только в Studio и у владельца места
 
 ShopUI.build({

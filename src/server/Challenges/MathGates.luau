@@ -23,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local MathConfig = require(Shared.Config.Math)
 local MathLevels = require(Shared.Config.MathLevels)
+local Attractions = require(Shared.Config.Attractions)
 local Tunnel = require(Shared.Config.Tunnel)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 
@@ -32,6 +33,7 @@ local TrackShape = require(Shared.Logic.TrackShape)
 -- Свой генератор у формы трассы: ворота и препятствия по старому сиду не сдвигаются.
 local TRACK_SEED_SALT = 15485863
 local SPECIAL_SEED_SALT = 32452843
+local ATTRACTION_SEED_SALT = 49979687
 local Scales = require(script.Parent.Scales)
 
 local MathGates = {}
@@ -159,11 +161,21 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 	local specialRandom = if gateCount >= 3 then Random.new(seed + SPECIAL_SEED_SALT) else nil
 	local specialSegment = if specialRandom then specialRandom:NextInteger(2, gateCount - 1) else nil
 
-	local gates, obstacles, checkpoints, length, _rows, _secret, runs, special = CourseLayout.layout(random, {
+	--[[
+		Аттракционы — те же, что у мира букв, но по одному на отрезок: счёт на бегу
+		тяжелее узнавания буквы, и паркура здесь меньше (Config/MathLevels).
+	]]
+	local course = CourseLayout.layout(random, {
 		gateCount = gateCount,
 		obstacleCount = obstacleCount,
 		obstacleTier = obstacleTier,
 		specialSegment = specialSegment,
+		attractions = {
+			unlocked = Attractions.unlocked(level.index),
+			heat = level.heat,
+			perSegment = 1,
+			random = Random.new(seed + ATTRACTION_SEED_SALT),
+		},
 		makeGate = function(_index: number, gateRandom: Random)
 			local task = MathConfig.generate(stage, gateRandom, choiceCount)
 			return {
@@ -183,6 +195,7 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 		end,
 	})
 
+	local gates, special = course.gates, course.special
 	local from = math.clamp(resumeFrom, 0, gateCount)
 	local firstGate = gates[from + 1]
 
@@ -204,11 +217,12 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 			taskVO = if firstGate then firstGate.vo else nil,
 			taskPrompt = if firstGate then firstGate.prompt else "",
 			gates = gates,
-			obstacles = obstacles,
-			checkpoints = checkpoints,
-			length = length,
+			obstacles = course.obstacles,
+			checkpoints = course.checkpoints,
+			attractions = course.attractions,
+			length = course.length,
 			-- Та же форма трассы, что у мира букв: горки и виражи на пробежках.
-			track = TrackShape.plan(runs, seed + TRACK_SEED_SALT),
+			track = TrackShape.plan(course.runs, seed + TRACK_SEED_SALT),
 			balance = if special and specialRandom
 				then buildBalance(special, stage, math.min(choiceCount, Tunnel.LANE_COUNT), specialRandom)
 				else nil,

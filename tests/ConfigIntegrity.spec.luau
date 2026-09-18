@@ -12,8 +12,6 @@ local Letters = require(Shared.Config.Letters)
 local Stages = require(Shared.Config.Stages)
 local Obstacles = require(Shared.Config.Obstacles)
 local Tunnel = require(Shared.Config.Tunnel)
-local Levels = require(Shared.Config.Levels)
-local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 local Challenges = require(Shared.Config.Challenges)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 local MathConfig = require(Shared.Config.Math)
@@ -236,7 +234,6 @@ return function()
 				local obstacle = Obstacles.expect(id)
 				expect(obstacle.tier).to.equal(3)
 				expect(Tunnel.obstacleLength(obstacle.kind)).to.be.ok()
-				expect(Tunnel.obstacleSeconds(obstacle.kind) > 0).to.equal(true)
 			end
 		end)
 
@@ -329,83 +326,6 @@ return function()
 				+ arm * math.sin(Tunnel.PENDULUM_SWING)
 				- Tunnel.PENDULUM_BALL / 2
 			expect(free >= 4).to.equal(true)
-		end)
-	end)
-
-	describe("Config: длина отрезка", function()
-		--[[
-			Отрезок между сохранками — 30–70 секунд пути (docs/14-TUNNEL-MODE.md § 3.4).
-			До этих тестов отрезок занимал три секунды: числа были заданы в студах,
-			и никто не считал, сколько это по времени.
-		]]
-		it("у каждого элемента есть цена в секундах", function()
-			for _, id in Obstacles.ids() do
-				local kind = Obstacles.expect(id).kind
-				expect(Tunnel.obstacleSeconds(kind) > 0).to.equal(true)
-			end
-		end)
-
-		it("средняя цена ряда растёт вместе с рядом", function()
-			expect(Tunnel.tierSeconds(1) > 0).to.equal(true)
-			expect(Tunnel.tierSeconds(2) > Tunnel.tierSeconds(1)).to.equal(true)
-		end)
-
-		it(
-			"отрезок любого уровня укладывается в бюджет времени",
-			function()
-				for _, level in Levels.all do
-					for difficulty = 1, DifficultyCurve.MAX_LEVEL do
-						local count = Levels.obstacleCount(level.index, difficulty)
-						local tier = Levels.obstacleTier(
-							level.index,
-							DifficultyCurve.pick(Tunnel.PARAMS.obstacleTier, difficulty)
-						)
-						local rows = DifficultyCurve.pick(Tunnel.PARAMS.collect, difficulty)
-						local runs = Tunnel.runCells(count, tier, rows)
-						local seconds = Tunnel.segmentSeconds(count, tier, rows, runs)
-
-						expect(runs <= Tunnel.MAX_RUN_CELLS).to.equal(true)
-						expect(seconds >= Tunnel.SEGMENT_SECONDS_MIN).to.equal(true)
-						expect(seconds <= Tunnel.SEGMENT_SECONDS_MAX).to.equal(true)
-					end
-				end
-			end
-		)
-
-		--[[
-			У свободных забегов уровня нет, но верхняя граница общая: отрезок, который
-			не кончается, ребёнок бросает. Нижней здесь нет — на полосе препятствий
-			и в воротах с числами ритм задаёт не путь, а сам пад.
-		]]
-		it(
-			"свободный забег тоже не длиннее верхней границы",
-			function()
-				for _, params in { Tunnel.PARAMS, Tunnel.COURSE_PARAMS, Tunnel.MATH_PARAMS } do
-					for difficulty = 1, DifficultyCurve.MAX_LEVEL do
-						local count = DifficultyCurve.pick(params.obstacles, difficulty)
-						local tier = DifficultyCurve.pick(params.obstacleTier, difficulty)
-						local rows = if params.collect
-							then DifficultyCurve.pick(params.collect, difficulty)
-							else 0
-						local runs = Tunnel.runCells(count, tier, rows)
-
-						expect(Tunnel.segmentSeconds(count, tier, rows, runs) <= Tunnel.SEGMENT_SECONDS_MAX).to.equal(
-							true
-						)
-					end
-				end
-			end
-		)
-
-		--[[
-			Паркур считается первым: пробежки добирают остаток, а не заменяют элементы.
-			Чем больше элементов на отрезке, тем меньше пустого пола — на последних
-			уровнях его нет совсем.
-		]]
-		it("чем больше паркура, тем меньше пробежек", function()
-			local few = Tunnel.runCells(Levels.obstacleCount(1, 3), 1, 3)
-			local many = Tunnel.runCells(Levels.obstacleCount(11, 3), 3, 3)
-			expect(many < few).to.equal(true)
 		end)
 	end)
 

@@ -26,6 +26,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 local Levels = require(Shared.Config.Levels)
+local Attractions = require(Shared.Config.Attractions)
 local Tunnel = require(Shared.Config.Tunnel)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 
@@ -95,37 +96,12 @@ end
 
 local RunCourse = {}
 
--- Соль генератора рядов букв: у них свой Random, чтобы не сдвигать ворота и препятствия.
-local ROW_SEED_SALT = 7919
--- То же для секрета уровня.
+-- Соль генератора секрета уровня: у него свой Random, чтобы не сдвигать ворота и препятствия.
 local SECRET_SEED_SALT = 104729
 -- Свой генератор у формы трассы: иначе сдвинулись бы ворота уже сохранённых забегов.
 local TRACK_SEED_SALT = 15485863
 local SPECIAL_SEED_SALT = 32452843
-
---[[
-	Ряд букв на дорожке перед воротами: буква этого отрезка и одна отвлекающая —
-	из тех же ворот, чтобы на дорожке не появлялось букв, которых ребёнок
-	на этом отрезке и не видит. Двух плиток хватает: ряд — не задача, а «монетка»,
-	и ребёнок должен успеть свернуть к нужной на бегу.
-]]
-local function makeRow(gate, _random: Random)
-	local target = Letters.expect(gate.targetLetter)
-	local items = {
-		{ letterId = target.id, glyph = target.glyph, color = target.color, isTarget = true },
-	}
-	for _, opening in gate.openings do
-		if not opening.isTarget and opening.letterId ~= target.id then
-			local other = Letters.expect(opening.letterId)
-			table.insert(
-				items,
-				{ letterId = other.id, glyph = other.glyph, color = other.color, isTarget = false }
-			)
-			break
-		end
-	end
-	return items
-end
+local ATTRACTION_SEED_SALT = 49979687
 
 --[[
 	Отвлекающие буквы уровня: по группам из Config/Levels, каждая перемешана
@@ -284,46 +260,69 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 		local specialRandom = if level and gateCount >= 3 then Random.new(seed + SPECIAL_SEED_SALT) else nil
 		local specialSegment = if specialRandom then specialRandom:NextInteger(2, gateCount - 1) else nil
 
-		local gates, obstacles, checkpoints, length, rows, secret, runs, special =
-			CourseLayout.layout(random, {
-				gateCount = gateCount,
-				obstacleCount = obstacleCount,
-				obstacleTier = obstacleTier,
-				rowsPerSegment = if params.collect
-					then DifficultyCurve.pick(params.collect, difficulty)
-					else 0,
-				rowRandom = Random.new(seed + ROW_SEED_SALT),
-				makeRow = makeRow,
-				secretSegment = secretSegment,
-				secretRandom = secretRandom,
-				specialSegment = specialSegment,
-				makeGate = function(index: number, gateRandom: Random)
-					local targetId = targets[index]
-					local target = Letters.expect(targetId)
+		--[[
+			Аттракционы: у уровня сила и число — свои (Config/Levels), свободный
+			забег живёт по сложности и получает всё, что игра умеет.
+		]]
+		local heat, perSegment
+		if level then
+			heat, perSegment = Levels.attractions(level.index)
+		else
+			heat, perSegment = difficulty, 2
+		end
 
-					local openings
-					if level then
-						local picked = levelDistractors(level.index, targetId, gateRandom, choiceCount - 1)
-						local taken = 0
-						openings = buildOpenings(gateRandom, #picked + 1, targetId, function()
-							taken += 1
-							return picked[taken]
-						end)
-					else
-						openings = buildOpenings(gateRandom, choiceCount, targetId, function()
-							return distractorPool[gateRandom:NextInteger(1, #distractorPool)]
-						end)
-					end
+		local course = CourseLayout.layout(random, {
+			gateCount = gateCount,
+			obstacleCount = obstacleCount,
+			obstacleTier = obstacleTier,
+			secretSegment = secretSegment,
+			secretRandom = secretRandom,
+			specialSegment = specialSegment,
+			stations = usesLevels,
+			attractions = {
+				unlocked = Attractions.unlocked(if level then level.index else Levels.count()),
+				heat = heat,
+				perSegment = perSegment,
+				random = Random.new(seed + ATTRACTION_SEED_SALT),
+			},
+			makeGate = function(index: number, gateRandom: Random)
+				local targetId = targets[index]
+				local target = Letters.expect(targetId)
 
-					return {
-						-- Буква отрезка живёт в самих воротах: у уровня она своя на каждом отрезке.
-						targetLetter = targetId,
-						targetGlyph = target.glyph,
-						targetVO = target.vo.name,
-						openings = openings,
-					}
-				end,
-			})
+				local openings
+				if level then
+					local picked = levelDistractors(level.index, targetId, gateRandom, choiceCount - 1)
+					local taken = 0
+					openings = buildOpenings(gateRandom, #picked + 1, targetId, function()
+						taken += 1
+						return picked[taken]
+					end)
+				else
+					openings = buildOpenings(gateRandom, choiceCount, targetId, function()
+						return distractorPool[gateRandom:NextInteger(1, #distractorPool)]
+					end)
+				end
+
+				return {
+					-- Буква отрезка живёт в самих воротах: у уровня она своя на каждом отрезке.
+					targetLetter = targetId,
+					targetGlyph = target.glyph,
+					targetVO = target.vo.name,
+					openings = openings,
+				}
+			end,
+		})
+
+		local gates, secret, special = course.gates, course.secret, course.special
+
+		-- Станция показывает и называет букву своего отрезка — ту, что спросят ворота.
+		for _, station in course.stations do
+			local letter = Letters.expect(gates[station.segment].targetLetter)
+			station.letterId = letter.id
+			station.glyph = letter.glyph
+			station.color = letter.color
+			station.vo = letter.vo.name
+		end
 
 		if secret and secretRandom and level then
 			local fresh = Levels.stage(level.index).letters
@@ -353,12 +352,13 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 				targetGlyph = current.targetGlyph,
 				targetVO = current.targetVO,
 				gates = gates,
-				obstacles = obstacles,
-				checkpoints = checkpoints,
-				rows = rows,
+				obstacles = course.obstacles,
+				checkpoints = course.checkpoints,
+				stations = course.stations,
+				attractions = course.attractions,
 				secret = secret,
-				length = length,
-				track = TrackShape.plan(runs, seed + TRACK_SEED_SALT),
+				length = course.length,
+				track = TrackShape.plan(course.runs, seed + TRACK_SEED_SALT),
 				stairs = if special
 						and specialRandom
 						and level
@@ -430,35 +430,6 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 
 		if action.kind == "finish" then
 			return { handled = true, correct = false, silent = true, finished = true }
-		end
-
-		--[[
-			Буква на дорожке. Засчитывается только буква своего отрезка и только
-			один раз; отвлекающая плитка триггера не имеет вовсе, и пробежать сквозь
-			неё ничего не стоит. Ряды пройденных до выхода отрезков не собираются:
-			их «монетки» уже взяты или упущены тогда.
-
-			Это не ответ: в статистику освоения подбор не идёт. Пробежать по букве
-			можно и случайно, а отчёт родителю должен знать только решения в воротах.
-		]]
-		if action.kind == "collect" then
-			local row = (state.spec.params.rows or {})[action.row]
-			local item = row and row.items[action.slot]
-			if not item or not item.isTarget or row.segment <= (state.spec.params.resumeFrom or 0) then
-				return { handled = false }
-			end
-			state.collected = state.collected or {}
-			if state.collected[row.index] then
-				return { handled = false }
-			end
-			state.collected[row.index] = true
-			return {
-				handled = true,
-				collect = true,
-				letterId = item.letterId,
-				row = row.index,
-				slot = action.slot,
-			}
 		end
 
 		--[[
@@ -568,6 +539,8 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 
 		local nextGate = gates[action.gateIndex + 1]
 		local changes = nextGate ~= nil and nextGate.targetLetter ~= gate.targetLetter
+		-- Где есть станции, новую букву называет станция: два раза подряд — это шум.
+		local hasStations = #(state.spec.params.stations or {}) > 0
 
 		return {
 			handled = true,
@@ -578,7 +551,7 @@ function RunCourse.new(id: string, params, options: { levels: boolean? }?)
 			-- Новая буква следующего отрезка: её название звучит сразу после реакции.
 			nextLetter = if changes then nextGate.targetLetter else nil,
 			nextGlyph = if changes then nextGate.targetGlyph else nil,
-			voAfter = if changes then { nextGate.targetVO } else nil,
+			voAfter = if changes and not hasStations then { nextGate.targetVO } else nil,
 			cooldown = if correct then 0 else state.spec.params.slowSeconds,
 			slowFactor = state.spec.params.slowFactor,
 			reactionMs = math.max(
