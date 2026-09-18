@@ -83,6 +83,8 @@ function ProfileTemplate.new(now: number): Types.Profile
 		levels = Levels.sanitize(nil),
 		tutorial = {},
 		base = Base.newProgress(),
+		-- Форма и краска построек: { [категория] = { shape, paint } }, Base.sanitizeStyle.
+		baseStyle = {},
 		inventory = {},
 		equipped = { hat = nil, back = nil, face = nil, trail = nil, pets = {} },
 		difficulty = {},
@@ -115,6 +117,7 @@ export type Snapshot = {
 	-- Текущий шаг обучения ("catch", "shop", "run") или nil, если пройдено.
 	tutorial: string?,
 	base: { [string]: number },
+	baseStyle: { [string]: Base.Style },
 	inventory: { string },
 	equipped: Types.Equipped,
 	dailyStreak: number,
@@ -168,6 +171,7 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 		levels = Levels.sanitize(profile.levels),
 		tutorial = tutorialStep(profile),
 		base = table.clone(profile.base),
+		baseStyle = Base.sanitizeStyle(profile.baseStyle),
 		inventory = table.clone(profile.inventory),
 		equipped = {
 			hat = profile.equipped.hat,

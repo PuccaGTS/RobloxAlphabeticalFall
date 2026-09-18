@@ -22,6 +22,7 @@ local EVENTS: { string } = {
 	"BuyItem", -- C→S
 	"EquipItem", -- C→S
 	"BuildUpgrade", -- C→S  улучшить постройку на своём участке
+	"SetBuildStyle", -- C→S  форма и краска постройки: (категория, форма, краска); бесплатно
 	"BaseAssigned", -- S→C  выдан участок: где он стоит (туда переезжает Башня)
 	"PlayVO", -- S→C  проиграть реплику по vo_key
 	--[[
@@ -33,7 +34,7 @@ local EVENTS: { string } = {
 	]]
 	"PlayPhrase",
 	"PlaySfx", -- S→C  короткий звуковой эффект по ключу из Config/Sfx
-	"OpenUI", -- S→C  объект мира просит открыть экран ("shop")
+	"OpenUI", -- S→C  объект мира просит открыть экран ("shop"; "build", категория — выбор постройки)
 	--[[
 		S→C  время игры: { state = "over" } — на сегодня всё, { state = "ok" } —
 		снова можно (родитель поднял лимит), { state = "rest" } — пора передохнуть.
@@ -72,6 +73,7 @@ local RATE_LIMITS: { [string]: number } = {
 	BuyItem = 4,
 	EquipItem = 8,
 	BuildUpgrade = 4,
+	SetBuildStyle = 6,
 	EquipPet = 2,
 	GoHome = 1,
 	RunHazard = 2,

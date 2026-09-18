@@ -317,4 +317,79 @@ return function()
 			end
 		)
 	end)
+
+	--[[
+		Форма и краска построек (docs/15-HOME-BASE.md § 3.1): у каждой покупки
+		есть выбор. Стиль приходит из DataStore и обязан приводиться к допустимому.
+	]]
+	describe("Config: форма и краска построек", function()
+		it(
+			"у забора и крыши по три формы, у каждой картинка и название",
+			function()
+				for _, id in { "fence", "roof" } do
+					local shapes = Base.expect(id).shapes
+					expect(#shapes).to.equal(3)
+					for _, shape in shapes do
+						expect(#shape.title > 0).to.equal(true)
+						expect(#shape.icon > 0 or shape.picture ~= nil).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it(
+			"красок больше пяти, первая — «как задумано», цвета не повторяются",
+			function()
+				expect(#Base.PAINTS >= 6).to.equal(true)
+				expect(Base.PAINTS[1].color).to.equal(nil)
+				local seen = {}
+				for index = 2, #Base.PAINTS do
+					local key = Base.PAINTS[index].color:ToHex()
+					expect(seen[key]).to.equal(nil)
+					seen[key] = true
+				end
+			end
+		)
+
+		it("красится всё, кроме двора", function()
+			for _, category in Base.CATEGORIES do
+				expect(category.paintable).to.equal(category.id ~= "yard")
+			end
+		end)
+
+		it(
+			"пустой стиль — первая форма и первая краска у всех",
+			function()
+				local style = Base.sanitizeStyle(nil)
+				for _, id in Base.ids() do
+					expect(style[id].shape).to.equal(1)
+					expect(style[id].paint).to.equal(1)
+				end
+			end
+		)
+
+		it("мусор из DataStore приводится к допустимому", function()
+			local style = Base.sanitizeStyle({
+				fence = { shape = 99, paint = -3 },
+				roof = { shape = 2.7, paint = 0 / 0 },
+				house = "синий",
+				yard = { paint = 4 },
+				unknown = { shape = 2 },
+			})
+			expect(style.fence.shape).to.equal(3)
+			expect(style.fence.paint).to.equal(1)
+			expect(style.roof.shape).to.equal(2)
+			expect(style.roof.paint).to.equal(1)
+			expect(style.house.shape).to.equal(1)
+			-- Двор не красится: краска у него всегда своя.
+			expect(style.yard.paint).to.equal(1)
+			expect(style.unknown).to.equal(nil)
+		end)
+
+		it("у категории без форм форма всегда первая", function()
+			local style = Base.sanitizeStyle({ house = { shape = 3, paint = 5 } })
+			expect(style.house.shape).to.equal(1)
+			expect(style.house.paint).to.equal(5)
+		end)
+	end)
 end

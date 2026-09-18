@@ -758,7 +758,83 @@ local ROOF_STYLES = {
 	},
 }
 
-local function buildRoof(plot: Model, at: CFrame, level: number, houseLevel: number)
+--[[
+	Шатёр: конус из колец, каждое уже предыдущего. Кольца чередуют цвета
+	уровня — у цветной крыши полосы идут по кругу, а не поперёк ската.
+]]
+local ROOF_RINGS = 7
+
+local function roofTent(
+	plot: Model,
+	at: CFrame,
+	width: number,
+	depth: number,
+	rise: number,
+	base: number,
+	style
+)
+	local radius = math.max(width, depth) / 2 * 1.08
+	for ring = 1, ROOF_RINGS do
+		local t = (ring - 1) / ROOF_RINGS
+		local diameter = radius * 2 * (1 - t) + 0.6
+		local height = rise / ROOF_RINGS
+		local slab = log(
+			`Roof_ring_{ring}`,
+			height + 0.02,
+			diameter,
+			at * CFrame.new(0, base + height * (ring - 0.5), 0) * CFrame.Angles(0, 0, math.pi / 2),
+			style.colors[(ring - 1) % #style.colors + 1],
+			plot
+		)
+		slab.Material = style.material
+		slab:SetAttribute("Paint", true)
+	end
+end
+
+-- Купол: половина эллипсоида, нижняя половина прячется в доме.
+local function roofDome(
+	plot: Model,
+	at: CFrame,
+	width: number,
+	depth: number,
+	rise: number,
+	base: number,
+	style
+)
+	local dome = part(
+		"Roof_dome",
+		Vector3.new(width * 1.02, rise * 2.2, depth * 1.02),
+		at * CFrame.new(0, base, 0),
+		style.colors[1],
+		plot
+	)
+	dome.Material = style.material
+	dome:SetAttribute("Paint", true)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = dome
+	-- Цветная крыша — полосы-пояса поверх купола, по одной на цвет.
+	if #style.colors > 1 then
+		for index = 2, #style.colors do
+			local t = (index - 1) / #style.colors
+			local y = rise * 1.1 * t
+			local scale = math.sqrt(math.max(0.05, 1 - t * t))
+			local band = part(
+				`Roof_band_{index}`,
+				Vector3.new(width * 1.03 * scale, 0.5, depth * 1.03 * scale),
+				at * CFrame.new(0, base + y, 0),
+				style.colors[index],
+				plot
+			)
+			band.CanCollide = false
+			local bandMesh = Instance.new("SpecialMesh")
+			bandMesh.MeshType = Enum.MeshType.Sphere
+			bandMesh.Parent = band
+		end
+	end
+end
+
+local function buildRoof(plot: Model, at: CFrame, level: number, houseLevel: number, shape: number?)
 	if level <= 0 or houseLevel <= 0 then
 		return
 	end
@@ -770,6 +846,26 @@ local function buildRoof(plot: Model, at: CFrame, level: number, houseLevel: num
 	local base = FLOOR + size.Y
 	local style = ROOF_STYLES[level]
 	local stripes = #style.colors
+
+	if shape == 2 or shape == 3 then
+		if shape == 2 then
+			roofTent(plot, at, width, depth, rise * 1.35, base, style)
+		else
+			roofDome(plot, at, width, depth, rise, base, style)
+		end
+		if level >= 4 then
+			local star = ball(
+				"RoofStar",
+				1.6,
+				at * CFrame.new(0, base + rise * (if shape == 2 then 1.35 else 1.1) + 1, 0),
+				Color3.fromRGB(255, 225, 90),
+				plot
+			)
+			star.Material = Enum.Material.Neon
+			trim(star)
+		end
+		return
+	end
 
 	for _, sign in { -1, 1 } do
 		for stripe = 1, stripes do
@@ -785,6 +881,7 @@ local function buildRoof(plot: Model, at: CFrame, level: number, houseLevel: num
 				plot
 			)
 			slope.Material = style.material
+			slope:SetAttribute("Paint", true)
 		end
 	end
 
@@ -1246,7 +1343,65 @@ local function fenceRail(
 	)
 end
 
-local function buildFence(plot: Model, at: CFrame, level: number)
+--[[
+	Верхушки столбиков забора (Config/Base: shapes). Забор строится как был,
+	а форма — это то, чем кончается каждый столбик: острый конёк из двух
+	клиньев или шарик. Так одна форма работает на всех четырёх уровнях забора.
+]]
+local FENCE_POSTS = { "Peg_", "Picket_", "StonePillarCap_", "LetterBlock_" }
+
+local function fenceToppers(plot: Model, shape: number)
+	if shape <= 1 then
+		return
+	end
+	for _, child in plot:GetChildren() do
+		if not child:IsA("BasePart") then
+			continue
+		end
+		local isPost = false
+		for _, prefix in FENCE_POSTS do
+			if string.sub(child.Name, 1, #prefix) == prefix then
+				isPost = true
+				break
+			end
+		end
+		if not isPost then
+			continue
+		end
+		local size = child.Size
+		local top = child.CFrame * CFrame.new(0, size.Y / 2, 0)
+		local color = child.Color
+		if shape == 2 then
+			local height = math.max(0.5, size.X * 0.8)
+			for _, side in { -1, 1 } do
+				local half = wedge(
+					`{child.Name}_Tip_{side}`,
+					Vector3.new(size.Z, height, size.X / 2),
+					-- Высокой гранью к середине столбика, как скаты крыши.
+					top
+						* CFrame.new(side * size.X / 4, height / 2, 0)
+						* CFrame.Angles(0, -side * math.pi / 2, 0),
+					color,
+					plot
+				)
+				half.Material = child.Material
+				trim(half)
+			end
+		else
+			local knob = ball(
+				`{child.Name}_Knob`,
+				math.max(0.7, size.X * 1.05),
+				top * CFrame.new(0, size.X * 0.35, 0),
+				color,
+				plot
+			)
+			knob.Material = child.Material
+			trim(knob)
+		end
+	end
+end
+
+local function buildFence(plot: Model, at: CFrame, level: number, shape: number?)
 	if level <= 0 then
 		return
 	end
@@ -1421,6 +1576,7 @@ local function buildFence(plot: Model, at: CFrame, level: number)
 			end
 		end
 	end
+	fenceToppers(plot, shape or 1)
 end
 
 -- ===== Наборы вокруг дома ========================================================
@@ -2918,25 +3074,36 @@ local function buildUpgradePad(
 	local price = Base.priceFor(categoryId, level)
 	local nextTitle = Base.nextTitle(categoryId, level)
 
-	if not price or not nextTitle then
+	local done = not price or not nextTitle
+	if done then
 		padCaption(pad, `{category.emoji} ✅`)
 		pad.Color = Color3.fromRGB(200, 230, 200)
+	else
+		padCaption(pad, `{category.emoji} {nextTitle}\n{price} ⭐`)
+	end
+
+	-- Достроенное нечего покупать, но перекрасить и сменить форму можно всегда.
+	if done and not category.paintable and not category.shapes then
 		return
 	end
 
-	padCaption(pad, `{category.emoji} {nextTitle}\n{price} ⭐`)
-
+	--[[
+		Подсказка открывает экран выбора (BuildPickerUI): форма, краска и кнопка
+		«Построить». Покупка по-прежнему на отдельной кнопке — пробежав мимо пада,
+		звёздочки не потратить, — а форма и краска меняются сразу и бесплатно,
+		прямо на доме за экраном.
+	]]
 	local prompt = Instance.new("ProximityPrompt")
-	prompt.ActionText = "Построить"
-	prompt.ObjectText = `{category.title}: {nextTitle} — {price} ⭐`
-	prompt.HoldDuration = 0.8
+	prompt.ActionText = if done then "Перекрасить" else "Выбрать"
+	prompt.ObjectText = if done then category.title else `{category.title}: {nextTitle} — {price} ⭐`
+	prompt.HoldDuration = 0.4
 	prompt.MaxActivationDistance = 12
 	prompt.RequiresLineOfSight = false
 	prompt.Parent = pad
 
 	prompt.Triggered:Connect(function(who: Player)
 		if who == player then
-			BaseService.upgrade(who, categoryId)
+			RemoteDefs.event("OpenUI"):FireClient(who, "build", categoryId)
 		end
 	end)
 end
@@ -2954,19 +3121,94 @@ end
 	двадцать деталей строятся мгновенно, а «улучшили крышу, а дом остался старый»
 	— это класс ошибок, которого при полной пересборке не существует.
 ]]
-local function renderBuildings(plot: Plot, base: { [string]: number })
-	local at = plot.cframe
-	buildYard(plot.model, at, base.yard)
-	buildHouse(plot.model, at, base.house)
-	buildRoof(plot.model, at, base.roof, base.house)
-	buildFence(plot.model, at, base.fence)
-	buildFurniture(plot.model, at, base.furniture, base.house)
-	buildDecor(plot.model, at, base.decor)
-	for id, builders in SETS do
-		for level = 1, math.min(base[id], #builders) do
-			local spot = Base.expect(id).spots[level]
-			builders[level](plot.model, at * CFrame.new(spot.x, FLOOR, spot.z))
+--[[
+	Краска постройки (Base.PAINTS). Перекрашивается главный цвет: если строитель
+	отметил детали атрибутом Paint (скаты крыши), то они; иначе цвет, которым
+	покрыта самая большая площадь, — стены дома, доски забора, кузов машинки.
+	Неон, стекло и полупрозрачное не красим: лампочки и окна остаются собой.
+]]
+local function paintable(p: BasePart): boolean
+	return p.Material ~= Enum.Material.Neon and p.Material ~= Enum.Material.Glass and p.Transparency < 0.5
+end
+
+local function applyPaint(model: Model, color: Color3?)
+	if not color then
+		return
+	end
+	local marked = {}
+	local areas: { [string]: number } = {}
+	local byKey: { [string]: Color3 } = {}
+	for _, item in model:GetDescendants() do
+		if item:IsA("BasePart") and paintable(item) then
+			if item:GetAttribute("Paint") then
+				table.insert(marked, item)
+			end
+			local size = item.Size
+			local key = item.Color:ToHex()
+			areas[key] = (areas[key] or 0) + size.X * size.Y + size.Y * size.Z + size.X * size.Z
+			byKey[key] = item.Color
 		end
+	end
+	if #marked > 0 then
+		for _, item in marked do
+			item.Color = color
+		end
+		return
+	end
+	local best, bestArea = nil, 0
+	for key, area in areas do
+		if area > bestArea then
+			best, bestArea = key, area
+		end
+	end
+	if not best then
+		return
+	end
+	for _, item in model:GetDescendants() do
+		if item:IsA("BasePart") and paintable(item) and item.Color:ToHex() == best then
+			item.Color = color
+		end
+	end
+end
+
+local function renderBuildings(plot: Plot, base: { [string]: number }, style: { [string]: Base.Style }?)
+	local at = plot.cframe
+	local styles = style or Base.sanitizeStyle(nil)
+
+	-- Каждая категория — своя модель: её перекрашивают, не задевая соседей.
+	local function category(id: string, build: (Model) -> ())
+		local model = Instance.new("Model")
+		model.Name = `Build_{id}`
+		model.Parent = plot.model
+		build(model)
+		applyPaint(model, Base.paintColor(styles[id].paint))
+	end
+
+	category("yard", function(model)
+		buildYard(model, at, base.yard)
+	end)
+	category("house", function(model)
+		buildHouse(model, at, base.house)
+	end)
+	category("roof", function(model)
+		buildRoof(model, at, base.roof, base.house, styles.roof.shape)
+	end)
+	category("fence", function(model)
+		buildFence(model, at, base.fence, styles.fence.shape)
+	end)
+	category("furniture", function(model)
+		buildFurniture(model, at, base.furniture, base.house)
+	end)
+	category("decor", function(model)
+		buildDecor(model, at, base.decor)
+	end)
+	for id, builders in SETS do
+		category(id, function(model)
+			for level = 1, math.min(base[id], #builders) do
+				local spot = Base.expect(id).spots[level]
+				builders[level](model, at * CFrame.new(spot.x, FLOOR, spot.z))
+			end
+		end)
 	end
 end
 
@@ -3026,7 +3268,7 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 
 	local base = Base.sanitize(profile and profile.base)
 	local earned = Awards.of(profile)
-	renderBuildings(plot, base)
+	renderBuildings(plot, base, Base.sanitizeStyle(profile and profile.baseStyle))
 	renderAwards(plot, earned)
 	buildRooms(plot.model, plot.cframe, earned, base.house)
 	buildRoofFlags(plot.model, plot.cframe, earned, base.house, base.roof)
@@ -3050,7 +3292,12 @@ end
 	на башенку с фонтаном, — не проверка, а рабочий день. Из игры не вызывается:
 	это команда для консоли Studio, см. docs/HOW-TO-CHECK.md.
 ]]
-function BaseService.preview(index: number, levels: { [string]: number }, earned: Awards.Earned?)
+function BaseService.preview(
+	index: number,
+	levels: { [string]: number },
+	earned: Awards.Earned?,
+	style: { [string]: any }?
+)
 	local plot = plots[index]
 	if not plot then
 		warn(`[Base] участка {index} нет`)
@@ -3059,7 +3306,7 @@ function BaseService.preview(index: number, levels: { [string]: number }, earned
 
 	clearPlot(plot)
 	local clean = Base.sanitize(levels)
-	renderBuildings(plot, clean)
+	renderBuildings(plot, clean, Base.sanitizeStyle(style))
 	if earned then
 		renderAwards(plot, earned)
 		buildRooms(plot.model, plot.cframe, earned, clean.house)
@@ -3306,8 +3553,36 @@ function BaseService.upgrade(player: Player, categoryId: any): boolean
 	return true
 end
 
+--[[
+	Форма и краска постройки. Бесплатно и сколько угодно раз: ребёнок пробует
+	цвета, как фломастеры. Из запроса берутся только номера, и оба приводятся
+	к допустимым (Base.sanitizeStyle) — прислать чужую форму нельзя.
+]]
+function BaseService.setStyle(player: Player, categoryId: any, shape: any, paint: any): boolean
+	if typeof(categoryId) ~= "string" or typeof(shape) ~= "number" or typeof(paint) ~= "number" then
+		return false
+	end
+	if not RateLimiter.allow(player, "SetBuildStyle", RemoteDefs.RATE_LIMITS.SetBuildStyle) then
+		return false
+	end
+	if not Base.get(categoryId) or not BaseService.plotOf(player) then
+		return false
+	end
+
+	ProfileService.update(player, function(p)
+		local styles = Base.sanitizeStyle(p.baseStyle)
+		styles[categoryId] = { shape = shape, paint = paint }
+		p.baseStyle = Base.sanitizeStyle(styles)
+	end)
+	BaseService.refresh(player)
+	ProfileService.pushSnapshot(player)
+	return true
+end
+
 function BaseService.start()
 	BaseService.build()
+
+	RemoteDefs.event("SetBuildStyle").OnServerEvent:Connect(BaseService.setStyle)
 
 	RemoteDefs.event("BuildUpgrade").OnServerEvent:Connect(function(player: Player, categoryId: any)
 		BaseService.upgrade(player, categoryId)

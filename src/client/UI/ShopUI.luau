@@ -174,7 +174,7 @@ function ShopUI.build(callbacks)
 	close.Position = UDim2.fromScale(0.86, 0.025)
 	close.BackgroundColor3 = Color3.fromRGB(220, 90, 80)
 	close.TextColor3 = Color3.fromRGB(255, 255, 255)
-	close.Text = "✕"
+	close.Text = "X" -- «✕» в FredokaOne не рисуется
 	close.TextScaled = true
 	close.Font = Enum.Font.FredokaOne
 	close.Parent = panel

@@ -110,7 +110,24 @@ export type Category = {
 	]]
 	spots: { Spot }?,
 	pad: Vector2?,
+	--[[
+		Формы на выбор (docs/15-HOME-BASE.md § 3.1): у забора — какие верхушки
+		у столбиков, у крыши — какой она формы. Первая — та, что была всегда.
+		Форма выбирается один раз на категорию и держится на всех её уровнях.
+	]]
+	shapes: { Shape }?,
+	-- Перекрашивается ли категория. Двор — это трава и дорожки, красить там нечего.
+	paintable: boolean?,
 }
+
+--[[
+	icon — эмодзи на карточке выбора. picture — рисунок из рамок вместо эмодзи,
+	когда подходящего эмодзи нет: столбик забора с верхушкой (BuildPickerUI).
+]]
+export type Shape = { title: string, icon: string, picture: string? }
+
+-- Стиль категории: номер формы и номер краски (Base.PAINTS). Оба с единицы.
+export type Style = { shape: number, paint: number }
 
 --[[
 	Десять категорий по четыре уровня. Цены из docs/15-HOME-BASE.md § 3.
@@ -138,6 +155,11 @@ local CATEGORIES: { Category } = {
 		emoji = "🔺",
 		prices = { 40, 150, 400, 800 },
 		levels = { "Солома", "Черепица", "Цветная", "Светящаяся" },
+		shapes = {
+			{ title = "Домиком", icon = "🏠" },
+			{ title = "Шатром", icon = "⛺" },
+			{ title = "Куполом", icon = "🍄" },
+		},
 	},
 	{
 		id = "yard",
@@ -152,6 +174,11 @@ local CATEGORIES: { Category } = {
 		emoji = "🚧",
 		prices = { 25, 100, 250, 600 },
 		levels = { "Колышки", "Штакетник", "Каменный", "Буквенный" },
+		shapes = {
+			{ title = "Ровный", icon = "", picture = "flat" },
+			{ title = "Острый", icon = "", picture = "pointed" },
+			{ title = "Круглый", icon = "", picture = "round" },
+		},
 	},
 	--[[
 		Мебель. Стоит на террасе перед домом, а не внутри: внутрь дома ребёнок
@@ -252,7 +279,32 @@ local CATEGORIES: { Category } = {
 	},
 }
 
+for _, category in CATEGORIES do
+	if category.paintable == nil then
+		category.paintable = category.id ~= "yard"
+	end
+end
+
 Base.CATEGORIES = CATEGORIES
+
+--[[
+	Краски построек (docs/15-HOME-BASE.md § 3.1). Первая — «как задумано»:
+	постройка своих цветов. Остальные перекрашивают главный цвет постройки —
+	стены дома, доски забора, кузов машинки. Бесплатно и сколько угодно раз:
+	это не покупка, а «мой дом такого цвета».
+]]
+export type Paint = { title: string, color: Color3? }
+
+Base.PAINTS = {
+	{ title = "Как задумано", color = nil },
+	{ title = "Красный", color = Color3.fromRGB(235, 95, 90) },
+	{ title = "Оранжевый", color = Color3.fromRGB(245, 160, 70) },
+	{ title = "Жёлтый", color = Color3.fromRGB(250, 215, 85) },
+	{ title = "Зелёный", color = Color3.fromRGB(115, 200, 120) },
+	{ title = "Голубой", color = Color3.fromRGB(105, 175, 235) },
+	{ title = "Фиолетовый", color = Color3.fromRGB(170, 125, 225) },
+	{ title = "Розовый", color = Color3.fromRGB(245, 155, 200) },
+} :: { Paint }
 
 local byId: { [string]: Category } = {}
 for _, category in CATEGORIES do
@@ -358,6 +410,39 @@ function Base.sanitize(progress: any): { [string]: number }
 		end
 	end
 
+	return clean
+end
+
+function Base.shapeCount(id: string): number
+	local shapes = Base.expect(id).shapes
+	return if shapes then #shapes else 1
+end
+
+function Base.paintColor(index: number): Color3?
+	local paint = Base.PAINTS[index]
+	return if paint then paint.color else nil
+end
+
+--[[
+	Стили всех категорий: у каждой форма и краска, по умолчанию первые.
+	Как и уровни, стиль приходит из DataStore: чужие ключи, дроби и номера
+	за пределами списка приводятся к допустимым, вход в игру на них не падает.
+]]
+function Base.sanitizeStyle(raw: any): { [string]: Style }
+	local clean: { [string]: Style } = {}
+	for _, category in CATEGORIES do
+		local entry = if typeof(raw) == "table" then raw[category.id] else nil
+		local shape, paint = 1, 1
+		if typeof(entry) == "table" then
+			if typeof(entry.shape) == "number" and entry.shape == entry.shape then
+				shape = math.clamp(math.floor(entry.shape), 1, Base.shapeCount(category.id))
+			end
+			if typeof(entry.paint) == "number" and entry.paint == entry.paint and category.paintable then
+				paint = math.clamp(math.floor(entry.paint), 1, #Base.PAINTS)
+			end
+		end
+		clean[category.id] = { shape = shape, paint = paint }
+	end
 	return clean
 end
 

@@ -295,6 +295,7 @@ export type Profile = {
 	-- Участок на спавне: уровень каждой категории построек, см. Config/Base.
 	-- Несколько чисел, а не список объектов: дёшево сохранять и нечему ломаться.
 	base: { [string]: number },
+	baseStyle: { [string]: { shape: number, paint: number } },
 	inventory: { string },
 	equipped: Equipped,
 	difficulty: { [string]: number }, -- уровень сложности на каждое испытание

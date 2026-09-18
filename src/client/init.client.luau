@@ -29,6 +29,7 @@ local RunHazardController = require(Controllers.RunHazardController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
+local BuildPickerUI = require(UI.BuildPickerUI)
 local ParentUI = require(UI.ParentUI)
 local DayOverScreen = require(UI.DayOverScreen)
 
@@ -140,6 +141,7 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 
 	HUD.setStars(snapshot.stars or 0)
 	ShopUI.update(snapshot)
+	BuildPickerUI.setSnapshot(snapshot)
 	TowerController.update(snapshot)
 	PortalSignController.update(snapshot)
 	TutorialController.update(snapshot)
@@ -233,9 +235,11 @@ RemoteDefs.event("PetGranted").OnClientEvent:Connect(function(letterId: string, 
 end)
 
 -- Объект в мире просит открыть экран (пад магазина в хабе).
-RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string)
+RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string, argument: any)
 	if screen == "shop" then
 		ShopUI.setOpen(true)
+	elseif screen == "build" and typeof(argument) == "string" then
+		BuildPickerUI.open(argument)
 	elseif screen == "locked_stage" then
 		HUD.toast("Эти буквы ещё спят. Поучись ещё немножко!", 3)
 	elseif screen == "need_stars" then
