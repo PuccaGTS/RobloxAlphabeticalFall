@@ -192,6 +192,28 @@ workspace:GetAttributeChangedSignal("ZZ_AudioReport"):Connect(function()
 	report:FireServer("AUDIO " .. workspace:GetAttribute("ZZ_AudioReport") .. ": " .. table.concat(lines, " | "))
 end)
 
+-- Танец по просьбе сценария (метка ZZ_Emote): открыть ряд жестов, станцевать, доложить дорожки.
+workspace:GetAttributeChangedSignal("ZZ_Emote"):Connect(function()
+	local id = workspace:GetAttribute("ZZ_Emote")
+	local panel = player.PlayerGui:FindFirstChild("AlphabetFallDance")
+	if panel and panel:FindFirstChild("Emotes") then
+		panel.Emotes.Visible = true
+	end
+	local controllers = player.PlayerScripts:FindFirstChild("Controllers", true)
+	local ok = pcall(function()
+		require(controllers.EmoteController).play(id)
+	end)
+	task.wait(1.2)
+	local tracks = {}
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		for _, t in humanoid:FindFirstChildOfClass("Animator"):GetPlayingAnimationTracks() do
+			table.insert(tracks, string.format("%s(%s len=%.1f)", t.Name, t.Animation and t.Animation.AnimationId:match("%d+") or "?", t.Length))
+		end
+	end
+	report:FireServer(`EMOTE {id} called={ok} rig={humanoid and humanoid.RigType.Name} tracks: ` .. table.concat(tracks, ", "))
+end)
+
 -- Раз в секунду: что под ногами у персонажа на клиенте.
 local lastLine = ""
 while true do

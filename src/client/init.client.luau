@@ -27,6 +27,7 @@ local LiveWorldController = require(Controllers.LiveWorldController)
 local DevController = require(Controllers.DevController)
 local PlaygroundController = require(Controllers.PlaygroundController)
 local RideController = require(Controllers.RideController)
+local EmoteController = require(Controllers.EmoteController)
 local DetailLodController = require(Controllers.DetailLodController)
 local RunHazardController = require(Controllers.RunHazardController)
 local UI = script:WaitForChild("UI")
@@ -35,6 +36,7 @@ local ShopUI = require(UI.ShopUI)
 local BuildPickerUI = require(UI.BuildPickerUI)
 local ParentUI = require(UI.ParentUI)
 local DayOverScreen = require(UI.DayOverScreen)
+local DanceUI = require(UI.DanceUI)
 
 --[[
 	Окна чата Roblox у нас нет (docs/11-COMPLIANCE.md § 2). Сервер удаляет сами каналы
@@ -62,6 +64,7 @@ PetController.init()
 LiveWorldController.init()
 PlaygroundController.init()
 RideController.init()
+EmoteController.init()
 DetailLodController.init()
 RunHazardController.init()
 DevController.init() -- панель появится только в Studio и у владельца места
@@ -95,6 +98,11 @@ HUD.build({
 })
 
 AudioController.onSubtitle(HUD.subtitle)
+
+-- Танцы и жесты: помахать соседу, станцевать на финише (Config/Emotes).
+DanceUI.build(EmoteController.play, function()
+	SfxController.play("tap")
+end)
 
 ParentUI.build()
 DayOverScreen.init(ParentUI.open)
