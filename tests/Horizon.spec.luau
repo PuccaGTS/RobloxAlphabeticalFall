@@ -56,6 +56,24 @@ return function()
 			end
 		)
 
+		it(
+			"водопад стоит за изгородью, и ближние холмы его не заслоняют",
+			function()
+				local foot = Horizon.waterfallFrame()
+				local reach = math.max(math.abs(foot.Position.X), math.abs(foot.Position.Z))
+				expect(reach > Base.GROUND_SIZE / 2 + 20).to.equal(true)
+				for _, hill in Horizon.hills() do
+					if hill.belt == "near" then
+						local toHill = Vector2.new(hill.position.X, hill.position.Z).Unit
+						local toFall = Vector2.new(foot.Position.X, foot.Position.Z).Unit
+						expect(toHill:Dot(toFall) < math.cos(Horizon.WATERFALL.clearance * 0.9)).to.equal(
+							true
+						)
+					end
+				end
+			end
+		)
+
 		it("земля горизонта накрывает горы", function()
 			for _, mountain in Horizon.mountains() do
 				local reach = math.max(math.abs(mountain.position.X), math.abs(mountain.position.Z))

@@ -7,6 +7,8 @@
 	стоит там же, где фонтан из Config/Decor, — передвинули фонтан, звук переехал.
 ]]
 
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
@@ -14,6 +16,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 local Ambient = require(Shared.Config.Ambient)
 local Decor = require(Shared.Config.Decor)
+local Horizon = require(Shared.Config.Horizon)
 local AudioController = require(script.Parent.AudioController)
 local MusicController = require(script.Parent.MusicController)
 
@@ -64,6 +67,43 @@ local function placeSpot(parent: Folder, position: Vector3, spot: Ambient.Spot)
 	end
 end
 
+--[[
+	Струйки водопада бегут сверху вниз и начинаются сверху заново: пласт воды
+	стоит на месте, а глаз видит течение. Водопад в модели горизонта, она
+	приходит клиенту целиком, так что метки на месте с самого начала.
+]]
+local function animateFallStripes()
+	local stripes: { BasePart } = {}
+	local homes: { [BasePart]: CFrame } = {}
+	local function add(instance: Instance)
+		if instance:IsA("BasePart") then
+			table.insert(stripes, instance)
+		end
+	end
+	for _, instance in CollectionService:GetTagged("AF_FallStripe") do
+		add(instance)
+	end
+	CollectionService:GetInstanceAddedSignal("AF_FallStripe"):Connect(add)
+	RunService.Heartbeat:Connect(function()
+		local now = os.clock()
+		for _, stripe in stripes do
+			if not stripe.Parent then
+				continue
+			end
+			local home = homes[stripe]
+			if not home then
+				home = stripe.CFrame
+				homes[stripe] = home
+			end
+			local top = stripe:GetAttribute("Top") or home.Position.Y
+			local bottom = stripe:GetAttribute("Bottom") or home.Position.Y
+			local phase = stripe:GetAttribute("Phase") or 0
+			local t = (now / Ambient.FALL_STRIPE_SECONDS + phase) % 1
+			stripe.CFrame = home + Vector3.new(0, top + (bottom - top) * t - home.Position.Y, 0)
+		end
+	end)
+end
+
 function AmbientController.init()
 	local sounds = Instance.new("Folder")
 	sounds.Name = "AmbientSounds"
@@ -80,6 +120,9 @@ function AmbientController.init()
 			)
 		end
 	end
+
+	placeSpot(sounds, Horizon.waterfallPool(), Ambient.WATERFALL)
+	animateFallStripes()
 
 	local bed = makeSound(Ambient.BED.key, 0, SoundService)
 	if not bed then

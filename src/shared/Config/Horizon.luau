@@ -84,6 +84,34 @@ Horizon.MOUNTAIN_SCALE = { 0.9, 1.5 }
 -- Горы сливаются с дымкой в голубой: у дальнего плана цвет холоднее.
 Horizon.MOUNTAIN_COLOR = Color3.fromRGB(120, 135, 160)
 
+--[[
+	Водопад на горизонте — прямо напротив точки появления, за порталами: скала
+	с водопадом, пенная чаша и ручей к изгороди. Ближние холмы на его месте
+	не растут, чтобы не заслонять. Туда не дойти, как и до всего горизонта,
+	но шум воды слышно уже у домов (Config/Ambient.WATERFALL).
+]]
+Horizon.WATERFALL = {
+	angle = 270, -- в градусах; −Z — туда смотрит ребёнок, появившись на площади
+	distance = EDGE + 75, -- от центра мира до подножия скалы
+	height = 50, -- откуда падает вода: ниже гребня скалы, из расщелины
+	width = 12, -- ширина потока
+	clearance = 0.2, -- в радианах: ближних холмов в этом секторе нет
+	rockScale = 0.36, -- скала — хребет MOUNTAIN в этом масштабе: около 77 студов в высоту
+}
+
+-- Кадр подножия водопада: на земле, лицом к центру мира.
+function Horizon.waterfallFrame(): CFrame
+	local angle = math.rad(Horizon.WATERFALL.angle)
+	local foot = Vector3.new(math.cos(angle), 0, math.sin(angle)) * Horizon.WATERFALL.distance
+		+ Vector3.new(0, Horizon.FAR_GROUND_TOP, 0)
+	return CFrame.lookAt(foot, Vector3.new(0, foot.Y, 0))
+end
+
+-- Где шумит вода: чаша под водопадом.
+function Horizon.waterfallPool(): Vector3
+	return (Horizon.waterfallFrame() * CFrame.new(0, 1, -12)).Position
+end
+
 export type Hill = {
 	belt: string,
 	position: Vector3, -- центр основания на земле
@@ -136,6 +164,13 @@ function Horizon.hills(): { Hill }
 		for index = 1, belt.count do
 			local angle = (index - 1 + random:NextNumber() * 0.6) / belt.count * math.pi * 2
 				+ beltIndex * 0.37
+			--[[
+				Сектор водопада ближние холмы оставляют открытым. Случайные числа
+				холм всё равно забирает: иначе от водопада сдвинулся бы весь пейзаж.
+			]]
+			local fromFall =
+				math.abs((angle - math.rad(Horizon.WATERFALL.angle) + math.pi) % (math.pi * 2) - math.pi)
+			local hidesFall = belt.name == "near" and fromFall < Horizon.WATERFALL.clearance
 			local radius = between(random, belt.radius) - EDGE + Horizon.edgeDistance(angle)
 			local height = between(random, belt.height)
 			local size = Vector3.new(between(random, belt.width), height * 2, between(random, belt.depth))
@@ -160,6 +195,9 @@ function Horizon.hills(): { Hill }
 				local offset = CFrame.Angles(0, yaw, 0)
 					:VectorToWorldSpace(Vector3.new(u * size.X, 0, v * size.Z))
 				table.insert(trees, position + offset + Vector3.new(0, rise - 1, 0))
+			end
+			if hidesFall then
+				continue
 			end
 			table.insert(hills, {
 				belt = belt.name,
