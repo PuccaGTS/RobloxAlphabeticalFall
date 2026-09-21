@@ -221,12 +221,15 @@ end
 	Крылья мельниц в парке (DecorShapes.windmill). Крутятся здесь, а не на сервере:
 	сервер двигал бы девять деталей каждый кадр по сети каждому ребёнку.
 	Дальше трёхсот студов не крутим — там их всё равно не видно.
+	Тем же крутятся колесо обозрения и пропеллер самолётика во дворе: у них
+	своя скорость в атрибуте Speed.
 ]]
 HANDLERS.AF_Windmill = function(hub: BasePart)
 	local blades = hub.Parent
 	if not blades or not blades:IsA("Model") then
 		return
 	end
+	local speed = hub:GetAttribute("Speed") or 0.7
 	local home = hub.CFrame
 	local parts: { [BasePart]: CFrame } = {}
 	for _, descendant in blades:GetDescendants() do
@@ -245,7 +248,7 @@ HANDLERS.AF_Windmill = function(hub: BasePart)
 		if camera and (camera.CFrame.Position - home.Position).Magnitude > 300 then
 			return
 		end
-		angle += dt * 0.7
+		angle += dt * speed
 		local now = home * CFrame.Angles(0, 0, angle)
 		for part, offset in parts do
 			part.CFrame = now * offset

@@ -387,9 +387,42 @@ return function()
 		end)
 
 		it("у категории без форм форма всегда первая", function()
-			local style = Base.sanitizeStyle({ house = { shape = 3, paint = 5 } })
-			expect(style.house.shape).to.equal(1)
-			expect(style.house.paint).to.equal(5)
+			local style = Base.sanitizeStyle({ furniture = { shape = 3, paint = 5 } })
+			expect(style.furniture.shape).to.equal(1)
+			expect(style.furniture.paint).to.equal(5)
+		end)
+
+		it(
+			"у дома три формы окон, у площадки и транспорта — по второй вещи на каждый уровень",
+			function()
+				expect(Base.shapeCount("house")).to.equal(3)
+				for _, shape in Base.expect("house").shapes do
+					expect(string.sub(shape.picture, 1, 7)).to.equal("window_")
+				end
+				for _, id in { "playground", "transport" } do
+					local category = Base.expect(id)
+					expect(#category.shapes >= 2).to.equal(true)
+					-- Первая форма — вещи, что были всегда, под своими названиями.
+					for level, title in category.levels do
+						expect(category.shapes[1].titles[level]).to.equal(title)
+					end
+					for _, shape in category.shapes do
+						expect(#shape.titles).to.equal(#category.levels)
+						expect(#shape.icons).to.equal(#category.levels)
+					end
+				end
+			end
+		)
+
+		it("пад и экран называют вещь выбранной формы", function()
+			expect(Base.nextTitle("transport", 0)).to.equal("Велосипед")
+			expect(Base.nextTitle("transport", 0, 2)).to.equal("Самокат")
+			expect(Base.nextTitle("playground", 3, 2)).to.equal("Колесо")
+			expect(Base.nextTitle("playground", 4, 2)).to.equal(nil)
+			-- У дома форма — окна, название уровня от неё не меняется.
+			expect(Base.nextTitle("house", 1, 2)).to.equal("Домик")
+			expect(Base.shapeIcon(Base.expect("transport").shapes[2], 4)).to.equal("🛸")
+			expect(Base.shapeIcon(Base.expect("roof").shapes[2], 4)).to.equal("⛺")
 		end)
 	end)
 end

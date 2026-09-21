@@ -244,10 +244,29 @@ local function log(
 	return p
 end
 
+-- Диск, смотрящий со стены наружу: у детали цилиндр лежит вдоль X, его поворачивают к −Z.
+local function wallDisc(name: string, diameter: number, depth: number, at: CFrame, color: Color3, plot: Model)
+	local disc = trim(
+		part(name, Vector3.new(depth, diameter, diameter), at * CFrame.Angles(0, math.pi / 2, 0), color, plot)
+	)
+	disc.Shape = Enum.PartType.Cylinder
+	return disc
+end
+
+local function windowGlass(glass: BasePart)
+	glass.Material = Enum.Material.Glass
+	glass.Reflectance = 0.15
+end
+
 --[[
 	Окно на стене. face — точка в центре окна на поверхности стены, её −Z смотрит
 	наружу. Рама, стекло с крестовиной, по желанию ставни и ящик с цветами:
 	из этих мелочей коробка и становится домом.
+
+	shape — форма окон, которую выбрал ребёнок (Config/Base, дом): 1 — квадратные,
+	2 — круглые, как иллюминатор, 3 — арочные, с полукруглым верхом. Круглое
+	и арочное вписаны в тот же проём, что и квадратное: ставни и ящик с цветами
+	садятся к ним так же.
 ]]
 local function houseWindow(
 	plot: Model,
@@ -256,22 +275,67 @@ local function houseWindow(
 	width: number,
 	height: number,
 	shutters: Color3?,
-	flowers: boolean?
+	flowers: boolean?,
+	shape: number?
 )
-	trim(
-		part(
-			`{name}Frame`,
-			Vector3.new(width + 0.6, height + 0.6, 0.3),
-			face * CFrame.new(0, 0, -0.15),
-			HOUSE_WHITE,
-			plot
+	-- Где лежит перекладина крестовины: у арки — на линии, откуда начинается полукруг.
+	local barY = 0
+	if shape == 2 then
+		local diameter = math.min(width, height) + 0.3
+		width, height = diameter, diameter
+		wallDisc(`{name}Frame`, diameter + 0.6, 0.3, face * CFrame.new(0, 0, -0.15), HOUSE_WHITE, plot)
+		windowGlass(wallDisc(`{name}Glass`, diameter, 0.3, face * CFrame.new(0, 0, -0.3), HOUSE_GLASS, plot))
+	elseif shape == 3 then
+		-- Прямоугольный низ и полукруг сверху; вместе ровно в высоту проёма.
+		local bottom = -height / 2
+		local straight = height - width / 2
+		barY = bottom + straight
+		trim(
+			part(
+				`{name}Frame`,
+				Vector3.new(width + 0.6, straight + 0.3, 0.3),
+				face * CFrame.new(0, bottom + (straight - 0.3) / 2, -0.15),
+				HOUSE_WHITE,
+				plot
+			)
 		)
-	)
-	local glass = trim(
-		part(`{name}Glass`, Vector3.new(width, height, 0.3), face * CFrame.new(0, 0, -0.3), HOUSE_GLASS, plot)
-	)
-	glass.Material = Enum.Material.Glass
-	glass.Reflectance = 0.15
+		wallDisc(`{name}FrameArch`, width + 0.6, 0.3, face * CFrame.new(0, barY, -0.15), HOUSE_WHITE, plot)
+		windowGlass(
+			trim(
+				part(
+					`{name}Glass`,
+					Vector3.new(width, straight, 0.3),
+					face * CFrame.new(0, bottom + straight / 2, -0.3),
+					HOUSE_GLASS,
+					plot
+				)
+			)
+		)
+		windowGlass(
+			wallDisc(`{name}GlassArch`, width, 0.3, face * CFrame.new(0, barY, -0.3), HOUSE_GLASS, plot)
+		)
+	else
+		trim(
+			part(
+				`{name}Frame`,
+				Vector3.new(width + 0.6, height + 0.6, 0.3),
+				face * CFrame.new(0, 0, -0.15),
+				HOUSE_WHITE,
+				plot
+			)
+		)
+		windowGlass(
+			trim(
+				part(
+					`{name}Glass`,
+					Vector3.new(width, height, 0.3),
+					face * CFrame.new(0, 0, -0.3),
+					HOUSE_GLASS,
+					plot
+				)
+			)
+		)
+	end
 	trim(
 		part(`{name}Cross`, Vector3.new(0.25, height, 0.2), face * CFrame.new(0, 0, -0.5), HOUSE_WHITE, plot)
 	)
@@ -279,7 +343,7 @@ local function houseWindow(
 		part(
 			`{name}CrossBar`,
 			Vector3.new(width, 0.25, 0.2),
-			face * CFrame.new(0, 0, -0.5),
+			face * CFrame.new(0, barY, -0.5),
 			HOUSE_WHITE,
 			plot
 		)
@@ -414,7 +478,19 @@ end
 	двухэтажный с крыльцом, каменная башенка с круглой башней и флажком.
 	Габариты прежние — вокруг них стоят мебель, комнаты букв и пады.
 ]]
-local function buildHouse(plot: Model, at: CFrame, level: number)
+local function buildHouse(plot: Model, at: CFrame, level: number, shape: number?)
+	-- Все окна дома одной формы, выбранной ребёнком.
+	local function window(
+		face: CFrame,
+		name: string,
+		width: number,
+		height: number,
+		shutters: Color3?,
+		flowers: boolean?
+	)
+		houseWindow(plot, face, name, width, height, shutters, flowers, shape)
+	end
+
 	if level <= 0 then
 		for corner = 1, 4 do
 			local angle = (corner - 1) / 4 * math.pi * 2
@@ -496,7 +572,7 @@ local function buildHouse(plot: Model, at: CFrame, level: number)
 			end
 		end
 		houseDoor(plot, at * CFrame.new(0, FLOOR + 0.6, -halfZ + 0.4), 2.8, 4)
-		houseWindow(plot, side(1, 0, 3.4) * CFrame.new(0, 0, -0.55), "WindowSide", 1.8, 1.6)
+		window(side(1, 0, 3.4) * CFrame.new(0, 0, -0.55), "WindowSide", 1.8, 1.6)
 		return
 	end
 
@@ -552,10 +628,10 @@ local function buildHouse(plot: Model, at: CFrame, level: number)
 		trim(awning)
 		local green = Color3.fromRGB(110, 170, 120)
 		for _, x in { -4.3, 4.3 } do
-			houseWindow(plot, front(x, 4.4), `Window_{x}`, 2.4, 2.4, green, true)
+			window(front(x, 4.4), `Window_{x}`, 2.4, 2.4, green, true)
 		end
 		for _, sign in { -1, 1 } do
-			houseWindow(plot, side(sign, 0, 4.4), `WindowSide_{sign}`, 2.2, 2.2, green)
+			window(side(sign, 0, 4.4), `WindowSide_{sign}`, 2.2, 2.2, green)
 		end
 		chimney(plot, at, 3.2, 3.2, level)
 	elseif level == 3 then
@@ -607,14 +683,14 @@ local function buildHouse(plot: Model, at: CFrame, level: number)
 
 		local blue = Color3.fromRGB(90, 140, 205)
 		for _, x in { -5, 5 } do
-			houseWindow(plot, front(x, 3.4), `Window1_{x}`, 2.4, 2.4, blue)
+			window(front(x, 3.4), `Window1_{x}`, 2.4, 2.4, blue)
 		end
 		for _, x in { -5, 0, 5 } do
-			houseWindow(plot, front(x, 10.4), `Window2_{x}`, 2.4, 2.4, blue, x == 0)
+			window(front(x, 10.4), `Window2_{x}`, 2.4, 2.4, blue, x == 0)
 		end
 		for _, sign in { -1, 1 } do
-			houseWindow(plot, side(sign, 0, 3.4), `WindowSide1_{sign}`, 2.2, 2.2)
-			houseWindow(plot, side(sign, 0, 10.4), `WindowSide2_{sign}`, 2.2, 2.2)
+			window(side(sign, 0, 3.4), `WindowSide1_{sign}`, 2.2, 2.2)
+			window(side(sign, 0, 10.4), `WindowSide2_{sign}`, 2.2, 2.2)
 		end
 		chimney(plot, at, 4.5, 4, level)
 	else
@@ -694,8 +770,7 @@ local function buildHouse(plot: Model, at: CFrame, level: number)
 		flag.Material = Enum.Material.Fabric
 		for _, y in { 9, 17 } do
 			-- Узкие окна башни смотрят по диагонали, наружу от угла.
-			houseWindow(
-				plot,
+			window(
 				turretAt
 					* CFrame.new(0, FLOOR + y, 0)
 					* CFrame.Angles(0, math.rad(45), 0)
@@ -707,15 +782,15 @@ local function buildHouse(plot: Model, at: CFrame, level: number)
 		end
 
 		houseDoor(plot, front(1.5, 0), 3.2, 5, true)
-		houseWindow(plot, front(5, 3.6), "Window1", 2, 2.4)
+		window(front(5, 3.6), "Window1", 2, 2.4)
 		for _, x in { -1.5, 4.5 } do
-			houseWindow(plot, front(x, 10.2), `Window2_{x}`, 2, 2.6, nil, true)
-			houseWindow(plot, front(x, 17), `Window3_{x}`, 2, 2.6)
+			window(front(x, 10.2), `Window2_{x}`, 2, 2.6, nil, true)
+			window(front(x, 17), `Window3_{x}`, 2, 2.6)
 		end
 		for _, y in { 10.2, 17 } do
-			houseWindow(plot, side(1, 0, y), `WindowSide_{y}`, 2, 2.6)
+			window(side(1, 0, y), `WindowSide_{y}`, 2, 2.6)
 		end
-		houseWindow(plot, side(-1, 2, 10.2), "WindowLeft", 2, 2.6)
+		window(side(-1, 2, 10.2), "WindowLeft", 2, 2.6)
 	end
 end
 
@@ -2651,11 +2726,618 @@ local TRANSPORT = {
 	end,
 }
 
+-- ===== Вторая форма наборов ======================================================
+
+--[[
+	У площадки и транспорта форма — это другая вещь на том же месте
+	(Config/Base: shapes, docs/15-HOME-BASE.md § 3.1): самокат вместо велосипеда,
+	колесо обозрения вместо карусели. Каждая влезает в круг своего места, как и
+	вещь первой формы: места подобраны тестом так, чтобы ничего не задеть.
+
+	Главные детали отмечены атрибутом Paint: краска ребёнка ложится на кузов
+	и крылья, а не на то, чего на детали больше по площади.
+]]
+
+-- Брус от точки до точки: ноги колеса обозрения.
+local function strut(
+	name: string,
+	from: Vector3,
+	to: Vector3,
+	thickness: number,
+	color: Color3,
+	plot: Instance
+)
+	return part(
+		name,
+		Vector3.new(thickness, thickness, (to - from).Magnitude),
+		CFrame.lookAt((from + to) / 2, to),
+		color,
+		plot
+	)
+end
+
+local function painted(p: BasePart): BasePart
+	p:SetAttribute("Paint", true)
+	return p
+end
+
+local PLAYGROUND_ALT = {
+	--[[
+		Шалаш: две покатые стенки домиком, внутри коврик и подушка. Концы открыты —
+		в него забегают насквозь и прячутся.
+	]]
+	function(plot: Model, at: CFrame)
+		local ridge, half, depth = 3.4, 2.4, 4.4
+		local slope = math.sqrt(ridge * ridge + half * half)
+		for _, sign in { -1, 1 } do
+			-- Ось X стенки идёт от её нижнего края к коньку.
+			local angle = math.atan2(ridge, -sign * half)
+			-- Гладкая, а не «ткань»: ткань темнит цвет, и шалаш выходил бурым.
+			painted(
+				part(
+					`TentWall_{sign}`,
+					Vector3.new(slope, 0.2, depth),
+					at * CFrame.new(sign * half / 2, ridge / 2, 0) * CFrame.Angles(0, 0, angle),
+					Color3.fromRGB(245, 140, 90),
+					plot
+				)
+			)
+			-- Белая кайма по низу стенки: без неё шалаш сливается в оранжевый клин.
+			trim(
+				part(
+					`TentHem_{sign}`,
+					Vector3.new(0.5, 0.25, depth + 0.05),
+					at * CFrame.new(sign * (half - 0.2), 0.3, 0) * CFrame.Angles(0, 0, angle),
+					WHITE,
+					plot
+				)
+			)
+		end
+		trim(
+			log(
+				"TentRidge",
+				depth + 1,
+				0.3,
+				at * CFrame.new(0, ridge + 0.1, 0) * CFrame.Angles(0, math.pi / 2, 0),
+				WOOD,
+				plot
+			)
+		)
+		trim(
+			part(
+				"TentFlagPole",
+				Vector3.new(0.15, 1.6, 0.15),
+				at * CFrame.new(0, ridge + 0.9, -depth / 2 - 0.3),
+				WOOD,
+				plot
+			)
+		)
+		trim(
+			part(
+				"TentFlag",
+				Vector3.new(0.05, 0.6, 0.9),
+				at * CFrame.new(0, ridge + 1.4, -depth / 2 + 0.15),
+				Color3.fromRGB(110, 170, 240),
+				plot
+			)
+		)
+		local rug = part(
+			"TentRug",
+			Vector3.new(3.2, 0.1, 3.8),
+			at * CFrame.new(0, 0.05, 0),
+			Color3.fromRGB(110, 170, 240),
+			plot
+		)
+		rug.Material = Enum.Material.Fabric
+		trim(
+			part(
+				"TentPillow",
+				Vector3.new(1.2, 0.4, 0.8),
+				at * CFrame.new(0, 0.3, 1.4),
+				Color3.fromRGB(250, 205, 80),
+				plot
+			)
+		).Material =
+			Enum.Material.Fabric
+	end,
+
+	--[[
+		Лазалка: кубик из перекладин через полтора студа — по ним забираются,
+		как по ступенькам, — площадка наверху с флажком и рукоход до второй
+		пары столбов. Всё проходимо: каждая перекладина ниже прыжка.
+	]]
+	function(plot: Model, at: CFrame)
+		local red, yellow, blue =
+			Color3.fromRGB(240, 110, 110), Color3.fromRGB(250, 205, 80), Color3.fromRGB(110, 170, 240)
+		local halfSide, top = 2, 4.5
+		for _, x in { -halfSide, halfSide } do
+			for _, z in { -halfSide, halfSide } do
+				painted(
+					part(
+						`ClimbPost_{x}_{z}`,
+						Vector3.new(0.4, top, 0.4),
+						at * CFrame.new(x, top / 2, z),
+						red,
+						plot
+					)
+				)
+			end
+		end
+		for rung, y in { 1.5, 3 } do
+			for side = 1, 4 do
+				local angle = side / 4 * math.pi * 2
+				part(
+					`ClimbBar_{rung}_{side}`,
+					Vector3.new(halfSide * 2, 0.3, 0.3),
+					at * CFrame.Angles(0, angle, 0) * CFrame.new(0, y, halfSide),
+					if rung == 1 then yellow else blue,
+					plot
+				)
+			end
+		end
+		local deck = part(
+			"ClimbDeck",
+			Vector3.new(halfSide * 2 + 0.4, 0.4, halfSide * 2 + 0.4),
+			at * CFrame.new(0, top, 0),
+			yellow,
+			plot
+		)
+		deck.Material = Enum.Material.WoodPlanks
+		trim(
+			part(
+				"ClimbFlagPole",
+				Vector3.new(0.15, 2.2, 0.15),
+				at * CFrame.new(-halfSide, top + 1.3, -halfSide),
+				WHITE,
+				plot
+			)
+		)
+		trim(
+			part(
+				"ClimbFlag",
+				Vector3.new(1.1, 0.7, 0.05),
+				at * CFrame.new(-halfSide + 0.6, top + 2, -halfSide),
+				red,
+				plot
+			)
+		).Material =
+			Enum.Material.Fabric
+
+		-- Рукоход: от площадки вбок, к двум столбам; под ним можно пройти.
+		local farX = halfSide + 4.2
+		for _, z in { -0.9, 0.9 } do
+			painted(
+				part(
+					`MonkeyPost_{z}`,
+					Vector3.new(0.4, top, 0.4),
+					at * CFrame.new(farX, top / 2, z),
+					red,
+					plot
+				)
+			)
+			part(
+				`MonkeyRail_{z}`,
+				Vector3.new(farX - halfSide, 0.3, 0.3),
+				at * CFrame.new((farX + halfSide) / 2, top, z),
+				blue,
+				plot
+			)
+		end
+		for rung = 1, 5 do
+			trim(
+				log(
+					`MonkeyRung_{rung}`,
+					1.8,
+					0.25,
+					at
+						* CFrame.new(halfSide + rung * (farX - halfSide) / 6, top, 0)
+						* CFrame.Angles(0, math.pi / 2, 0),
+					yellow,
+					plot
+				)
+			)
+		end
+		-- Цветные зацепы на задней стенке: лазалка, а не просто клетка.
+		for index, spec in { { -1.2, 0.8 }, { 0.3, 1.3 }, { 1.1, 2.3 }, { -0.6, 2.8 }, { 0.8, 3.7 } } do
+			trim(
+				ball(
+					`ClimbHold_{index}`,
+					0.45,
+					at * CFrame.new(spec[1], spec[2], halfSide + 0.2),
+					if index % 2 == 0 then yellow else blue,
+					plot
+				)
+			)
+		end
+	end,
+
+	--[[
+		Надувной бассейн: круг из надутых «колбасок» в полоску, вода, уточка
+		и мяч. В воду можно встать: она по щиколотку.
+	]]
+	function(plot: Model, at: CFrame)
+		local water =
+			cylinder("PoolWater", 0.5, 4.2, at * CFrame.new(0, 0.25, 0), Color3.fromRGB(120, 200, 240), plot)
+		water.Material = Enum.Material.Glass
+		water.Transparency = 0.15
+		local segments = 14
+		for index = 1, segments do
+			local angle = index / segments * math.pi * 2
+			local bead = ball(
+				`PoolRing_{index}`,
+				1.1,
+				at * CFrame.new(math.cos(angle) * 2.35, 0.55, math.sin(angle) * 2.35),
+				if index % 2 == 0 then WHITE else Color3.fromRGB(90, 150, 230),
+				plot
+			)
+			if index % 2 == 1 then
+				painted(bead)
+			end
+		end
+		-- Уточка: тельце, голова и клюв.
+		local duck = at * CFrame.new(0.8, 0.6, -0.5)
+		trim(ball("PoolDuck", 0.8, duck, Color3.fromRGB(255, 220, 70), plot))
+		trim(
+			ball("PoolDuckHead", 0.55, duck * CFrame.new(0, 0.45, -0.25), Color3.fromRGB(255, 220, 70), plot)
+		)
+		trim(
+			part("PoolDuckBeak", Vector3.new(0.25, 0.12, 0.3), duck * CFrame.new(0, 0.42, -0.6), ORANGE, plot)
+		)
+		local beachBall = at * CFrame.new(-1, 0.85, 0.6)
+		trim(ball("PoolBall", 0.9, beachBall, WHITE, plot))
+		for index, color in { Color3.fromRGB(240, 100, 110), Color3.fromRGB(250, 205, 80) } do
+			local band = trim(
+				part(
+					`PoolBallBand_{index}`,
+					Vector3.new(0.35, 0.93, 0.93),
+					beachBall * CFrame.Angles(0, index * math.pi / 2, 0),
+					color,
+					plot
+				)
+			)
+			band.Shape = Enum.PartType.Cylinder
+		end
+	end,
+
+	--[[
+		Колесо обозрения: две пары ног, ось, обод с восемью спицами и круглые
+		кабинки — круглые, чтобы на повороте не вставать вверх ногами. Крутит
+		клиент (AF_Windmill, как крылья мельниц), медленно.
+	]]
+	function(plot: Model, at: CFrame)
+		local axleHeight, radius = 4.4, 2.7
+		local hubAt = at * CFrame.new(0, axleHeight, 0)
+		cylinder("WheelBase", 0.3, 5, at * CFrame.new(0, 0.15, 0), Color3.fromRGB(200, 195, 185), plot)
+		for _, x in { -1.1, 1.1 } do
+			for _, z in { -1.8, 1.8 } do
+				painted(
+					strut(
+						`WheelLeg_{x}_{z}`,
+						(at * CFrame.new(x * 1.3, 0, z)).Position,
+						(hubAt * CFrame.new(x, 0, 0)).Position,
+						0.35,
+						Color3.fromRGB(110, 170, 240),
+						plot
+					)
+				)
+			end
+		end
+		trim(log("WheelAxle", 2.6, 0.4, hubAt, Color3.fromRGB(150, 155, 165), plot))
+
+		local wheel = moving(plot, "FerrisWheel")
+		-- Мельница крутит вокруг локальной Z центра: разворачиваем её вдоль оси колеса.
+		local hub = trim(
+			part(
+				"WheelHub",
+				Vector3.new(0.9, 0.9, 0.9),
+				hubAt * CFrame.Angles(0, math.pi / 2, 0),
+				WHITE,
+				wheel
+			)
+		)
+		hub:SetAttribute("Speed", 0.35)
+		CollectionService:AddTag(hub, "AF_Windmill")
+		local rimSegments = 16
+		for index = 1, rimSegments do
+			local angle = index / rimSegments * math.pi * 2
+			trim(
+				painted(
+					part(
+						`WheelRim_{index}`,
+						Vector3.new(0.25, 0.3, 2 * math.pi * radius / rimSegments + 0.1),
+						hubAt * CFrame.Angles(angle, 0, 0) * CFrame.new(0, radius, 0),
+						Color3.fromRGB(240, 110, 110),
+						wheel
+					)
+				)
+			)
+		end
+		local cabins = {
+			Color3.fromRGB(250, 205, 80),
+			Color3.fromRGB(120, 200, 120),
+			Color3.fromRGB(110, 170, 240),
+			Color3.fromRGB(255, 150, 200),
+		}
+		for index = 1, 8 do
+			local angle = index / 8 * math.pi * 2
+			trim(
+				part(
+					`WheelSpoke_{index}`,
+					Vector3.new(0.15, radius, 0.15),
+					hubAt * CFrame.Angles(angle, 0, 0) * CFrame.new(0, radius / 2, 0),
+					WHITE,
+					wheel
+				)
+			)
+			if index % 2 == 0 then
+				trim(
+					ball(
+						`WheelCabin_{index}`,
+						1.2,
+						hubAt * CFrame.Angles(angle, 0, 0) * CFrame.new(0, radius, 0),
+						cabins[index // 2],
+						wheel
+					)
+				)
+			end
+		end
+	end,
+}
+
+local TRANSPORT_ALT = {
+	-- Самокат: дека на двух колёсиках, руль на высокой стойке и звонок.
+	function(plot: Model, at: CFrame)
+		local color = Color3.fromRGB(245, 120, 170)
+		for _, z in { -0.95, 0.95 } do
+			local wheel = trim(
+				part(`ScooterWheel_{z}`, Vector3.new(0.3, 0.7, 0.7), at * CFrame.new(0, 0.35, z), BLACK, plot)
+			)
+			wheel.Shape = Enum.PartType.Cylinder
+		end
+		trim(
+			painted(
+				part("ScooterDeck", Vector3.new(0.6, 0.2, 2.2), at * CFrame.new(0, 0.55, 0.05), color, plot)
+			)
+		)
+		trim(
+			painted(
+				part(
+					"ScooterStem",
+					Vector3.new(0.2, 2.4, 0.2),
+					tilted(at * CFrame.new(0, 1.7, -1.05), -10, 0, 0),
+					color,
+					plot
+				)
+			)
+		)
+		trim(part("ScooterBar", Vector3.new(1.4, 0.15, 0.15), at * CFrame.new(0, 2.85, -1.25), WHITE, plot))
+		for _, x in { -0.7, 0.7 } do
+			trim(
+				part(
+					`ScooterGrip_{x}`,
+					Vector3.new(0.3, 0.2, 0.2),
+					at * CFrame.new(x, 2.85, -1.25),
+					BLACK,
+					plot
+				)
+			)
+		end
+		trim(ball("ScooterBell", 0.3, at * CFrame.new(0.35, 3, -1.25), Color3.fromRGB(250, 205, 80), plot))
+	end,
+
+	--[[
+		Грузовичок: кабина впереди, открытый кузов с кубиками. Сиденье в кузове:
+		в грузовичке, как и в машинке, можно посидеть.
+	]]
+	function(plot: Model, at: CFrame)
+		local blue, yellow = Color3.fromRGB(80, 140, 225), Color3.fromRGB(250, 205, 80)
+		local sky = Color3.fromRGB(180, 225, 250)
+		painted(part("TruckChassis", Vector3.new(3.4, 1.2, 6.4), at * CFrame.new(0, 1.3, 0), blue, plot))
+		painted(part("TruckCabin", Vector3.new(3.2, 1.9, 2.2), at * CFrame.new(0, 2.85, -1.9), blue, plot))
+		trim(part("TruckWindshield", Vector3.new(2.6, 1.1, 0.1), at * CFrame.new(0, 3, -3.02), sky, plot)).Material =
+			Enum.Material.Glass
+		for _, x in { -1, 1 } do
+			part(
+				`TruckBedSide_{x}`,
+				Vector3.new(0.2, 0.9, 3.9),
+				at * CFrame.new(x * 1.6, 2.35, 1.2),
+				yellow,
+				plot
+			)
+			trim(
+				part(
+					`TruckWindow_{x}`,
+					Vector3.new(0.1, 0.9, 1.4),
+					at * CFrame.new(x * 1.62, 3.05, -1.9),
+					sky,
+					plot
+				)
+			).Material =
+				Enum.Material.Glass
+			for _, z in { -2, 2 } do
+				local wheel = part(
+					`TruckWheel_{x}_{z}`,
+					Vector3.new(0.7, 1.6, 1.6),
+					at * CFrame.new(x * 1.55, 0.8, z),
+					BLACK,
+					plot
+				)
+				wheel.Shape = Enum.PartType.Cylinder
+				local cap = trim(
+					part(
+						`TruckHubcap_{x}_{z}`,
+						Vector3.new(0.75, 0.7, 0.7),
+						at * CFrame.new(x * 1.56, 0.8, z),
+						Color3.fromRGB(220, 220, 225),
+						plot
+					)
+				)
+				cap.Shape = Enum.PartType.Cylinder
+			end
+			local light = trim(
+				ball(
+					`TruckHeadlight_{x}`,
+					0.6,
+					at * CFrame.new(x * 1.1, 1.5, -3.2),
+					Color3.fromRGB(255, 240, 170),
+					plot
+				)
+			)
+			light.Material = Enum.Material.Neon
+		end
+		part("TruckTailgate", Vector3.new(3.4, 0.9, 0.2), at * CFrame.new(0, 2.35, 3.1), yellow, plot)
+		for index, spec in { { -0.8, Color3.fromRGB(240, 110, 110) }, { 0.8, Color3.fromRGB(120, 200, 120) } } do
+			part(
+				`TruckCrate_{index}`,
+				Vector3.new(1, 1, 1),
+				at * CFrame.new(spec[1], 2.4, 2.4),
+				spec[2],
+				plot
+			)
+		end
+		trim(
+			part(
+				"TruckBumper",
+				Vector3.new(3.6, 0.35, 0.3),
+				at * CFrame.new(0, 0.85, -3.25),
+				Color3.fromRGB(220, 220, 225),
+				plot
+			)
+		)
+		local seat = Instance.new("Seat")
+		seat.Name = "TruckSeat"
+		seat.Size = Vector3.new(2, 0.4, 1.4)
+		seat.CFrame = at * CFrame.new(0, 2.1, 0.4)
+		seat.Color = Color3.fromRGB(60, 60, 70)
+		seat.Anchored = true
+		seat.TopSurface = Enum.SurfaceType.Smooth
+		seat.BottomSurface = Enum.SurfaceType.Smooth
+		seat.Parent = plot
+	end,
+
+	--[[
+		Самолётик на стоянке: носом к калитке, пропеллер крутится (AF_Windmill),
+		крылья и хвост, три колеса шасси и стекло кабины.
+	]]
+	function(plot: Model, at: CFrame)
+		local body = at * CFrame.new(0, 1.5, 0)
+		local along = CFrame.Angles(0, math.pi / 2, 0)
+		painted(log("PlaneBody", 4.6, 1.4, body * along, ORANGE, plot))
+		painted(ball("PlaneNose", 1.4, body * CFrame.new(0, 0, -2.3), ORANGE, plot))
+		painted(log("PlaneTail", 1.4, 0.9, body * CFrame.new(0, 0.15, 2.9) * along, ORANGE, plot))
+		painted(part("PlaneWing", Vector3.new(5.6, 0.2, 1.4), body * CFrame.new(0, -0.2, -0.5), ORANGE, plot))
+		part("PlaneFin", Vector3.new(0.2, 1.3, 1), body * CFrame.new(0, 0.95, 3.1), WHITE, plot)
+		part("PlaneStabilizer", Vector3.new(2.2, 0.15, 0.8), body * CFrame.new(0, 0.2, 3.2), WHITE, plot)
+		for _, x in { -2.5, 2.5 } do
+			trim(
+				part(
+					`PlaneWingTip_{x}`,
+					Vector3.new(0.6, 0.22, 1.42),
+					body * CFrame.new(x, -0.2, -0.5),
+					WHITE,
+					plot
+				)
+			)
+		end
+		local canopy = trim(
+			ball("PlaneCanopy", 1.1, body * CFrame.new(0, 0.6, -0.4), Color3.fromRGB(150, 205, 240), plot)
+		)
+		canopy.Material = Enum.Material.Glass
+		for index, spec in { { -1.2, -0.6 }, { 1.2, -0.6 }, { 0, 2.6 } } do
+			local size = if index == 3 then 0.5 else 0.8
+			local wheel = trim(
+				part(
+					`PlaneWheel_{index}`,
+					Vector3.new(0.3, size, size),
+					at * CFrame.new(spec[1], size / 2, spec[2]),
+					BLACK,
+					plot
+				)
+			)
+			wheel.Shape = Enum.PartType.Cylinder
+			if index < 3 then
+				trim(
+					part(
+						`PlaneGear_{index}`,
+						Vector3.new(0.15, 0.6, 0.15),
+						at * CFrame.new(spec[1], 0.9, spec[2]),
+						Color3.fromRGB(150, 155, 165),
+						plot
+					)
+				)
+			end
+		end
+
+		local propeller = moving(plot, "PlanePropeller")
+		local hub = trim(
+			part("PlaneHub", Vector3.new(0.4, 0.4, 0.4), body * CFrame.new(0, 0, -3.1), WHITE, propeller)
+		)
+		hub:SetAttribute("Speed", 6)
+		CollectionService:AddTag(hub, "AF_Windmill")
+		for index = 1, 2 do
+			trim(
+				part(
+					`PlaneBlade_{index}`,
+					Vector3.new(0.25, 2.2, 0.08),
+					body * CFrame.new(0, 0, -3.15) * CFrame.Angles(0, 0, index * math.pi / 2),
+					BLACK,
+					propeller
+				)
+			)
+		end
+	end,
+
+	--[[
+		Летающая тарелка над посадочным кругом: парит вверх-вниз (AF_Float), по краю
+		огоньки, под стеклянным колпаком — зелёный инопланетянин с глазками.
+	]]
+	function(plot: Model, at: CFrame)
+		local metal = Color3.fromRGB(170, 175, 200)
+		cylinder("UfoPad", 0.2, 5, at * CFrame.new(0, 0.1, 0), Color3.fromRGB(150, 155, 165), plot)
+		trim(
+			cylinder("UfoPadRing", 0.22, 3.6, at * CFrame.new(0, 0.11, 0), Color3.fromRGB(250, 205, 80), plot)
+		)
+		local ufo = moving(plot, "UfoFloat")
+		local center = at * CFrame.new(0, 3, 0)
+		local disc = trim(painted(cylinder("UfoDisc", 0.6, 5.6, center, metal, ufo)))
+		disc.Material = Enum.Material.Metal
+		disc:SetAttribute("Amplitude", 0.4)
+		disc:SetAttribute("Period", 3)
+		CollectionService:AddTag(disc, "AF_Float")
+		trim(painted(cylinder("UfoBelly", 0.6, 3.4, center * CFrame.new(0, -0.5, 0), metal, ufo)))
+		local dome =
+			trim(ball("UfoDome", 2.6, center * CFrame.new(0, 0.4, 0), Color3.fromRGB(170, 225, 250), ufo))
+		dome.Material = Enum.Material.Glass
+		dome.Transparency = 0.35
+		local alien = center * CFrame.new(0, 0.9, 0)
+		trim(ball("UfoAlien", 0.9, alien, Color3.fromRGB(120, 215, 110), ufo))
+		eyes(ufo, alien * CFrame.new(0, 0.1, -0.35), "UfoAlien", 0.18, 0.2)
+		for index = 1, 8 do
+			local angle = index / 8 * math.pi * 2
+			local light = trim(ball(
+				`UfoLight_{index}`,
+				0.45,
+				-- На самом краю диска: чуть глубже — и огоньки прячутся внутри.
+				center * CFrame.new(math.cos(angle) * 2.85, 0, math.sin(angle) * 2.85),
+				if index % 2 == 0 then Color3.fromRGB(255, 220, 90) else Color3.fromRGB(120, 230, 255),
+				ufo
+			))
+			light.Material = Enum.Material.Neon
+		end
+	end,
+}
+
 local SETS: { [string]: { (Model, CFrame) -> () } } = {
 	garden = GARDEN,
 	playground = PLAYGROUND,
 	pets = PETS,
 	transport = TRANSPORT,
+}
+
+-- Вещи второй формы набора (Config/Base: shapes); первая форма — SETS.
+local SET_SHAPES: { [string]: { [number]: { (Model, CFrame) -> () } } } = {
+	playground = { [2] = PLAYGROUND_ALT },
+	transport = { [2] = TRANSPORT_ALT },
 }
 
 -- ===== Заработанное учёбой =======================================================
@@ -3052,7 +3734,8 @@ local function buildUpgradePad(
 	index: number,
 	categoryId: string,
 	player: Player,
-	level: number
+	level: number,
+	shape: number
 )
 	local category = Base.expect(categoryId)
 	local spot = if category.pad
@@ -3072,7 +3755,7 @@ local function buildUpgradePad(
 	)
 
 	local price = Base.priceFor(categoryId, level)
-	local nextTitle = Base.nextTitle(categoryId, level)
+	local nextTitle = Base.nextTitle(categoryId, level, shape)
 
 	local done = not price or not nextTitle
 	if done then
@@ -3188,7 +3871,7 @@ local function renderBuildings(plot: Plot, base: { [string]: number }, style: { 
 		buildYard(model, at, base.yard)
 	end)
 	category("house", function(model)
-		buildHouse(model, at, base.house)
+		buildHouse(model, at, base.house, styles.house.shape)
 	end)
 	category("roof", function(model)
 		buildRoof(model, at, base.roof, base.house, styles.roof.shape)
@@ -3202,7 +3885,8 @@ local function renderBuildings(plot: Plot, base: { [string]: number }, style: { 
 	category("decor", function(model)
 		buildDecor(model, at, base.decor)
 	end)
-	for id, builders in SETS do
+	for id, firstShape in SETS do
+		local builders = SET_SHAPES[id] and SET_SHAPES[id][styles[id].shape] or firstShape
 		category(id, function(model)
 			for level = 1, math.min(base[id], #builders) do
 				local spot = Base.expect(id).spots[level]
@@ -3268,7 +3952,8 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 
 	local base = Base.sanitize(profile and profile.base)
 	local earned = Awards.of(profile)
-	renderBuildings(plot, base, Base.sanitizeStyle(profile and profile.baseStyle))
+	local styles = Base.sanitizeStyle(profile and profile.baseStyle)
+	renderBuildings(plot, base, styles)
 	renderAwards(plot, earned)
 	buildRooms(plot.model, plot.cframe, earned, base.house)
 	buildRoofFlags(plot.model, plot.cframe, earned, base.house, base.roof)
@@ -3276,11 +3961,27 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 	renderYardPets(plot, player, earned)
 
 	for index, categoryId in Base.rowIds() do
-		buildUpgradePad(plot.model, plot.cframe, index, categoryId, player, base[categoryId])
+		buildUpgradePad(
+			plot.model,
+			plot.cframe,
+			index,
+			categoryId,
+			player,
+			base[categoryId],
+			styles[categoryId].shape
+		)
 	end
 	for _, categoryId in Base.ids() do
 		if Base.expect(categoryId).pad then
-			buildUpgradePad(plot.model, plot.cframe, 0, categoryId, player, base[categoryId])
+			buildUpgradePad(
+				plot.model,
+				plot.cframe,
+				0,
+				categoryId,
+				player,
+				base[categoryId],
+				styles[categoryId].shape
+			)
 		end
 	end
 end

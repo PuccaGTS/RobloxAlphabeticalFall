@@ -103,6 +103,61 @@ local function postPicture(parent: Instance, picture: string)
 	rail.Parent = holder
 end
 
+--[[
+	Окно дома: рама с крестовиной — квадратная, круглая или с полукруглым верхом.
+	Форма дома — это его окна, и на карточке ребёнок видит именно окно.
+]]
+local function windowPicture(parent: Instance, picture: string)
+	local frameColor = Color3.fromRGB(245, 240, 230)
+	local holder = Instance.new("Frame")
+	holder.AnchorPoint = Vector2.new(0.5, 0.5)
+	holder.Size = UDim2.fromScale(0.5, 0.5)
+	holder.Position = UDim2.fromScale(0.5, 0.33)
+	holder.BackgroundTransparency = 1
+	holder.Parent = parent
+	local aspect = Instance.new("UIAspectRatioConstraint")
+	aspect.AspectRatio = if picture == "window_arch" then 0.75 else 1
+	aspect.Parent = holder
+
+	local function pane(size: UDim2, position: UDim2, round: boolean, z: number)
+		local glass = Instance.new("Frame")
+		glass.Size = size
+		glass.Position = position
+		glass.BackgroundColor3 = Color3.fromRGB(150, 205, 240)
+		glass.BorderSizePixel = 0
+		glass.ZIndex = z
+		glass.Parent = holder
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = frameColor
+		stroke.Thickness = 4
+		stroke.Parent = glass
+		if round then
+			corner(glass, 100)
+		end
+	end
+
+	-- Перекладина крестовины; у арки — там, где начинается полукруг.
+	local barY = 0.5
+	if picture == "window_arch" then
+		-- Круг сверху, прямоугольник поверх его нижней половины: вместе — арка.
+		pane(UDim2.fromScale(1, 0.75), UDim2.fromScale(0, 0), true, 1)
+		pane(UDim2.fromScale(1, 0.625), UDim2.fromScale(0, 0.375), false, 2)
+		barY = 0.375
+	else
+		pane(UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), picture == "window_round", 1)
+	end
+	for _, vertical in { true, false } do
+		local bar = Instance.new("Frame")
+		bar.AnchorPoint = Vector2.new(0.5, 0.5)
+		bar.Size = if vertical then UDim2.new(0, 4, 1, 0) else UDim2.new(1, 0, 0, 4)
+		bar.Position = UDim2.fromScale(0.5, if vertical then 0.5 else barY)
+		bar.BackgroundColor3 = frameColor
+		bar.BorderSizePixel = 0
+		bar.ZIndex = 3
+		bar.Parent = holder
+	end
+end
+
 local function pips(price: number): string
 	return `{price} ` .. string.rep("⭐", math.clamp(math.ceil(price / 50), 1, 5))
 end
@@ -127,7 +182,9 @@ local function render()
 	local level = snapshot and snapshot.base and snapshot.base[categoryId] or 0
 	local stars = snapshot and snapshot.stars or 0
 	local price = Base.priceFor(categoryId, level)
-	local nextTitle = Base.nextTitle(categoryId, level)
+	local nextTitle = Base.nextTitle(categoryId, level, chosen.shape)
+	-- Какую вещь показывать на карточках форм: ту, что покупают, или последнюю построенную.
+	local shownLevel = math.clamp(level + 1, 1, Base.maxLevel(categoryId))
 
 	label(
 		panel,
@@ -166,12 +223,20 @@ local function render()
 			card.Text = ""
 			card.Parent = panel
 			corner(card, 14)
-			if shape.picture then
+			if shape.picture and string.sub(shape.picture, 1, 7) == "window_" then
+				windowPicture(card, shape.picture)
+			elseif shape.picture then
 				postPicture(card, shape.picture)
 			else
-				label(card, shape.icon, UDim2.fromScale(1, 0.62), UDim2.fromScale(0, 0.02))
+				label(
+					card,
+					Base.shapeIcon(shape, shownLevel),
+					UDim2.fromScale(1, 0.62),
+					UDim2.fromScale(0, 0.02)
+				)
 			end
-			label(card, shape.title, UDim2.fromScale(0.92, 0.3), UDim2.fromScale(0.04, 0.66))
+			local title = if shape.titles then shape.titles[shownLevel] else shape.title
+			label(card, title, UDim2.fromScale(0.92, 0.3), UDim2.fromScale(0.04, 0.66))
 			if chosen.shape == index then
 				local stroke = Instance.new("UIStroke")
 				stroke.Color = GOLD

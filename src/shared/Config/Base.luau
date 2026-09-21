@@ -122,9 +122,20 @@ export type Category = {
 
 --[[
 	icon — эмодзи на карточке выбора. picture — рисунок из рамок вместо эмодзи,
-	когда подходящего эмодзи нет: столбик забора с верхушкой (BuildPickerUI).
+	когда подходящего эмодзи нет: столбик забора с верхушкой, окно (BuildPickerUI).
+
+	У наборов форма — это другая вещь на том же месте: самокат вместо велосипеда,
+	колесо обозрения вместо карусели. Тогда у формы свои названия и значки
+	на каждый уровень (titles, icons): на карточке — та вещь, которую покупают
+	сейчас, а на паде — её название, а не название вещи из другой формы.
 ]]
-export type Shape = { title: string, icon: string, picture: string? }
+export type Shape = {
+	title: string,
+	icon: string,
+	picture: string?,
+	titles: { string }?,
+	icons: { string }?,
+}
 
 -- Стиль категории: номер формы и номер краски (Base.PAINTS). Оба с единицы.
 export type Style = { shape: number, paint: number }
@@ -148,6 +159,12 @@ local CATEGORIES: { Category } = {
 		emoji = "🏠",
 		prices = { 50, 200, 500, 1000 },
 		levels = { "Шалаш", "Домик", "Двухэтажный", "Башенка" },
+		-- Форма дома — его окна: на всех четырёх уровнях, от сруба до башенки.
+		shapes = {
+			{ title = "Квадратные", icon = "", picture = "window_square" },
+			{ title = "Круглые", icon = "", picture = "window_round" },
+			{ title = "Арочные", icon = "", picture = "window_arch" },
+		},
 	},
 	{
 		id = "roof",
@@ -238,6 +255,20 @@ local CATEGORIES: { Category } = {
 		emoji = "🛝",
 		prices = { 35, 80, 160, 300 },
 		levels = { "Песочница", "Горка", "Батут", "Карусель" },
+		shapes = {
+			{
+				title = "Песочница",
+				icon = "🏖️",
+				titles = { "Песочница", "Горка", "Батут", "Карусель" },
+				icons = { "🏖️", "🛝", "🤸", "🎠" },
+			},
+			{
+				title = "Шалаш",
+				icon = "⛺",
+				titles = { "Шалаш", "Лазалка", "Бассейн", "Колесо" },
+				icons = { "⛺", "🧗", "🏊", "🎡" },
+			},
+		},
 		-- За домом слева; карусели там тесно, она встаёт у калитки.
 		spots = {
 			{ x = -9, z = 25, r = 3.5 },
@@ -268,6 +299,25 @@ local CATEGORIES: { Category } = {
 		emoji = "🚲",
 		prices = { 50, 120, 250, 500 },
 		levels = { "Велосипед", "Машинка", "Воздушный шар", "Ракета" },
+		shapes = {
+			{
+				title = "Велосипед",
+				icon = "🚲",
+				titles = {
+					"Велосипед",
+					"Машинка",
+					"Воздушный шар",
+					"Ракета",
+				},
+				icons = { "🚲", "🚗", "🎈", "🚀" },
+			},
+			{
+				title = "Самокат",
+				icon = "🛴",
+				titles = { "Самокат", "Грузовичок", "Самолётик", "Тарелка" },
+				icons = { "🛴", "🚚", "🛩️", "🛸" },
+			},
+		},
 		-- Вдоль правого забора: от велосипеда у калитки до ракеты у дома.
 		spots = {
 			{ x = 23, z = -21, r = 2.5 },
@@ -317,6 +367,13 @@ for _, category in CATEGORIES do
 		category.spots == nil or #category.spots == #category.levels,
 		`Base: у категории {category.id} мест не столько, сколько уровней`
 	)
+	for index, shape in category.shapes or {} do
+		assert(
+			(shape.titles == nil or #shape.titles == #category.levels)
+				and (shape.icons == nil or #shape.icons == #category.levels),
+			`Base: у формы {index} категории {category.id} подписей не столько, сколько уровней`
+		)
+	end
 	byId[category.id] = category
 end
 
@@ -366,14 +423,23 @@ function Base.priceFor(id: string, currentLevel: number): number?
 	return category.prices[next_]
 end
 
--- Название следующего уровня — для подписи на паде: ребёнок видит, что он покупает.
-function Base.nextTitle(id: string, currentLevel: number): string?
+--[[
+	Название следующего уровня — для подписи на паде: ребёнок видит, что он покупает.
+	shape — выбранная форма: у наборов она меняет саму вещь, а с ней и название.
+]]
+function Base.nextTitle(id: string, currentLevel: number, shape: number?): string?
 	local category = Base.expect(id)
 	local next_ = currentLevel + 1
 	if next_ < 1 or next_ > #category.levels then
 		return nil
 	end
-	return category.levels[next_]
+	local chosen = category.shapes and category.shapes[shape or 1]
+	return if chosen and chosen.titles then chosen.titles[next_] else category.levels[next_]
+end
+
+-- Значок формы на карточке выбора: у наборов — вещь того уровня, что покупают сейчас.
+function Base.shapeIcon(shape: Shape, level: number): string
+	return if shape.icons then shape.icons[math.clamp(level, 1, #shape.icons)] else shape.icon
 end
 
 --[[
