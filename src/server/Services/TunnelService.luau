@@ -2878,6 +2878,8 @@ function TunnelService.spawn(player: Player, spec: any)
 
 	local model = Instance.new("Model")
 	model.Name = `Tunnel_{player.UserId}`
+	-- Какой это забег: по метке клиент выбирает музыку (Controllers/MusicController).
+	model:SetAttribute("Challenge", spec.challengeId)
 	model.Parent = ensureContainer()
 
 	buildCorridor(model, origin, length, spec.params.obstacles, spec.params.attractions)

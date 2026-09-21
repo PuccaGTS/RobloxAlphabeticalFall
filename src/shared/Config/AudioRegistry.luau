@@ -101,6 +101,31 @@ for _, key in Stages.THEMES do
 	end
 end
 
+--[[
+	Звук из библиотеки Roblox: музыка (Config/Music), звуки природы (Config/Ambient)
+	и гудок паровозика. Её не записывают и не загружают: APM Music и Pro Sound
+	Effects лицензированы Roblox для всех опытов, id берутся из Creator Store как есть.
+	В requiredKeys её нет — это не реплики, потолок сотни их не касается.
+]]
+local LIBRARY: { [string]: number } = {
+	-- APM Music: спокойные инструментальные треки
+	mus_lib_woodland = 9043323476,
+	mus_lib_playground = 9046512235,
+	mus_lib_garden = 9046598930,
+	mus_lib_exploration = 9043326195,
+	mus_lib_playful = 9042269449,
+	mus_lib_crafts = 9040171127,
+	mus_lib_shiny = 9046274992,
+	-- Pro Sound Effects: природа и парк
+	amb_birds = 9119383684, -- Sonoma Morning Birds, 128 с
+	amb_fountain = 9120557577, -- Water Fountain, Huntington Park, 37 с
+	amb_stream = 9120606523, -- Water Stream into Pool, 56 с
+	amb_train_whistle = 9120223157, -- Toy Train Whistle, деревянный трёхтонный свисток
+}
+for key, assetId in LIBRARY do
+	ids[key] = `rbxassetid://{assetId}`
+end
+
 AudioRegistry.ids = ids
 
 --[[

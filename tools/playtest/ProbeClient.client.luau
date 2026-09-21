@@ -178,6 +178,20 @@ task.delay(12, function()
 	report:FireServer("FILEMESH fetch: " .. table.concat(parts, " "))
 end)
 
+-- Звуки по просьбе сценария (метка ZZ_AudioReport): что играет, загрузилось ли, сколько длится.
+workspace:GetAttributeChangedSignal("ZZ_AudioReport"):Connect(function()
+	local lines = {}
+	local SoundService = game:GetService("SoundService")
+	for _, root in { SoundService, workspace } do
+		for _, d in root:GetDescendants() do
+			if d:IsA("Sound") and d.SoundId ~= "" and not d.SoundId:find("^rbxasset://") then
+				table.insert(lines, string.format("%s[%s] loaded=%s len=%.0f playing=%s vol=%.2f", d.Name, d.SoundId:match("%d+") or "?", tostring(d.IsLoaded), d.TimeLength, tostring(d.IsPlaying), d.Volume))
+			end
+		end
+	end
+	report:FireServer("AUDIO " .. workspace:GetAttribute("ZZ_AudioReport") .. ": " .. table.concat(lines, " | "))
+end)
+
 -- Раз в секунду: что под ногами у персонажа на клиенте.
 local lastLine = ""
 while true do
