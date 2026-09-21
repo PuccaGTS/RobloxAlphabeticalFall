@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Playground = require(Shared.Config.Playground)
 local Decor = require(Shared.Config.Decor)
+local RidesBuilder = require(script.Parent.Parent.World.Rides)
 
 local PlaygroundService = {}
 
@@ -505,6 +506,12 @@ function BUILDERS.maze(model: Model, origin: CFrame)
 		end
 	end
 	sign(model, origin * CFrame.new(0, 0, (half + 1) * cell), "🌿")
+end
+
+-- Колесо обозрения: строит World/Rides, крутит и катает RideController.
+function BUILDERS.ferris(model: Model, origin: CFrame)
+	RidesBuilder.buildWheel(model, origin)
+	sign(model, origin * CFrame.new(9, 0, -9), "🎡")
 end
 
 -- Мячи, укатившиеся за бортик или упавшие, возвращаются в песочницу.

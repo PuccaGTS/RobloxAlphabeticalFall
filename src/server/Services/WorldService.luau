@@ -41,6 +41,7 @@ local DecorService = require(script.Parent.DecorService)
 local PlaygroundService = require(script.Parent.PlaygroundService)
 local Teleport = require(script.Parent.Parent.World.Teleport)
 local Horizon = require(script.Parent.Parent.World.Horizon)
+local RidesBuilder = require(script.Parent.Parent.World.Rides)
 local DailyLetterService = require(script.Parent.DailyLetterService)
 
 local WorldService = {}
@@ -717,6 +718,8 @@ local function buildDecor(hub: Folder)
 	DecorService.build(hub)
 	-- Игровые места парка: батуты, музыкальная дорожка, классики и остальное (Config/Playground).
 	PlaygroundService.build(hub)
+	-- Паровозик по кругу между парком и домами (Config/Rides).
+	RidesBuilder.buildRailway(hub)
 end
 
 --[[
