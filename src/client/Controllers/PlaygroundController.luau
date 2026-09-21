@@ -27,6 +27,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Playground = require(Shared.Config.Playground)
 
 local AudioController = require(script.Parent.AudioController)
+local EmoteController = require(script.Parent.EmoteController)
+local AudioRegistry = require(Shared.Config.AudioRegistry)
 
 local PlaygroundController = {}
 
@@ -130,6 +132,76 @@ HANDLERS.AF_Note = function(key: BasePart)
 		key.CFrame = home * CFrame.new(0, -0.2, 0)
 		TweenService:Create(key, TweenInfo.new(0.3, Enum.EasingStyle.Back), { CFrame = home }):Play()
 		burst(key, key.Color, 6)
+	end)
+end
+
+--[[
+	Фото-зона: встал на метку — персонаж поворачивается к «фотографу» и кричит
+	«ура», экран вспыхивает, щёлкает затвор, из рамки сыплется конфетти,
+	а камера пару секунд держит красивый кадр. Сам снимок делает Roblox
+	(снимок экрана) — игра только ставит кадр и радуется вместе с ребёнком.
+]]
+local function flash()
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "PhotoFlash"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 50
+	gui.Parent = player:WaitForChild("PlayerGui")
+	local white = Instance.new("Frame")
+	white.Size = UDim2.fromScale(1, 1)
+	white.BackgroundColor3 = Color3.new(1, 1, 1)
+	white.BackgroundTransparency = 0.05
+	white.Parent = gui
+	local fade = TweenService:Create(white, TweenInfo.new(0.7), { BackgroundTransparency = 1 })
+	fade.Completed:Connect(function()
+		gui:Destroy()
+	end)
+	fade:Play()
+end
+
+HANDLERS.AF_PhotoMark = function(mark: BasePart)
+	local CONFETTI = {
+		Color3.fromRGB(240, 90, 90),
+		Color3.fromRGB(250, 210, 80),
+		Color3.fromRGB(120, 205, 110),
+		Color3.fromRGB(80, 190, 220),
+		Color3.fromRGB(230, 120, 190),
+	}
+	mark.Touched:Connect(function(hit)
+		if not isMine(hit) or not ready(mark, Playground.PHOTO_COOLDOWN) then
+			return
+		end
+		local root = rootOf()
+		local pose = mark:GetAttribute("Camera")
+		local camera = workspace.CurrentCamera
+		if not root or typeof(pose) ~= "CFrame" or not camera then
+			return
+		end
+		-- Лицом к фотографу.
+		root.CFrame =
+			CFrame.lookAt(root.Position, Vector3.new(pose.Position.X, root.Position.Y, pose.Position.Z))
+		EmoteController.play("cheer")
+
+		local previousType = camera.CameraType
+		local previousFov = camera.FieldOfView
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.CFrame = pose
+		camera.FieldOfView = 55
+
+		task.delay(0.5, function()
+			local shutter = AudioRegistry.ids.sfx_camera_shutter
+			if shutter and shutter ~= "" then
+				playSound(shutter, 1, 0.8, mark)
+			end
+			flash()
+			for _, color in CONFETTI do
+				burst(mark, color, 14)
+			end
+		end)
+		task.delay(Playground.PHOTO_POSE_SECONDS, function()
+			camera.CameraType = previousType
+			camera.FieldOfView = previousFov
+		end)
 	end)
 end
 

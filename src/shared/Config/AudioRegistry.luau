@@ -121,6 +121,7 @@ local LIBRARY: { [string]: number } = {
 	amb_fountain = 9120557577, -- Water Fountain, Huntington Park, 37 с
 	amb_stream = 9120606523, -- Water Stream into Pool, 56 с
 	amb_train_whistle = 9120223157, -- Toy Train Whistle, деревянный трёхтонный свисток
+	sfx_camera_shutter = 17208312548, -- Roblox GUI - Camera Shutter: щелчок фото-зоны
 }
 for key, assetId in LIBRARY do
 	ids[key] = `rbxassetid://{assetId}`

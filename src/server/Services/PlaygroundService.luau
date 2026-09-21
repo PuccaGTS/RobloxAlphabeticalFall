@@ -18,6 +18,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Playground = require(Shared.Config.Playground)
 local Decor = require(Shared.Config.Decor)
 local RidesBuilder = require(script.Parent.Parent.World.Rides)
+local Letter3D = require(script.Parent.Parent.World.Letter3D)
 
 local PlaygroundService = {}
 
@@ -512,6 +513,165 @@ end
 function BUILDERS.ferris(model: Model, origin: CFrame)
 	RidesBuilder.buildWheel(model, origin)
 	sign(model, origin * CFrame.new(9, 0, -9), "🎡")
+end
+
+--[[
+	Фото-зона: небесный задник с радугой в золотой раме, по бокам объёмные
+	А и Я, перед рамкой — метка с фотоаппаратом. Встал на метку — снимок
+	(PlaygroundController, AF_PhotoMark). Рама смотрит на площадь: оттуда
+	к ней и подходят, и «фотограф» стоит там же.
+]]
+local GOLD = Color3.fromRGB(255, 205, 80)
+
+local function rainbowBackdrop(board: BasePart)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 24
+	gui.LightInfluence = 0.2
+	gui.Parent = board
+
+	-- Радуга: вложенные круги, у контейнера видна только верхняя половина.
+	local arc = Instance.new("Frame")
+	arc.AnchorPoint = Vector2.new(0.5, 1)
+	arc.Position = UDim2.fromScale(0.5, 0.92)
+	arc.Size = UDim2.fromScale(0.86, 0.62)
+	arc.BackgroundTransparency = 1
+	arc.ClipsDescendants = true
+	arc.Parent = gui
+	for index, color in RAINBOW do
+		local share = 1 - (index - 1) * 0.085
+		local ring = Instance.new("Frame")
+		ring.AnchorPoint = Vector2.new(0.5, 0.5)
+		ring.Position = UDim2.fromScale(0.5, 1)
+		ring.Size = UDim2.fromScale(share, share * 2)
+		ring.BackgroundColor3 = color
+		ring.BorderSizePixel = 0
+		ring.ZIndex = index
+		ring.Parent = arc
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(1, 0)
+		corner.Parent = ring
+	end
+	local sky = Instance.new("Frame")
+	sky.AnchorPoint = Vector2.new(0.5, 0.5)
+	sky.Position = UDim2.fromScale(0.5, 1)
+	sky.Size = UDim2.fromScale(0.3, 0.6)
+	sky.BackgroundColor3 = board.Color
+	sky.BorderSizePixel = 0
+	sky.ZIndex = #RAINBOW + 1
+	sky.Parent = arc
+	local skyCorner = Instance.new("UICorner")
+	skyCorner.CornerRadius = UDim.new(1, 0)
+	skyCorner.Parent = sky
+
+	local function label(text: string, position: UDim2, size: UDim2, color: Color3)
+		local l = Instance.new("TextLabel")
+		l.AnchorPoint = Vector2.new(0.5, 0.5)
+		l.Position = position
+		l.Size = size
+		l.BackgroundTransparency = 1
+		l.Text = text
+		l.TextScaled = true
+		l.Font = Enum.Font.FredokaOne
+		l.TextColor3 = color
+		l.ZIndex = 20
+		l.Parent = gui
+		return l
+	end
+	local title = label(
+		"Я учу азбуку!",
+		UDim2.fromScale(0.5, 0.13),
+		UDim2.fromScale(0.9, 0.18),
+		Color3.fromRGB(255, 255, 255)
+	)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(90, 110, 200)
+	stroke.Thickness = 3
+	stroke.Parent = title
+	label("☀️", UDim2.fromScale(0.88, 0.32), UDim2.fromScale(0.14, 0.2), Color3.new(1, 1, 1))
+	label("☁️", UDim2.fromScale(0.14, 0.34), UDim2.fromScale(0.16, 0.18), Color3.new(1, 1, 1))
+	label("☁️", UDim2.fromScale(0.66, 0.27), UDim2.fromScale(0.1, 0.12), Color3.new(1, 1, 1))
+end
+
+function BUILDERS.photo(model: Model, origin: CFrame)
+	local width, height = 16, 11
+	-- Задник чуть дальше от площади, чем метка. Лицевая сторона детали (−Z) смотрит
+	-- туда же, куда origin, — на площадь.
+	local center = origin * CFrame.new(0, 1.2 + height / 2, 4)
+	local board =
+		part(model, "PhotoBoard", Vector3.new(width, height, 0.6), center, Color3.fromRGB(165, 215, 250))
+	rainbowBackdrop(board)
+	-- Рама: четыре золотые планки и шары по углам.
+	for _, y in { -1, 1 } do
+		part(
+			model,
+			"FrameBar",
+			Vector3.new(width + 1.6, 1, 1),
+			center * CFrame.new(0, y * (height / 2 + 0.5), 0),
+			GOLD
+		)
+	end
+	for _, x in { -1, 1 } do
+		part(
+			model,
+			"FrameBar",
+			Vector3.new(1, height + 2, 1),
+			center * CFrame.new(x * (width / 2 + 0.5), 0, 0),
+			GOLD
+		)
+		for _, y in { -1, 1 } do
+			local knob = part(
+				model,
+				"FrameKnob",
+				Vector3.new(1.8, 1.8, 1.8),
+				center * CFrame.new(x * (width / 2 + 0.5), y * (height / 2 + 0.5), 0),
+				Color3.fromRGB(245, 120, 150)
+			)
+			knob.Shape = Enum.PartType.Ball
+		end
+		-- Ножка-подпорка сзади: рама стоит, а не висит в воздухе.
+		part(
+			model,
+			"FrameFoot",
+			Vector3.new(1, 1.2, 3),
+			origin * CFrame.new(x * (width / 2 + 0.5), 0.6, 4.8),
+			Color3.fromRGB(150, 110, 70)
+		)
+	end
+	-- По бокам объёмные А и Я: вся азбука от начала до конца. У зрителя «влево» — это +X кадра.
+	for index, spec in { { "a", 1, RAINBOW[1] }, { "ya", -1, RAINBOW[6] } } do
+		local letter =
+			Letter3D.build(spec[1], 5, origin * CFrame.new(spec[2] * (width / 2 + 3.5), 3, 2.5), spec[3])
+		letter.Name = `PhotoLetter_{index}`
+		letter.Parent = model
+	end
+
+	local mark = part(
+		model,
+		"PhotoMark",
+		Vector3.new(0.3, 5, 5),
+		origin * CFrame.new(0, 0.15, -0.5) * CFrame.Angles(0, 0, math.rad(90)),
+		GOLD
+	)
+	mark.Shape = Enum.PartType.Cylinder
+	mark.CanCollide = false
+	local icon = Instance.new("SurfaceGui")
+	icon.Face = Enum.NormalId.Right -- ось X цилиндра смотрит вверх
+	icon.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	icon.PixelsPerStud = 40
+	icon.LightInfluence = 0
+	icon.Parent = mark
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Text = "📸"
+	text.TextScaled = true
+	text.Parent = icon
+	-- Где стоит «фотограф»: со стороны площади, чуть выше головы, лицом к раме.
+	local eye = (origin * CFrame.new(0, 5.2, -13)).Position
+	mark:SetAttribute("Camera", CFrame.lookAt(eye, (origin * CFrame.new(0, 5, 2)).Position))
+	CollectionService:AddTag(mark, "AF_PhotoMark")
 end
 
 -- Мячи, укатившиеся за бортик или упавшие, возвращаются в песочницу.
