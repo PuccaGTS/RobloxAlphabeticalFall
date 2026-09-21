@@ -49,7 +49,9 @@ return function()
 			"ни один предмет не крупнее двадцати студов в основании",
 			function()
 				for _, item in Decor.items do
-					expect(math.max(item.size.X, item.size.Z) <= 20).to.equal(true)
+					if not item.horizon then
+						expect(math.max(item.size.X, item.size.Z) <= 20).to.equal(true)
+					end
 				end
 			end
 		)

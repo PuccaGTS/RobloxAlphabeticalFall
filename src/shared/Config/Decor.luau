@@ -75,6 +75,12 @@ export type Item = {
 		что файл на месте: без него предмет встал бы серой коробкой.
 	]]
 	file: boolean?,
+	--[[
+		Предмет горизонта (Config/Horizon): стоит за изгородью, куда не дойти,
+		и в парке не появляется. Ему можно быть с гору — правило «не шире
+		двадцати студов» про проход, а здесь проходить некому.
+	]]
+	horizon: boolean?,
 }
 
 local ITEMS: { Item } = {
@@ -123,6 +129,22 @@ local ITEMS: { Item } = {
 		size = Vector3.new(4, 3, 4),
 		color = Color3.fromRGB(170, 170, 180),
 		collide = true,
+	},
+	--[[
+		Горный хребет на горизонте (Config/Horizon): стоит за изгородью, куда
+		не дойти, поэтому в парке его нет. Low-Poly Rocky Mountain Border,
+		DaveCam456, 557 треугольников.
+	]]
+	{
+		id = "mountain_rocky",
+		assetId = 11751636142,
+		file = true,
+		horizon = true,
+		title = "Горный хребет",
+		kind = "rock",
+		size = Vector3.new(377, 215, 136),
+		color = Color3.fromRGB(120, 135, 160),
+		collide = false,
 	},
 	{
 		id = "bench",

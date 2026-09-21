@@ -40,6 +40,7 @@ local ChallengeService = require(script.Parent.ChallengeService)
 local DecorService = require(script.Parent.DecorService)
 local PlaygroundService = require(script.Parent.PlaygroundService)
 local Teleport = require(script.Parent.Parent.World.Teleport)
+local Horizon = require(script.Parent.Parent.World.Horizon)
 local DailyLetterService = require(script.Parent.DailyLetterService)
 
 local WorldService = {}
@@ -760,7 +761,25 @@ local function styleLighting()
 	-- Мягкий край тени: жёсткая ступенька от дерева на плитке выглядит грязью.
 	Lighting.ShadowSoftness = 0.35
 
-	effect("Sky", function() end)
+	--[[
+		Небо мультяшное: «Cartoon Sky» из Creator Store (xor25th, 650+ одобрений) —
+		пушистые облака, бирюза к горизонту. Серое небо движка по умолчанию
+		спорило с нарисованным миром. Солнце и луну скайбокс прячет: у рисованного
+		неба свет уже в картинке.
+	]]
+	do
+		-- Небо ставится всегда: в шаблоне Baseplate своё небо уже лежит в Lighting.
+		local sky = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky")
+		sky.SkyboxBk = "rbxassetid://6295671271"
+		sky.SkyboxDn = "rbxassetid://6295671382"
+		sky.SkyboxFt = "rbxassetid://6295671136"
+		sky.SkyboxLf = "rbxassetid://6295670996"
+		sky.SkyboxRt = "rbxassetid://6295671509"
+		sky.SkyboxUp = "rbxassetid://6295671667"
+		sky.CelestialBodiesShown = false
+		sky.StarCount = 0
+		sky.Parent = Lighting
+	end
 
 	effect("Atmosphere", function(instance)
 		local atmosphere = instance :: Atmosphere
@@ -1064,6 +1083,7 @@ function WorldService.build()
 
 	buildDailyStone(hub)
 	buildDecor(hub)
+	Horizon.build(hub)
 
 	--[[
 		Чужие точки появления (например, из шаблона Baseplate) выключаем: иначе

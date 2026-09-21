@@ -1,0 +1,105 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Low-Poly Rocky Mountain Border by DaveCam456",
+   "children": [
+    {
+     "className": "Model",
+     "name": "Model",
+     "children": [
+      {
+       "className": "Part",
+       "name": "Meshes/RockyMountainBorder",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            1,
+            0,
+            0
+           ],
+           [
+            0,
+            1,
+            0
+           ],
+           [
+            0,
+            0,
+            1
+           ]
+          ],
+          "position": [
+           360.860107421875,
+           107.51971435546875,
+           186.37615966796875
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          376.72021484375,
+          215.0394287109375,
+          135.7523193359375
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            0.18357564508914948,
+            0.1839454025030136,
+            0.1839454174041748
+           ]
+          },
+          "MeshId": {
+           "ContentId": "rbxassetid://11751620745"
+          },
+          "MeshType": {
+           "Enum": 5
+          },
+          "TextureId": {
+           "ContentId": "rbxassetid://11751620802"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

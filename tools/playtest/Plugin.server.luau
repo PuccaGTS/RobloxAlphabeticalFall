@@ -71,7 +71,7 @@ local function explicit(value)
 	return nil
 end
 
-local CONTENT = { MeshId = true, TextureID = true, TextureId = true, Texture = true, ColorMap = true, NormalMap = true, RoughnessMap = true, MetalnessMap = true }
+local CONTENT = { MeshId = true, TextureID = true, TextureId = true, Texture = true, ColorMap = true, NormalMap = true, RoughnessMap = true, MetalnessMap = true, SkyboxBk = true, SkyboxDn = true, SkyboxFt = true, SkyboxLf = true, SkyboxRt = true, SkyboxUp = true, SunTextureId = true, MoonTextureId = true }
 
 local PROPS = {
 	BasePart = { "Size", "CFrame", "Color", "Material", "Transparency", "Reflectance", "CanCollide", "CastShadow" },
@@ -85,13 +85,15 @@ local PROPS = {
 	SurfaceAppearance = { "ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap", "AlphaMode" },
 	PointLight = { "Brightness", "Range", "Color", "Shadows" },
 	SpotLight = { "Brightness", "Range", "Color", "Angle", "Face" },
+	-- Небо: берётся ради id текстур, в игру его ставит WorldService, а не декор.
+	Sky = { "SkyboxBk", "SkyboxDn", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp", "SunTextureId", "MoonTextureId", "CelestialBodiesShown", "StarCount", "SunAngularSize" },
 }
 
 local SUPPORTED = {
 	Model = true, Folder = true, Part = true, WedgePart = true, CornerWedgePart = true, TrussPart = true,
 	MeshPart = true, SpecialMesh = true, BlockMesh = true, CylinderMesh = true, Decal = true, Texture = true,
 	SurfaceAppearance = true, PointLight = true, SpotLight = true, Seat = true, VehicleSeat = true,
-	Accessory = true, Tool = true,
+	Accessory = true, Tool = true, Sky = true,
 }
 
 -- Классы, которые пишутся другим классом: сиденье — просто деталь, аксессуар и инструмент — модель.
