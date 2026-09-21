@@ -85,6 +85,37 @@ return function(player, note)
 		_G.ZZ_Shot(player, `run_{index}_{id}`, CFrame.lookAt(eye, center.Position), 70)
 		note(`{id} #{index}: length {math.floor(size.Z)} center {center.Position}`)
 
+		-- Облачко должно везти: встать на первое и посмотреть, не соскользнёт ли.
+		if id == "clouds" then
+			local cloud = child:FindFirstChild(`Cloud_{index}_1`)
+			local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if cloud and r then
+				Teleport.to(player, CFrame.new(cloud.Position + Vector3.new(0, 4, 0)))
+				local startX = r.Position
+				local worst = 0
+				for _ = 1, 16 do
+					task.wait(0.25)
+					local offset = (r.Position - cloud.Position) * Vector3.new(1, 0, 1)
+					worst = math.max(worst, offset.Magnitude)
+				end
+				note(
+					string.format(
+						"   clouds: rode %.1f studs, farthest from cloud centre %.1f (cloud radius %.1f), y above %.1f",
+						((r.Position - startX) * Vector3.new(1, 0, 1)).Magnitude,
+						worst,
+						cloud.Size.Y / 2,
+						r.Position.Y - cloud.Position.Y
+					)
+				)
+				_G.ZZ_Shot(
+					player,
+					`run_{index}_clouds_ride`,
+					CFrame.lookAt(r.Position + Vector3.new(-12, 8, 14), r.Position),
+					70
+				)
+			end
+		end
+
 		-- Механика: поставить в опасное место и посмотреть, вернёт ли к флажку.
 		if id == "lava" or id == "boulders" or id == "spinner" or id == "hammers" then
 			-- Сначала через флажок: он и есть точка возврата.

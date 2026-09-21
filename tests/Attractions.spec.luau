@@ -108,6 +108,27 @@ return function()
 			end
 		)
 
+		it(
+			"облачка: прыжок между рядами берётся, облако не вылезает за бортик",
+			function()
+				for _, plan in plans("clouds") do
+					expect(plan.gap <= Attractions.MAX_GAP).to.equal(true)
+					expect(plan.travel + plan.size / 2 <= Tunnel.WIDTH / 2).to.equal(true)
+					local tail = plan.length - (plan.clouds[#plan.clouds].z + plan.size / 2)
+					expect(tail > 1 and tail <= Attractions.MAX_GAP).to.equal(true)
+				end
+			end
+		)
+
+		it("облачка: соседние ряды не идут строем", function()
+			for _, plan in plans("clouds") do
+				for index = 2, #plan.clouds do
+					local shift = math.abs(plan.clouds[index].phase - plan.clouds[index - 1].phase)
+					expect(shift > 0.05).to.equal(true)
+				end
+			end
+		end)
+
 		it("островки: чем жарче, тем шире прыжки", function()
 			expect(Attractions.param("islands", "gapMax", 5) > Attractions.param("islands", "gapMax", 1)).to.equal(
 				true

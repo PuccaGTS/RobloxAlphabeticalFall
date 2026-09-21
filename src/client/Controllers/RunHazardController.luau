@@ -73,6 +73,11 @@ local function positionFor(part: BasePart, now: number): CFrame?
 		-- Последние полсекунды валун уходит в землю: он не исчезает, а проваливается.
 		local sink = math.max(0, s - (travel - 0.5)) / 0.5 * radius * 2
 		return base * CFrame.new(0, -sink, distance) * CFrame.Angles(distance / radius, 0, 0)
+	elseif kind == "slide" then
+		-- Облачко катается поперёк трассы: влево-вправо от середины.
+		local travel = part:GetAttribute("Travel") or 0
+		local x = travel * math.sin(2 * math.pi * (now + phase) / period)
+		return base * CFrame.new(x, 0, 0) * offset
 	elseif kind == "sink" then
 		local s = (now + phase) % period
 		local solid = part:GetAttribute("Solid") or period
@@ -144,6 +149,18 @@ local function step()
 		local cframe = positionFor(part, now)
 		if cframe then
 			part.CFrame = cframe
+			--[[
+				Везёт стоящего: у закреплённой детали скорость — это «лента
+				транспортёра», и персонаж на облаке едет вместе с ним, а не
+				соскальзывает. Скорость — производная того же движения.
+			]]
+			if part:GetAttribute("Carry") then
+				local period = part:GetAttribute("Period") or 1
+				local travel = part:GetAttribute("Travel") or 0
+				local phase = part:GetAttribute("Phase") or 0
+				local speed = travel * 2 * math.pi / period * math.cos(2 * math.pi * (now + phase) / period)
+				part.AssemblyLinearVelocity = (base :: CFrame).RightVector * speed
+			end
 		end
 	end
 

@@ -145,6 +145,36 @@ local function boulders(heat: number, _random: Random)
 	}
 end
 
+--[[
+	Облачка: ряды по одному облаку, каждое катается поперёк трассы. Сдвиг фаз
+	между соседними рядами — треть взмаха с небольшим разбросом: облака никогда
+	не идут строем, но напротив друг друга оказываются дважды за взмах.
+]]
+local function clouds(heat: number, random: Random)
+	local size = Attractions.param("clouds", "size", heat)
+	local gap = Attractions.param("clouds", "gap", heat)
+	local rows = Attractions.param("clouds", "rows", heat)
+	local period = Attractions.param("clouds", "period", heat)
+	local list = {}
+	local z = gap + size / 2
+	for row = 1, rows do
+		table.insert(list, {
+			row = row,
+			z = z,
+			phase = ((row - 1) * period / 3 + random:NextNumber(0, period * 0.15)) % period,
+		})
+		z += size + gap
+	end
+	return {
+		clouds = list,
+		size = size,
+		gap = gap,
+		period = period,
+		travel = Attractions.param("clouds", "travel", heat),
+		length = z - size / 2,
+	}
+end
+
 local function hammers(heat: number, _random: Random)
 	local period = Attractions.param("hammers", "period", heat)
 	local list = {}
@@ -170,6 +200,7 @@ local MAKERS = {
 	lava = lava,
 	spinner = spinner,
 	boulders = boulders,
+	clouds = clouds,
 	hammers = hammers,
 }
 

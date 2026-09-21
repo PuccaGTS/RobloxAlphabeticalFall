@@ -591,6 +591,59 @@ function BUILDERS.lava(model: Model, path, ride)
 end
 
 --[[
+	Облачка: пушистые облака над пропастью катаются поперёк трассы. Сверху
+	ровная площадка — на неё приземляются, по краю клубы — чтобы облако
+	читалось облаком, а не тарелкой. Клубы ни с чем не сталкиваются.
+	Облако везёт стоящего на нём ребёнка: клиент задаёт ему скорость (Carry).
+]]
+local CLOUD = Color3.fromRGB(252, 252, 255)
+local CLOUD_SHADE = Color3.fromRGB(225, 232, 250)
+
+function BUILDERS.clouds(model: Model, path, ride)
+	local size = ride.size
+	for _, cloud in ride.clouds do
+		local center = at(path, ride, 0, -0.8, cloud.z)
+		local attributes = { Period = ride.period, Phase = cloud.phase, Travel = ride.travel }
+		local body = part(
+			model,
+			`Cloud_{ride.index}_{cloud.row}`,
+			Vector3.new(1.6, size, size),
+			center * CFrame.Angles(0, 0, math.pi / 2),
+			CLOUD
+		)
+		body.Shape = Enum.PartType.Cylinder
+		attributes.Offset = CFrame.Angles(0, 0, math.pi / 2)
+		mover(body, "slide", attributes)
+		body:SetAttribute("Base", center)
+		body:SetAttribute("Carry", true)
+
+		local puffs = 6
+		for puff = 1, puffs do
+			local angle = (puff - 0.5) / puffs * math.pi * 2 + cloud.row
+			local diameter = size * (if puff % 2 == 0 then 0.42 else 0.34)
+			local offset = CFrame.new(math.cos(angle) * size * 0.46, -0.3, math.sin(angle) * size * 0.46)
+			local ball = ghost(
+				part(
+					model,
+					`CloudPuff_{ride.index}_{cloud.row}_{puff}`,
+					Vector3.new(diameter, diameter, diameter),
+					center * offset,
+					if puff % 3 == 0 then CLOUD_SHADE else CLOUD
+				)
+			)
+			ball.Shape = Enum.PartType.Ball
+			mover(
+				ball,
+				"slide",
+				{ Period = ride.period, Phase = cloud.phase, Travel = ride.travel, Offset = offset }
+			)
+			ball:SetAttribute("Base", center)
+		end
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 12, 0), "☁️")
+end
+
+--[[
 	Молоты: узкий мостик над пропастью, над ним качаются три молота поперёк
 	мостика. Молот сбивает вниз — и ребёнок возвращается к флажку.
 ]]
