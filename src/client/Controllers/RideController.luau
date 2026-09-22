@@ -164,12 +164,147 @@ local function stepWheels(now: number, camera: Vector3)
 	end
 end
 
+-- ===== Карусель =====
+
+type Carousel = { center: CFrame, rotor: Group, horses: { Group } }
+local carousels: { [Instance]: Carousel } = {}
+
+local attachCarousel: (Instance) -> ()
+function attachCarousel(model: Instance)
+	local center = model:GetAttribute("Center")
+	local rotorModel = model:FindFirstChild("Rotor")
+	if typeof(center) ~= "CFrame" or not rotorModel then
+		return
+	end
+	local horses: { Group } = {}
+	for index = 1, Rides.CAROUSEL.horses do
+		local steed = model:FindFirstChild(`Horse_{index}`)
+		if not steed then
+			if model.Parent then
+				task.delay(2, attachCarousel, model)
+			end
+			return
+		end
+		horses[index] = collect(steed, center * Rides.horseFrame(index, 0, 0))
+	end
+	carousels[model] = { center = center, rotor = collect(rotorModel, center), horses = horses }
+end
+
+local function stepCarousels(now: number, camera: Vector3)
+	local angle = Rides.carouselAngle(now)
+	for model, carousel in carousels do
+		if not model.Parent then
+			carousels[model] = nil
+		elseif (carousel.center.Position - camera).Magnitude < ANIMATE_DISTANCE then
+			move(carousel.rotor, carousel.center * CFrame.Angles(0, -angle, 0))
+			for index, steed in carousel.horses do
+				move(steed, carousel.center * Rides.horseFrame(index, angle, now))
+			end
+		end
+	end
+end
+
+-- ===== Воздушный шар =====
+
+type Balloon = {
+	home: CFrame,
+	inward: Vector3,
+	group: Group,
+	flame: BasePart?,
+	fire: Fire?,
+	burning: boolean,
+}
+local balloons: { [Instance]: Balloon } = {}
+
+local attachBalloon: (Instance) -> ()
+function attachBalloon(model: Instance)
+	local inward = model:GetAttribute("Inward")
+	local body = model:FindFirstChild("Balloon")
+	local home = body and body:GetAttribute("Home")
+	if
+		typeof(inward) ~= "Vector3"
+		or typeof(home) ~= "CFrame"
+		or not body
+		or not body:FindFirstChild("Crown")
+	then
+		if model.Parent then
+			task.delay(2, attachBalloon, model)
+		end
+		return
+	end
+	local flame = body:FindFirstChild("Flame") :: BasePart?
+	balloons[model] = {
+		home = home,
+		inward = inward,
+		group = collect(body, home),
+		flame = flame,
+		fire = if flame then flame:FindFirstChildOfClass("Fire") else nil,
+		burning = false,
+	}
+end
+
+-- Короткий звук в точке мира: свисток горки, горелка шара.
+local function playAt(key: string, at: BasePart?, volume: number, reach: number)
+	local id = AudioRegistry.ids[key]
+	if not at or not id or id == "" then
+		return
+	end
+	local sound = Instance.new("Sound")
+	sound.SoundId = id
+	sound.Volume = volume
+	sound.RollOffMaxDistance = reach
+	sound.RollOffMinDistance = 15
+	sound.SoundGroup = AudioController.group("SFX")
+	sound.Parent = at
+	sound:Play()
+	sound.Ended:Connect(function()
+		sound:Destroy()
+	end)
+end
+
+local function balloonFrame(balloon: Balloon, now: number): (CFrame, boolean, boolean)
+	local offset, standing, burning = Rides.balloonAt(now, balloon.inward)
+	-- В полёте шар чуть покачивается: он висит на ветру, а не едет по рельсу.
+	local sway = if standing
+		then CFrame.identity
+		else CFrame.Angles(math.sin(now * 0.7) * 0.03, 0, math.cos(now * 0.5) * 0.03)
+	return (balloon.home + offset) * sway, standing, burning
+end
+
+local function stepBalloons(now: number)
+	for model, balloon in balloons do
+		if not model.Parent then
+			balloons[model] = nil
+			continue
+		end
+		local frame, _, burning = balloonFrame(balloon, now)
+		move(balloon.group, frame)
+		if burning ~= balloon.burning then
+			balloon.burning = burning
+			if balloon.flame then
+				balloon.flame.Transparency = if burning then 0.25 else 1
+			end
+			if balloon.fire then
+				balloon.fire.Enabled = burning
+			end
+			if burning then
+				playAt("sfx_balloon_burner", balloon.flame, 0.7, 260)
+			end
+		end
+	end
+end
+
 -- ===== Катание =====
 
+type Kind = "train" | "wheel" | "carousel" | "slide" | "balloon"
 type Ride = {
-	kind: "train" | "wheel",
+	kind: Kind,
 	wheel: Wheel?,
 	cabin: number?,
+	carousel: Carousel?,
+	horse: number?,
+	slide: CFrame?, -- опорная точка горки
+	balloon: Balloon?,
 	started: number,
 	departed: boolean,
 	exit: CFrame,
@@ -192,6 +327,33 @@ local function onPad(root: BasePart, pad: BasePart): boolean
 end
 
 local function seatFrame(current: Ride, now: number): CFrame?
+	if current.kind == "carousel" then
+		local carousel = current.carousel
+		if not carousel or not current.horse then
+			return nil
+		end
+		local frame = carousel.center * Rides.horseFrame(current.horse, Rides.carouselAngle(now), now)
+		return frame * CFrame.new(0, 1.1 + SEAT_HEIGHT - 0.3, 0.1)
+	elseif current.kind == "slide" then
+		local base = current.slide
+		if not base then
+			return nil
+		end
+		local u = Rides.slideProgress(now - current.started)
+		local here = (base * CFrame.new(Rides.slidePoint(u))).Position + Vector3.new(0, SEAT_HEIGHT, 0)
+		local ahead = (base * CFrame.new(Rides.slidePoint(u + 0.01))).Position
+			+ Vector3.new(0, SEAT_HEIGHT, 0)
+		return CFrame.lookAt(here, ahead)
+	elseif current.kind == "balloon" then
+		local balloon = current.balloon
+		if not balloon then
+			return nil
+		end
+		local frame = balloonFrame(balloon, now)
+		-- Лицом к площади: оттуда виден весь парк.
+		local seat = (frame * CFrame.new(0, 0.4 + SEAT_HEIGHT, 0)).Position
+		return CFrame.lookAt(seat, seat + balloon.inward)
+	end
 	if current.kind == "train" then
 		local head = Rides.trainAt(now)
 		return Rides.trackFrame(Rides.carAngle(head, PASSENGER_CAR)) * CFrame.new(0, 2.4 + SEAT_HEIGHT, 0)
@@ -219,16 +381,94 @@ local function finish(placeAtExit: boolean)
 	end
 end
 
-local function start(kind: "train" | "wheel", pad: BasePart, now: number, wheel: Wheel?)
+local function start(kind: Kind, pad: BasePart, now: number, wheel: Wheel?): Ride?
 	local _, humanoid = rootAndHumanoid()
 	if not humanoid then
-		return
+		return nil
 	end
 	local exit = CFrame.new(pad.Position + Vector3.new(0, 3, 0))
 	local cabin = if wheel then Rides.lowestCabin(Rides.wheelAngle(now)) else nil
-	ride = { kind = kind, wheel = wheel, cabin = cabin, started = now, departed = false, exit = exit }
+	local current: Ride =
+		{ kind = kind, wheel = wheel, cabin = cabin, started = now, departed = false, exit = exit }
+	ride = current
 	blockedPad = pad
 	humanoid.Sit = true
+	return current
+end
+
+-- Лошадка, которая сейчас ближе всех к кругу посадки.
+local function nearestHorse(carousel: Carousel, pad: BasePart, now: number): number
+	local angle = Rides.carouselAngle(now)
+	local best, bestDistance = 1, math.huge
+	for index = 1, Rides.CAROUSEL.horses do
+		local position = (carousel.center * Rides.horseFrame(index, angle, now)).Position
+		local distance = (position - pad.Position).Magnitude
+		if distance < bestDistance then
+			best, bestDistance = index, distance
+		end
+	end
+	return best
+end
+
+-- Внизу горки вылетаешь из жёлоба вперёд, на траву.
+local function leaveSlide(base: CFrame, root: BasePart, humanoid: Humanoid)
+	local bottom = (base * CFrame.new(Rides.slidePoint(1))).Position
+	local before = (base * CFrame.new(Rides.slidePoint(0.97))).Position
+	local ahead = ((bottom - before) * Vector3.new(1, 0, 1)).Unit
+	ride = nil
+	humanoid.Sit = false
+	local at = bottom + Vector3.new(0, 3, 0)
+	root.CFrame = CFrame.lookAt(at, at + ahead)
+	--[[
+		Персонаж гасит свою скорость сам — и вставая, и в воздухе без нажатых
+		клавиш: простой толчок пропадает за кадр. Поэтому треть секунды его несёт
+		LinearVelocity, а дальше он летит сам и приземляется на коврик.
+	]]
+	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = root
+	local fling = Instance.new("LinearVelocity")
+	fling.Attachment0 = attachment
+	fling.MaxForce = 1e6
+	fling.VectorVelocity = ahead * 24 + Vector3.new(0, 14, 0)
+	fling.Parent = root
+	task.delay(0.35, function()
+		fling:Destroy()
+		attachment:Destroy()
+	end)
+end
+
+-- Круг посадки: светится зелёным, когда сесть можно, и сажает, если встал.
+local function checkPads(
+	tag: string,
+	root: BasePart,
+	ready: (BasePart) -> boolean,
+	board: (BasePart) -> ()
+): boolean
+	for _, pad in CollectionService:GetTagged(tag) do
+		if pad:IsA("BasePart") then
+			local canBoard = ready(pad)
+			pad.Color = if canBoard then PAD_READY else PAD_WAIT
+			if onPad(root, pad) then
+				if pad ~= blockedPad and canBoard then
+					board(pad)
+					return true
+				end
+			elseif pad == blockedPad then
+				blockedPad = nil
+			end
+		end
+	end
+	return false
+end
+
+local function ownerOf(pad: BasePart, list: { [Instance]: any }): any
+	for model, value in list do
+		if pad:IsDescendantOf(model) then
+			return value
+		end
+	end
+	return nil
 end
 
 local function wheelOf(pad: BasePart): Wheel?
@@ -264,6 +504,25 @@ local function stepRide(now: number)
 				finish(true) -- круг проехали, поезд снова у платформы
 				return
 			end
+		elseif current.kind == "balloon" then
+			local balloon = current.balloon
+			local _, grounded = Rides.balloonAt(now, if balloon then balloon.inward else Vector3.xAxis)
+			if not grounded then
+				current.departed = true
+			elseif current.departed then
+				finish(true) -- облетели парк и сели на ту же лужайку
+				return
+			end
+		elseif current.kind == "carousel" then
+			if now - current.started >= Rides.CAROUSEL.period * Rides.CAROUSEL.laps then
+				finish(true)
+				return
+			end
+		elseif current.kind == "slide" then
+			if now - current.started >= Rides.SLIDE.seconds then
+				leaveSlide(current.slide :: CFrame, root, humanoid)
+				return
+			end
 		elseif now - current.started >= Rides.WHEEL.period then
 			finish(true)
 			return
@@ -291,6 +550,36 @@ local function stepRide(now: number)
 			end
 		end
 	end
+	local boarded = checkPads("AF_CarouselBoard", root, function(pad)
+		return ownerOf(pad, carousels) ~= nil
+	end, function(pad)
+		local carousel = ownerOf(pad, carousels)
+		local started = start("carousel", pad, now, nil)
+		if started then
+			started.carousel = carousel
+			started.horse = nearestHorse(carousel, pad, now)
+		end
+	end) or checkPads("AF_SlideBoard", root, function(pad)
+		return pad.Parent ~= nil and typeof(pad.Parent:GetAttribute("Base")) == "CFrame"
+	end, function(pad)
+		local started = start("slide", pad, now, nil)
+		if started then
+			started.slide = (pad.Parent :: Instance):GetAttribute("Base")
+			playAt("sfx_slide_whistle", pad, 0.9, 120)
+		end
+	end) or checkPads("AF_BalloonBoard", root, function(pad)
+		local balloon = ownerOf(pad, balloons)
+		return balloon ~= nil and select(2, Rides.balloonAt(now, balloon.inward))
+	end, function(pad)
+		local started = start("balloon", pad, now, nil)
+		if started then
+			started.balloon = ownerOf(pad, balloons)
+		end
+	end)
+	if boarded then
+		return
+	end
+
 	for _, pad in CollectionService:GetTagged("AF_WheelBoard") do
 		if pad:IsA("BasePart") then
 			pad.Color = PAD_READY
@@ -324,12 +613,17 @@ function RideController.init()
 	end
 	watch("AF_Train", attachTrain)
 	watch("AF_Wheel", attachWheel)
+	watch("AF_Carousel", attachCarousel)
+	watch("AF_Balloon", attachBalloon)
 
 	RunService:BindToRenderStep("AF_Rides", Enum.RenderPriority.Camera.Value - 1, function()
 		local now = workspace:GetServerTimeNow()
 		local camera = workspace.CurrentCamera
 		stepTrain(now)
-		stepWheels(now, if camera then camera.CFrame.Position else Vector3.zero)
+		local eye = if camera then camera.CFrame.Position else Vector3.zero
+		stepWheels(now, eye)
+		stepCarousels(now, eye)
+		stepBalloons(now)
 		stepRide(now)
 	end)
 end

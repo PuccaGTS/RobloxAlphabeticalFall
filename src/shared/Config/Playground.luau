@@ -65,6 +65,10 @@ Playground.spots = {
 		как фотограф: самое время нажать снимок экрана и показать маме.
 	]]
 	{ id = "photo", title = "📸 Фото", angle = 55, distance = 150, radius = 13 },
+	-- Катания (Config/Rides): карусель с лошадками, горка-спираль и воздушный шар.
+	{ id = "carousel", title = "🎠 Карусель", angle = 300, distance = 160, radius = 16 },
+	{ id = "slide", title = "🌀 Горка", angle = 192, distance = 196, radius = 17 },
+	{ id = "balloon", title = "🎈 Воздушный шар", angle = 120, distance = 190, radius = 14 },
 } :: { Spot }
 
 -- Сила батутов: от маленького к большому. Выше 90 ребёнок улетает из кадра.

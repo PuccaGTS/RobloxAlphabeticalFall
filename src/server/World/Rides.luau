@@ -520,4 +520,519 @@ function RidesBuilder.buildWheel(model: Model, origin: CFrame)
 	CollectionService:AddTag(model, "AF_Wheel")
 end
 
+-- Вертикальный цилиндр: ось вдоль Y кадра at.
+local function column(
+	parent: Instance,
+	name: string,
+	height: number,
+	diameter: number,
+	at: CFrame,
+	color: Color3
+): Part
+	return cylinder(parent, name, height, diameter, at * CFrame.Angles(0, 0, math.rad(90)), color)
+end
+
+local function ball(parent: Instance, name: string, diameter: number, at: CFrame, color: Color3): Part
+	local p = part(parent, name, Vector3.new(diameter, diameter, diameter), at, color)
+	p.Shape = Enum.PartType.Ball
+	return p
+end
+
+local function boardPad(model: Instance, at: CFrame, tag: string): Part
+	local pad =
+		part(model, "BoardPad", Vector3.new(0.3, 5, 5), at * CFrame.Angles(0, 0, math.rad(90)), YELLOW)
+	pad.Shape = Enum.PartType.Cylinder
+	pad.Material = Enum.Material.Neon
+	pad.CanCollide = false
+	CollectionService:AddTag(pad, tag)
+	return pad
+end
+
+-- ===== Карусель =====
+
+local HORSE_COATS = {
+	{ coat = Color3.fromRGB(250, 248, 240), mane = Color3.fromRGB(240, 120, 170) },
+	{ coat = Color3.fromRGB(170, 115, 80), mane = Color3.fromRGB(80, 55, 40) },
+	{ coat = Color3.fromRGB(250, 205, 225), mane = Color3.fromRGB(150, 110, 220) },
+	{ coat = Color3.fromRGB(200, 205, 215), mane = Color3.fromRGB(70, 130, 220) },
+	{ coat = Color3.fromRGB(252, 230, 160), mane = Color3.fromRGB(245, 150, 70) },
+	{ coat = Color3.fromRGB(190, 225, 250), mane = Color3.fromRGB(255, 255, 255) },
+}
+local SADDLES = { RED, BLUE, GREEN, Color3.fromRGB(240, 140, 60), Color3.fromRGB(170, 110, 220), YELLOW }
+
+-- Лошадка в кадре frame: смотрит вперёд (LookVector), спина на высоте frame, шест сквозь неё.
+local function horse(parent: Model, frame: CFrame, index: number)
+	local look = HORSE_COATS[(index - 1) % #HORSE_COATS + 1]
+	cylinder(parent, "Body", 3.6, 1.9, frame * CFrame.Angles(0, math.rad(90), 0), look.coat)
+	part(parent, "Chest", Vector3.new(1.5, 1.7, 1.2), frame * CFrame.new(0, 0.1, -1.5), look.coat)
+	part(
+		parent,
+		"Neck",
+		Vector3.new(0.95, 2.2, 1),
+		frame * CFrame.new(0, 1.2, -1.75) * CFrame.Angles(math.rad(-25), 0, 0),
+		look.coat
+	)
+	part(
+		parent,
+		"Head",
+		Vector3.new(0.9, 0.95, 1.9),
+		frame * CFrame.new(0, 2.3, -2.55) * CFrame.Angles(math.rad(15), 0, 0),
+		look.coat
+	)
+	part(parent, "Muzzle", Vector3.new(0.8, 0.7, 0.5), frame * CFrame.new(0, 2.05, -3.4), look.coat)
+	for _, side in { -1, 1 } do
+		part(
+			parent,
+			"Ear",
+			Vector3.new(0.25, 0.55, 0.25),
+			frame * CFrame.new(side * 0.3, 2.95, -2.1),
+			look.coat
+		)
+		ball(parent, "Eye", 0.28, frame * CFrame.new(side * 0.46, 2.45, -2.9), Color3.fromRGB(40, 35, 35))
+	end
+	-- Грива гребнем по шее и хвост.
+	for step = 0, 3 do
+		part(
+			parent,
+			"Mane",
+			Vector3.new(0.4, 0.7, 0.55),
+			frame * CFrame.new(0, 0.7 + step * 0.55, -1.2 - step * 0.3) * CFrame.Angles(math.rad(-25), 0, 0),
+			look.mane
+		)
+	end
+	part(
+		parent,
+		"Tail",
+		Vector3.new(0.45, 1.8, 0.5),
+		frame * CFrame.new(0, -0.1, 2.05) * CFrame.Angles(math.rad(35), 0, 0),
+		look.mane
+	)
+	-- Ноги вскачь: передние вперёд, задние назад.
+	for _, side in { -1, 1 } do
+		part(
+			parent,
+			"Leg",
+			Vector3.new(0.35, 1.7, 0.35),
+			frame * CFrame.new(side * 0.5, -1.2, -1.3) * CFrame.Angles(math.rad(-35), 0, 0),
+			look.coat
+		)
+		part(
+			parent,
+			"Leg",
+			Vector3.new(0.35, 1.7, 0.35),
+			frame * CFrame.new(side * 0.5, -1.2, 1.3) * CFrame.Angles(math.rad(30), 0, 0),
+			look.coat
+		)
+	end
+	part(
+		parent,
+		"Saddle",
+		Vector3.new(1.95, 0.3, 1.5),
+		frame * CFrame.new(0, 0.95, 0.1),
+		SADDLES[(index - 1) % #SADDLES + 1]
+	)
+	part(parent, "Blanket", Vector3.new(2.05, 1, 1.2), frame * CFrame.new(0, 0.5, 0.1), YELLOW)
+	-- Шест от помоста до шатра: едет вместе с лошадкой.
+	local fromY, toY = 1.2 - 2.6, Rides.CAROUSEL.roof - 0.4 - 2.6
+	local pole = column(
+		parent,
+		"Pole",
+		toY - fromY,
+		0.35,
+		frame * CFrame.new(0, (fromY + toY) / 2, 0),
+		Color3.fromRGB(255, 215, 90)
+	)
+	pole.Material = Enum.Material.Metal
+end
+
+--[[
+	Карусель в месте парка origin. Опорная точка всего, что крутится, — центр
+	помоста на земле (атрибут Center); лошадки — отдельные модели со своей
+	опорной точкой Rides.horseFrame(i, 0, 0), их двигает RideController.
+]]
+function RidesBuilder.buildCarousel(model: Model, origin: CFrame)
+	local spec = Rides.CAROUSEL
+	local center = origin
+	model:SetAttribute("Center", center)
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+
+	-- Неподвижное: круглый цоколь.
+	local plinth = column(model, "Plinth", 0.8, spec.platform + 1.6, center * CFrame.new(0, 0.4, 0), CREAM)
+	plinth.Material = Enum.Material.Marble
+
+	local rotor = Instance.new("Model")
+	rotor.Name = "Rotor"
+	rotor.Parent = model
+	local deck = column(rotor, "Deck", 0.4, spec.platform, center * CFrame.new(0, 1, 0), WOOD)
+	deck.Material = Enum.Material.WoodPlanks
+	column(rotor, "DeckRim", 0.5, spec.platform + 0.4, center * CFrame.new(0, 0.95, 0), RED)
+	column(rotor, "Core", spec.roof, 3, center * CFrame.new(0, spec.roof / 2 + 1, 0), CREAM)
+	-- Зеркальные полосы на столбе: блестят, когда карусель крутится.
+	for index = 1, 8 do
+		local mirror = part(
+			rotor,
+			"Mirror",
+			Vector3.new(0.2, 4, 0.9),
+			center * CFrame.Angles(0, index / 8 * math.pi * 2, 0) * CFrame.new(1.45, 5, 0),
+			Color3.fromRGB(220, 235, 250)
+		)
+		mirror.Material = Enum.Material.Glass
+		mirror.Reflectance = 0.4
+	end
+
+	-- Шатёр: ярусы-кольца, чем выше, тем уже, красные и белые через один.
+	local tiers = 7
+	for tier = 0, tiers - 1 do
+		local diameter = (spec.platform + 2) * (1 - tier / tiers) + 1
+		column(
+			rotor,
+			"Canopy",
+			0.9,
+			diameter,
+			center * CFrame.new(0, spec.roof + 1 + tier * 0.8, 0),
+			if tier % 2 == 0 then RED else CREAM
+		)
+	end
+	local peak = spec.roof + 1 + tiers * 0.8
+	ball(rotor, "Top", 1.6, center * CFrame.new(0, peak + 0.5, 0), YELLOW)
+	column(rotor, "FlagPole", 3, 0.2, center * CFrame.new(0, peak + 2, 0), CREAM)
+	part(rotor, "Flag", Vector3.new(0.1, 1, 1.8), center * CFrame.new(0, peak + 2.9, 0.9), BLUE)
+	-- Бахрома по краю шатра: шарики-фестоны и лампочки.
+	local fringe = 24
+	local edge = (spec.platform + 2) / 2 + 0.3
+	for index = 1, fringe do
+		local at = center
+			* CFrame.Angles(0, index / fringe * math.pi * 2, 0)
+			* CFrame.new(edge, spec.roof + 0.4, 0)
+		ball(rotor, "Scallop", 1.1, at, CABIN_COLORS[(index - 1) % #CABIN_COLORS + 1])
+		local bulb = ball(rotor, "Bulb", 0.45, at * CFrame.new(0.2, -0.75, 0), Color3.fromRGB(255, 240, 180))
+		bulb.Material = Enum.Material.Neon
+	end
+
+	for index = 1, spec.horses do
+		local steed = Instance.new("Model")
+		steed.Name = `Horse_{index}`
+		steed.Parent = model
+		horse(steed, center * Rides.horseFrame(index, 0, 0), index)
+	end
+	-- Твёрдые только цоколь и помост: по помосту можно ходить между лошадками.
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.CanCollide = descendant == deck or descendant == plinth
+		end
+	end
+
+	boardPad(model, origin * CFrame.new(0, 0.15, -(spec.platform / 2 + 4)), "AF_CarouselBoard")
+	CollectionService:AddTag(model, "AF_Carousel")
+end
+
+-- ===== Горка-спираль =====
+
+--[[
+	Горка в месте парка origin: столб-башня, площадка наверху под шатром,
+	лестница-сетка (TrussPart: по ней лазают сами) и полтора витка жёлоба.
+	Жёлоб неподвижный и твёрдый — по нему можно и забраться, это тоже игра.
+	Едет ребёнок на клиенте (RideController): встал на круг наверху — поехал.
+]]
+function RidesBuilder.buildSlide(model: Model, origin: CFrame)
+	local spec = Rides.SLIDE
+	local base = origin
+	model:SetAttribute("Base", base)
+
+	local tower = column(model, "Tower", spec.height, 4, base * CFrame.new(0, spec.height / 2, 0), CREAM)
+	tower.CanCollide = true
+	for band = 1, 5 do
+		column(
+			model,
+			"TowerBand",
+			0.6,
+			4.3,
+			base * CFrame.new(0, band * spec.height / 6, 0),
+			CABIN_COLORS[band]
+		).CanCollide =
+			false
+	end
+	local deck =
+		column(model, "Deck", 0.6, spec.platform * 2, base * CFrame.new(0, spec.height - 0.3, 0), WOOD)
+	deck.CanCollide = true
+	deck.Material = Enum.Material.WoodPlanks
+
+	-- Мостик от площадки к началу жёлоба: жёлоб начинается на угле 0, вдоль оси X.
+	local start = Rides.slidePoint(0)
+	local bridgeFrom = spec.platform - 0.5
+	local bridgeLength = start.X - bridgeFrom + 1
+	local bridge = part(
+		model,
+		"StartDeck",
+		Vector3.new(bridgeLength, 0.6, spec.width),
+		base * CFrame.new(bridgeFrom + bridgeLength / 2, spec.height - 0.3, 0),
+		WOOD
+	)
+	bridge.CanCollide = true
+	bridge.Material = Enum.Material.WoodPlanks
+	for _, side in { -1, 1 } do
+		part(
+			model,
+			"StartRail",
+			Vector3.new(bridgeLength - 1, 1.4, 0.3),
+			base * CFrame.new(bridgeFrom + bridgeLength / 2 - 0.5, spec.height + 0.7, side * spec.width / 2),
+			RED
+		).CanCollide =
+			true
+	end
+
+	-- Перила площадки по кругу, кроме выхода на мостик и места лестницы.
+	local ladder = math.rad(spec.ladderAngle)
+	local rails = 16
+	local function apart(a: number, b: number): number
+		return math.abs(math.atan2(math.sin(a - b), math.cos(a - b)))
+	end
+	for index = 1, rails do
+		local a = (index - 0.5) / rails * math.pi * 2
+		if apart(a, 0) > math.rad(28) and apart(a, ladder) > math.rad(28) then
+			local r = spec.platform - 0.2
+			local at = base * CFrame.new(math.cos(a) * r, spec.height + 0.7, math.sin(a) * r)
+			-- Поперёк радиуса: CFrame.Angles(0, -a, 0) смотрит осью X наружу, длина по Z.
+			part(
+				model,
+				"Rail",
+				Vector3.new(0.3, 1.4, spec.platform * 2 * math.pi / rails + 0.2),
+				at * CFrame.Angles(0, -a, 0),
+				CABIN_COLORS[(index - 1) % #CABIN_COLORS + 1]
+			).CanCollide =
+				true
+		end
+	end
+
+	-- Шатёр над площадкой на четырёх столбиках.
+	for index = 0, 3 do
+		local a = math.rad(45 + index * 90)
+		local r = spec.platform - 0.4
+		column(
+			model,
+			"RoofPost",
+			5,
+			0.35,
+			base * CFrame.new(math.cos(a) * r, spec.height + 2.5, math.sin(a) * r),
+			CREAM
+		).CanCollide =
+			false
+	end
+	for tier = 0, 4 do
+		column(
+			model,
+			"Roof",
+			0.8,
+			(spec.platform * 2 + 1.5) * (1 - tier / 5) + 0.6,
+			base * CFrame.new(0, spec.height + 5.2 + tier * 0.7, 0),
+			if tier % 2 == 0 then BLUE else CREAM
+		).CanCollide =
+			false
+	end
+	ball(model, "RoofTop", 1.2, base * CFrame.new(0, spec.height + 8.9, 0), YELLOW).CanCollide = false
+
+	-- Лестница-сетка снаружи площадки: по ней лезут сами.
+	local ladderRadius = spec.platform + 1
+	local truss = Instance.new("TrussPart")
+	truss.Name = "Ladder"
+	truss.Size = Vector3.new(2, spec.height + 1, 2)
+	truss.CFrame = base
+		* CFrame.new(math.cos(ladder) * ladderRadius, (spec.height + 1) / 2, math.sin(ladder) * ladderRadius)
+		* CFrame.Angles(0, -ladder, 0)
+	truss.Anchored = true
+	truss.Color = Color3.fromRGB(240, 140, 60)
+	truss.Parent = model
+
+	-- Жёлоб: отрезки по спирали, у каждого дно и два бортика, цвета радугой.
+	local segments = 45
+	for index = 1, segments do
+		local u0, u1 = (index - 1) / segments, index / segments
+		local p0 = (base * CFrame.new(Rides.slidePoint(u0))).Position
+		local p1 = (base * CFrame.new(Rides.slidePoint(u1))).Position
+		local frame = CFrame.lookAt((p0 + p1) / 2, p1)
+		local length = (p1 - p0).Magnitude + 0.35
+		local color = CABIN_COLORS[math.floor((index - 1) / segments * #CABIN_COLORS) + 1]
+		local floor =
+			part(model, "Chute", Vector3.new(spec.width, 0.4, length), frame * CFrame.new(0, -0.2, 0), color)
+		floor.CanCollide = true
+		for _, side in { -1, 1 } do
+			part(
+				model,
+				"ChuteWall",
+				Vector3.new(0.35, 1.3, length),
+				frame * CFrame.new(side * spec.width / 2, 0.45, 0),
+				CREAM
+			).CanCollide =
+				true
+		end
+		-- Опоры реже и не там, где идут к лестнице.
+		local angle = math.deg(u0 * spec.turns * math.pi * 2) % 360
+		local nearLadder = math.abs((angle - spec.ladderAngle + 180) % 360 - 180) < 35
+		local foot = (frame * CFrame.new(0, -0.4, 0)).Position
+		local ground = base.Position.Y
+		if index % 5 == 0 and not nearLadder and foot.Y - ground > 1 then
+			column(
+				model,
+				"ChutePost",
+				foot.Y - ground,
+				0.6,
+				CFrame.new(foot.X, (foot.Y + ground) / 2, foot.Z),
+				CREAM
+			).CanCollide =
+				false
+		end
+	end
+
+	-- Внизу — мягкий коврик, куда вылетают.
+	local finish = (base * CFrame.new(Rides.slidePoint(1))).Position
+	local before = (base * CFrame.new(Rides.slidePoint(0.98))).Position
+	local ahead = ((finish - before) * Vector3.new(1, 0, 1)).Unit
+	local matAt = Vector3.new(finish.X, base.Position.Y + 0.15, finish.Z) + ahead * 4
+	part(
+		model,
+		"Mat",
+		Vector3.new(6, 0.3, 8),
+		CFrame.lookAt(matAt, matAt + ahead),
+		Color3.fromRGB(120, 205, 110)
+	).CanCollide =
+		false
+
+	boardPad(model, base * CFrame.new(start.X - 1.5, spec.height + 0.15, 0), "AF_SlideBoard")
+	CollectionService:AddTag(model, "AF_Slide")
+end
+
+-- ===== Воздушный шар =====
+
+-- Профиль купола снизу вверх: доля поперечника на каждой полосе (капля: узко внизу, шар сверху).
+local ENVELOPE = { 0.28, 0.42, 0.56, 0.7, 0.82, 0.92, 0.98, 1, 0.98, 0.93, 0.84, 0.7, 0.5 }
+local BALLOON_STRIPES = { RED, YELLOW, Color3.fromRGB(80, 190, 220), CREAM }
+
+--[[
+	Шар в месте парка origin: корзинка на лужайке, над ней купол из полос.
+	Весь шар — одна модель Balloon с опорной точкой Home (центр дна корзины),
+	её двигает RideController по Rides.balloonAt. Пламя горелки — деталь Flame
+	внутри: клиент зажигает её на подъёме и на круге.
+]]
+function RidesBuilder.buildBalloon(model: Model, origin: CFrame)
+	local spec = Rides.BALLOON
+	local home = origin
+	-- Стоянка: круг утоптанной травы с колышками.
+	column(model, "Field", 0.2, 16, home * CFrame.new(0, 0.1, 0), Color3.fromRGB(215, 235, 170)).CanCollide =
+		false
+	for index = 1, 8 do
+		local a = index / 8 * math.pi * 2
+		column(model, "Peg", 1.4, 0.25, home * CFrame.new(math.cos(a) * 8, 0.7, math.sin(a) * 8), CREAM).CanCollide =
+			false
+	end
+
+	local balloon = Instance.new("Model")
+	balloon.Name = "Balloon"
+	balloon.Parent = model
+	balloon:SetAttribute("Home", home)
+	model:SetAttribute("Inward", (-home.Position * Vector3.new(1, 0, 1)).Unit)
+	-- Шар летает далеко от ребёнка: стриминг не должен его прятать.
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+
+	-- Корзинка: плетёный пол и стенки по пояс.
+	local basket = 4.4
+	part(balloon, "BasketFloor", Vector3.new(basket, 0.4, basket), home * CFrame.new(0, 0.2, 0), WOOD_DARK)
+	for _, side in { -1, 1 } do
+		part(
+			balloon,
+			"BasketWall",
+			Vector3.new(0.35, 2.4, basket),
+			home * CFrame.new(side * (basket / 2 - 0.17), 1.4, 0),
+			WOOD
+		).Material =
+			Enum.Material.Fabric
+		part(
+			balloon,
+			"BasketWall",
+			Vector3.new(basket, 2.4, 0.35),
+			home * CFrame.new(0, 1.4, side * (basket / 2 - 0.17)),
+			WOOD
+		).Material =
+			Enum.Material.Fabric
+	end
+	part(
+		balloon,
+		"BasketRim",
+		Vector3.new(basket + 0.3, 0.35, basket + 0.3),
+		home * CFrame.new(0, 2.6, 0),
+		WOOD_DARK
+	)
+
+	-- Горелка над корзиной и её пламя.
+	local burnerY = 7
+	part(
+		balloon,
+		"Burner",
+		Vector3.new(1.2, 0.8, 1.2),
+		home * CFrame.new(0, burnerY, 0),
+		Color3.fromRGB(120, 125, 135)
+	).Material =
+		Enum.Material.Metal
+	local flame = part(
+		balloon,
+		"Flame",
+		Vector3.new(0.8, 2.2, 0.8),
+		home * CFrame.new(0, burnerY + 1.5, 0),
+		Color3.fromRGB(255, 150, 50)
+	)
+	flame.Material = Enum.Material.Neon
+	flame.Transparency = 1
+	local fire = Instance.new("Fire")
+	fire.Size = 3
+	fire.Heat = 12
+	fire.Color = Color3.fromRGB(255, 150, 50)
+	fire.SecondaryColor = Color3.fromRGB(255, 230, 120)
+	fire.Enabled = false
+	fire.Parent = flame
+
+	-- Стропы от углов корзины к нижнему краю купола.
+	local envelopeBottom = burnerY + 2.5
+	local band = 1.6
+	local d = spec.envelope
+	for _, corner in { Vector2.new(-1, -1), Vector2.new(-1, 1), Vector2.new(1, -1), Vector2.new(1, 1) } do
+		local from = (home * CFrame.new(corner.X * (basket / 2 - 0.2), 2.6, corner.Y * (basket / 2 - 0.2))).Position
+		local to = (home * CFrame.new(
+			corner.X * d * ENVELOPE[1] / 2.2,
+			envelopeBottom,
+			corner.Y * d * ENVELOPE[1] / 2.2
+		)).Position
+		beam(balloon, "Rope", from, to, 0.18, Color3.fromRGB(235, 220, 180))
+	end
+	for index, share in ENVELOPE do
+		column(
+			balloon,
+			"Envelope",
+			band + 0.05,
+			d * share,
+			home * CFrame.new(0, envelopeBottom + (index - 0.5) * band, 0),
+			BALLOON_STRIPES[(index - 1) % #BALLOON_STRIPES + 1]
+		)
+	end
+	ball(
+		balloon,
+		"Crown",
+		d * 0.42,
+		home * CFrame.new(0, envelopeBottom + #ENVELOPE * band - 0.2, 0),
+		BALLOON_STRIPES[#ENVELOPE % #BALLOON_STRIPES + 1]
+	)
+	-- Флажок на макушке — видно, где шар, и с другого конца парка.
+	local top = envelopeBottom + #ENVELOPE * band + 1.5
+	column(balloon, "Mast", 3, 0.2, home * CFrame.new(0, top + 1, 0), CREAM)
+	part(balloon, "Pennant", Vector3.new(0.1, 1.2, 2.2), home * CFrame.new(0, top + 2, 1.1), RED)
+
+	-- Твёрдое только дно корзины: остальное ни за что не цепляется в полёте.
+	for _, descendant in balloon:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.CanCollide = descendant.Name == "BasketFloor"
+		end
+	end
+
+	boardPad(model, origin * CFrame.new(0, 0.15, -(basket / 2 + 4)), "AF_BalloonBoard")
+	CollectionService:AddTag(model, "AF_Balloon")
+end
+
 return RidesBuilder

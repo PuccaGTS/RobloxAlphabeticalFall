@@ -17,6 +17,8 @@ local AudioRegistry = require(Shared.Config.AudioRegistry)
 local Ambient = require(Shared.Config.Ambient)
 local Decor = require(Shared.Config.Decor)
 local Horizon = require(Shared.Config.Horizon)
+local Playground = require(Shared.Config.Playground)
+local Rides = require(Shared.Config.Rides)
 local AudioController = require(script.Parent.AudioController)
 local MusicController = require(script.Parent.MusicController)
 
@@ -122,6 +124,12 @@ function AmbientController.init()
 	end
 
 	placeSpot(sounds, Horizon.waterfallPool(), Ambient.WATERFALL)
+	local carousel = Playground.position(Playground.expect(Rides.CAROUSEL.spot))
+	placeSpot(
+		sounds,
+		Vector3.new(carousel.X, Decor.groundY(carousel.X, carousel.Z) + 6, carousel.Z),
+		Ambient.CAROUSEL
+	)
 	animateFallStripes()
 
 	local bed = makeSound(Ambient.BED.key, 0, SoundService)

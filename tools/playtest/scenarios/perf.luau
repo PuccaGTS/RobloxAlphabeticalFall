@@ -21,22 +21,18 @@ return function(player, note)
 
 	-- Худший случай для площади: все двадцать участков застроены до конца.
 	for index = 2, 20 do
-		pcall(
-			BaseService.preview,
-			index,
-			{
-				house = 4,
-				roof = 4,
-				yard = 4,
-				fence = 4,
-				furniture = 4,
-				decor = 4,
-				garden = 4,
-				playground = 4,
-				pets = 4,
-				transport = 4,
-			}
-		)
+		pcall(BaseService.preview, index, {
+			house = 4,
+			roof = 4,
+			yard = 4,
+			fence = 4,
+			furniture = 4,
+			decor = 4,
+			garden = 4,
+			playground = 4,
+			pets = 4,
+			transport = 4,
+		})
 	end
 	task.wait(2)
 

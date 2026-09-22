@@ -45,20 +45,17 @@ return function(player, note)
 	-- Смешанный участок: башенка под соломой, забор первого уровня — крыша обязана сесть на любой дом.
 	local sets = {}
 	for _, level in levels do
-		table.insert(
-			sets,
-			{
-				name = `house_{level}`,
-				levels = {
-					house = level,
-					roof = level,
-					yard = level,
-					fence = level,
-					furniture = level,
-					decor = level,
-				},
-			}
-		)
+		table.insert(sets, {
+			name = `house_{level}`,
+			levels = {
+				house = level,
+				roof = level,
+				yard = level,
+				fence = level,
+				furniture = level,
+				decor = level,
+			},
+		})
 	end
 	if not only then
 		table.insert(sets, { name = "house_mixed", levels = { house = 4, roof = 1, yard = 2, fence = 1 } })
@@ -67,21 +64,16 @@ return function(player, note)
 
 	for order, set in sets do
 		local index = order + 1
-		local ok, err = pcall(
-			BaseService.preview,
-			index,
-			set.levels,
-			{
-				stageFlags = { 1, 2, 3, 4, 5 },
-				letterRooms = { "a", "b", "v" },
-				mathRooms = {},
-				flags = 4,
-				mathFlags = 2,
-				arch = false,
-				spire = false,
-				countSpire = false,
-			}
-		)
+		local ok, err = pcall(BaseService.preview, index, set.levels, {
+			stageFlags = { 1, 2, 3, 4, 5 },
+			letterRooms = { "a", "b", "v" },
+			mathRooms = {},
+			flags = 4,
+			mathFlags = 2,
+			arch = false,
+			spire = false,
+			countSpire = false,
+		})
 		note(`{set.name} on plot {index}: {ok} {err}`)
 		local at = BaseService.plotCFrame(index)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")

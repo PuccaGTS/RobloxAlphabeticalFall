@@ -15,21 +15,16 @@ return function(player, note)
 	end
 	task.wait(3)
 
-	pcall(
-		BaseService.preview,
-		2,
-		{ house = 2, roof = 2, yard = 2, fence = 2 },
-		{
-			arch = true,
-			spire = true,
-			flags = 3,
-			mathFlags = 1,
-			countSpire = false,
-			letterRooms = {},
-			mathRooms = {},
-			stageFlags = {},
-		}
-	)
+	pcall(BaseService.preview, 2, { house = 2, roof = 2, yard = 2, fence = 2 }, {
+		arch = true,
+		spire = true,
+		flags = 3,
+		mathFlags = 1,
+		countSpire = false,
+		letterRooms = {},
+		mathRooms = {},
+		stageFlags = {},
+	})
 	local plot = BaseService.plotCFrame(2)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root then

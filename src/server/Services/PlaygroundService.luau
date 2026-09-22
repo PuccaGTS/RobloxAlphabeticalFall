@@ -515,6 +515,22 @@ function BUILDERS.ferris(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(9, 0, -9), "🎡")
 end
 
+-- Карусель, горка и воздушный шар: строит World/Rides, катает RideController.
+function BUILDERS.carousel(model: Model, origin: CFrame)
+	RidesBuilder.buildCarousel(model, origin)
+	sign(model, origin * CFrame.new(11, 0, -12), "🎠")
+end
+
+function BUILDERS.slide(model: Model, origin: CFrame)
+	RidesBuilder.buildSlide(model, origin)
+	sign(model, origin * CFrame.new(8, 0, -14), "🌀")
+end
+
+function BUILDERS.balloon(model: Model, origin: CFrame)
+	RidesBuilder.buildBalloon(model, origin)
+	sign(model, origin * CFrame.new(8, 0, -9), "🎈")
+end
+
 --[[
 	Фото-зона: небесный задник с радугой в золотой раме, по бокам объёмные
 	А и Я, перед рамкой — метка с фотоаппаратом. Встал на метку — снимок

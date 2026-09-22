@@ -31,7 +31,7 @@ LiveWorld.BUTTERFLIES_PER_BED = 2
 	много, и бабочки у каждой съели бы весь бюджет кадра: здесь ребёнок бывает
 	чаще всего, здесь им и летать.
 ]]
-LiveWorld.MAX_BUTTERFLY_BEDS = 9 -- было 14: часть бюджета отдана уткам, зайчикам, паровозику и колесу
+LiveWorld.MAX_BUTTERFLY_BEDS = 8 -- было 14: часть бюджета отдана уткам, зайчикам и катаниям
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
@@ -189,7 +189,7 @@ function LiveWorld.movingBudget(): number
 		+ #LiveWorld.BUNNY_HOMES
 		-- В каждом пруду карпы и одно кольцо брызг от прыжка.
 		+ #LiveWorld.ponds() * (LiveWorld.KOI_PER_POND + 1)
-		-- Паровозик и колесо обозрения (Config/Rides).
+		-- Катания: паровозик, колесо, карусель, воздушный шар (Config/Rides).
 		+ Rides.MOVING
 end
 

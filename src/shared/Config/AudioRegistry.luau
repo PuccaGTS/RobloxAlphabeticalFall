@@ -122,6 +122,9 @@ local LIBRARY: { [string]: number } = {
 	amb_stream = 9120606523, -- Water Stream into Pool, 56 с
 	amb_train_whistle = 9120223157, -- Toy Train Whistle, деревянный трёхтонный свисток
 	sfx_camera_shutter = 17208312548, -- Roblox GUI - Camera Shutter: щелчок фото-зоны
+	amb_carousel = 9046170527, -- APM Carousel Waltz (a): вальс шарманки у карусели, 115 с
+	sfx_slide_whistle = 9119198473, -- Slide Whistle 7: мультяшный свисток на горке-спирали
+	sfx_balloon_burner = 9114440283, -- Fire Whoosh 1: горелка воздушного шара, короткие вспышки
 }
 for key, assetId in LIBRARY do
 	ids[key] = `rbxassetid://{assetId}`

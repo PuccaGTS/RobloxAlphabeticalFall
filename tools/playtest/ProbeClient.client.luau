@@ -297,11 +297,17 @@ while true do
 		local hit = workspace:Raycast(root.Position, Vector3.new(0, -60, 0), params)
 		local venues = workspace:FindFirstChild("Venues")
 		local line = string.format(
-			"root %.0f,%.0f,%.0f anchored=%s below=%s venues=%s",
+			"root %.0f,%.0f,%.0f anchored=%s state=%s below=%s venues=%s",
 			root.Position.X,
 			root.Position.Y,
 			root.Position.Z,
 			tostring(root.Anchored),
+			(function()
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				return if humanoid
+					then humanoid:GetState().Name .. (if humanoid.Sit then "+sit" else "")
+					else "?"
+			end)(),
 			hit and (hit.Instance:GetFullName() .. " @" .. string.format("%.1f", hit.Distance)) or "nothing",
 			venues and tostring(#venues:GetDescendants()) or "none"
 		)
