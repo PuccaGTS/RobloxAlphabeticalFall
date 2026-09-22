@@ -126,6 +126,7 @@ local LIBRARY: { [string]: number } = {
 	sfx_slide_whistle = 9119198473, -- Slide Whistle 7: мультяшный свисток на горке-спирали
 	sfx_balloon_burner = 9114440283, -- Fire Whoosh 1: горелка воздушного шара, короткие вспышки
 	sfx_fireworks = 9114447104, -- Fireworks Fast 2: свистящие ракеты и хлопки, салют за уровень
+	mus_fountain_show = 1840422274, -- APM Water Ballet, 55 с: музыка поющего фонтана
 }
 for key, assetId in LIBRARY do
 	ids[key] = `rbxassetid://{assetId}`

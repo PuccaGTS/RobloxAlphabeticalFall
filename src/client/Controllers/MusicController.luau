@@ -28,6 +28,8 @@ local RUN_FROM_X = Tunnel.PLOT_ORIGIN.X - Tunnel.PLOT_SPACING / 2
 
 local place: string? = nil
 local current: Sound? = nil
+local hushes: { [string]: boolean } = {} -- кто просит притихнуть: поющий фонтан и подобные
+local HUSHED = 0.2 -- доля громкости, пока рядом играет своя музыка места
 local position: { [string]: number } = {} -- какой трек плейлиста играл последним
 
 local function available(list: { string }): { string }
@@ -39,6 +41,10 @@ local function available(list: { string }): { string }
 		end
 	end
 	return ids
+end
+
+local function targetVolume(): number
+	return if next(hushes) then Music.VOLUME * HUSHED else Music.VOLUME
 end
 
 local function fadeOut(sound: Sound)
@@ -75,7 +81,7 @@ function playNext(name: string)
 		end
 	end)
 	sound:Play()
-	TweenService:Create(sound, TweenInfo.new(Music.FADE_SECONDS), { Volume = Music.VOLUME }):Play()
+	TweenService:Create(sound, TweenInfo.new(Music.FADE_SECONDS), { Volume = targetVolume() }):Play()
 end
 
 local function runModel(): Model?
@@ -108,6 +114,20 @@ end
 
 function MusicController.current(): (string?, Sound?)
 	return place, current
+end
+
+--[[
+	Притихнуть на время чужой музыки рядом (поющий фонтан): фон не спорит
+	с шоу. Причин может быть несколько — громкость вернётся, когда уйдут все.
+]]
+function MusicController.hush(reason: string, on: boolean)
+	if (hushes[reason] == true) == on then
+		return
+	end
+	hushes[reason] = if on then true else nil
+	if current then
+		TweenService:Create(current, TweenInfo.new(1.5), { Volume = targetVolume() }):Play()
+	end
 end
 
 function MusicController.init()
