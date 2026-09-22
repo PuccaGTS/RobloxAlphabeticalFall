@@ -129,6 +129,59 @@ return function()
 			end
 		end)
 
+		it(
+			"ленты: щель между лентами в прыжок, лента короче трассы",
+			function()
+				for _, plan in plans("belts") do
+					expect(plan.gap <= Attractions.MAX_GAP).to.equal(true)
+					expect(plan.span < Tunnel.WIDTH - 4).to.equal(true)
+					-- Лента тащит, но не быстрее бега: кто бежит, тот перебегает.
+					expect(plan.speed < 16 + 1).to.equal(true)
+					expect(plan.back.speed < 12).to.equal(true)
+					-- Последняя лента начинается после щели и упирается в выход.
+					local lastEdge = plan.belts[#plan.belts].z + plan.depth / 2
+					local backStart = plan.back.z - plan.back.length / 2
+					expect(math.abs(backStart - lastEdge - plan.gap) < 1e-6).to.equal(true)
+					expect(math.abs(plan.length - (plan.back.z + plan.back.length / 2)) < 1e-6).to.equal(true)
+				end
+			end
+		)
+
+		it("ленты: три ленты подряд в одну сторону не тянут", function()
+			for _, plan in plans("belts") do
+				for index = 3, #plan.belts do
+					local a, b, c = plan.belts[index - 2], plan.belts[index - 1], plan.belts[index]
+					expect(a.direction == b.direction and b.direction == c.direction).to.equal(false)
+				end
+			end
+		end)
+
+		it(
+			"качели: сошедшиеся доски — в прыжок, разошедшиеся — нет",
+			function()
+				for _, plan in plans("swings") do
+					expect(plan.near <= Attractions.MAX_GAP).to.equal(true)
+					expect(plan.near + 4 * plan.reach > Attractions.MAX_GAP + 4).to.equal(true)
+					for index = 2, #plan.swings do
+						local a, b = plan.swings[index - 1], plan.swings[index]
+						-- В противофазе: одна впереди, другая сзади.
+						expect(math.abs(math.abs(b.phase - a.phase) - plan.period / 2) < 1e-6).to.equal(true)
+						local closest = (b.z - a.z) - plan.board - 2 * plan.reach
+						expect(math.abs(closest - plan.near) < 1e-6).to.equal(true)
+					end
+					-- Первая доска сходится с полом входа, последняя — с полом выхода.
+					expect(math.abs(plan.swings[1].z - plan.reach - plan.board / 2 - plan.near) < 1e-6).to.equal(
+						true
+					)
+					local last = plan.swings[#plan.swings]
+					expect(math.abs(plan.length - (last.z + plan.reach + plan.board / 2 + plan.near)) < 1e-6).to.equal(
+						true
+					)
+					expect(plan.board / 2 <= Tunnel.WIDTH / 2).to.equal(true)
+				end
+			end
+		)
+
 		it("островки: чем жарче, тем шире прыжки", function()
 			expect(Attractions.param("islands", "gapMax", 5) > Attractions.param("islands", "gapMax", 1)).to.equal(
 				true

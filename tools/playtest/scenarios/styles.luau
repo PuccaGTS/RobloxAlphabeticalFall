@@ -107,7 +107,12 @@ return function(player, note)
 	BaseService.setStyle(player, "transport", 2, 6)
 	task.wait(1.5)
 	local plane = home * CFrame.new(23, 3, -3)
-	_G.ZZ_Shot(player, "style_transport_2_paint", CFrame.lookAt((plane * CFrame.new(-9, 5, -7)).Position, plane.Position), 60)
+	_G.ZZ_Shot(
+		player,
+		"style_transport_2_paint",
+		CFrame.lookAt((plane * CFrame.new(-9, 5, -7)).Position, plane.Position),
+		60
+	)
 
 	-- Экран выбора, как его видит ребёнок у пада забора.
 	RemoteDefs.event("OpenUI"):FireClient(player, "build", "fence")

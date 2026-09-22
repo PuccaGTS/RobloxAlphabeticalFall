@@ -63,6 +63,39 @@ return function(player, note)
 		note("NO STATION")
 	end
 
+	-- Где движущаяся деталь сейчас у клиента: сервер держит её в исходном месте.
+	local function livePosition(p)
+		local base = p:GetAttribute("Base")
+		local now = workspace:GetServerTimeNow()
+		local period = p:GetAttribute("Period") or 1
+		local phase = p:GetAttribute("Phase") or 0
+		local kind = p:GetAttribute("Mover")
+		if kind == "slide" then
+			local x = (p:GetAttribute("Travel") or 0) * math.sin(2 * math.pi * (now + phase) / period)
+			return (base * CFrame.new(x, 0, 0)).Position
+		elseif kind == "pendulum" then
+			local angle = (p:GetAttribute("Amplitude") or 0) * math.sin(2 * math.pi * (now + phase) / period)
+			return (base * CFrame.Angles(angle, 0, 0) * CFrame.new(0, -(p:GetAttribute("Hang") or 0), 0)).Position
+		end
+		return p.Position
+	end
+
+	-- Поставить прямо на деталь: сначала перенос (он держит якорем и грузит место), потом точно.
+	local function standOn(p)
+		Teleport.to(player, CFrame.new(livePosition(p) + Vector3.new(0, 4, 0)))
+		local r = player.Character.HumanoidRootPart
+		for _ = 1, 40 do
+			if not r.Anchored then
+				break
+			end
+			task.wait(0.1)
+		end
+		task.wait(0.3)
+		r.AssemblyLinearVelocity = Vector3.zero
+		r.CFrame = CFrame.new(livePosition(p) + Vector3.new(0, p.Size.Y / 2 + 3, 0)) * r.CFrame.Rotation
+		return r
+	end
+
 	for _, child in model:GetChildren() do
 		local index, id = string.match(child.Name, "^Attraction_(%d+)_(%a+)$")
 		if not index then
@@ -90,12 +123,12 @@ return function(player, note)
 			local cloud = child:FindFirstChild(`Cloud_{index}_1`)
 			local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if cloud and r then
-				Teleport.to(player, CFrame.new(cloud.Position + Vector3.new(0, 4, 0)))
+				Teleport.to(player, CFrame.new(livePosition(cloud) + Vector3.new(0, 4, 0)))
 				local startX = r.Position
 				local worst = 0
 				for _ = 1, 16 do
 					task.wait(0.25)
-					local offset = (r.Position - cloud.Position) * Vector3.new(1, 0, 1)
+					local offset = (r.Position - livePosition(cloud)) * Vector3.new(1, 0, 1)
 					worst = math.max(worst, offset.Magnitude)
 				end
 				note(
@@ -104,13 +137,67 @@ return function(player, note)
 						((r.Position - startX) * Vector3.new(1, 0, 1)).Magnitude,
 						worst,
 						cloud.Size.Y / 2,
-						r.Position.Y - cloud.Position.Y
+						r.Position.Y - livePosition(cloud).Y
 					)
 				)
 				_G.ZZ_Shot(
 					player,
 					`run_{index}_clouds_ride`,
 					CFrame.lookAt(r.Position + Vector3.new(-12, 8, 14), r.Position),
+					70
+				)
+			end
+		end
+
+		-- Лента должна тащить: встать на середину первой и не двигаться.
+		if id == "belts" then
+			local beltPart = child:FindFirstChild(`Belt_{index}_1`)
+			local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if beltPart and r then
+				standOn(beltPart)
+				local trace = {}
+				for _ = 1, 8 do
+					local rel = beltPart.CFrame:PointToObjectSpace(r.Position)
+					table.insert(trace, string.format("(%.1f,%.1f,%.1f)", rel.X, rel.Y, rel.Z))
+					task.wait(0.1)
+				end
+				note("   belts trace (x along belt, y up): " .. table.concat(trace, " "))
+				_G.ZZ_Shot(
+					player,
+					`run_{index}_belts_on`,
+					CFrame.lookAt(r.Position + Vector3.new(-10, 9, 14), r.Position),
+					70
+				)
+			end
+		end
+
+		-- Доска качелей должна везти: встать на первую и посмотреть, не соскользнёт ли.
+		if id == "swings" then
+			local seat = child:FindFirstChild(`Swing_{index}_1`)
+			local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if seat and r then
+				standOn(seat)
+				local worst, travelled, last = 0, 0, r.Position
+				for _ = 1, 16 do
+					task.wait(0.25)
+					local offset = (r.Position - livePosition(seat)) * Vector3.new(1, 0, 1)
+					worst = math.max(worst, offset.Magnitude)
+					travelled += ((r.Position - last) * Vector3.new(1, 0, 1)).Magnitude
+					last = r.Position
+				end
+				note(
+					string.format(
+						"   swings: rode %.1f studs, farthest from board centre %.1f (half board %.1f), y above %.1f",
+						travelled,
+						worst,
+						seat.Size.X / 2,
+						r.Position.Y - livePosition(seat).Y
+					)
+				)
+				_G.ZZ_Shot(
+					player,
+					`run_{index}_swings_ride`,
+					CFrame.lookAt(r.Position + Vector3.new(-16, 6, 4), r.Position),
 					70
 				)
 			end

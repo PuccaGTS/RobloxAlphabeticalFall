@@ -24,8 +24,18 @@ return function(player, note)
 	BaseService.sendHome(player)
 	task.wait(4)
 	local home = BaseService.plotCFrame(BaseService.plotOf(player).index)
-	_G.ZZ_Shot(player, "yard_pads", CFrame.lookAt((home * CFrame.new(6, 9, -46)).Position, (home * CFrame.new(0, 3, -24)).Position), 60)
-	_G.ZZ_Shot(player, "yard_pads_near", CFrame.lookAt((home * CFrame.new(3, 6, -38)).Position, (home * CFrame.new(0, 3, -26)).Position), 60)
+	_G.ZZ_Shot(
+		player,
+		"yard_pads",
+		CFrame.lookAt((home * CFrame.new(6, 9, -46)).Position, (home * CFrame.new(0, 3, -24)).Position),
+		60
+	)
+	_G.ZZ_Shot(
+		player,
+		"yard_pads_near",
+		CFrame.lookAt((home * CFrame.new(3, 6, -38)).Position, (home * CFrame.new(0, 3, -26)).Position),
+		60
+	)
 	if workspace:GetAttribute("ZZ_Yard") then
 		return
 	end
@@ -35,7 +45,20 @@ return function(player, note)
 	-- Смешанный участок: башенка под соломой, забор первого уровня — крыша обязана сесть на любой дом.
 	local sets = {}
 	for _, level in levels do
-		table.insert(sets, { name = `house_{level}`, levels = { house = level, roof = level, yard = level, fence = level, furniture = level, decor = level } })
+		table.insert(
+			sets,
+			{
+				name = `house_{level}`,
+				levels = {
+					house = level,
+					roof = level,
+					yard = level,
+					fence = level,
+					furniture = level,
+					decor = level,
+				},
+			}
+		)
 	end
 	if not only then
 		table.insert(sets, { name = "house_mixed", levels = { house = 4, roof = 1, yard = 2, fence = 1 } })
@@ -44,7 +67,21 @@ return function(player, note)
 
 	for order, set in sets do
 		local index = order + 1
-		local ok, err = pcall(BaseService.preview, index, set.levels, { stageFlags = { 1, 2, 3, 4, 5 }, letterRooms = { "a", "b", "v" }, mathRooms = {}, flags = 4, mathFlags = 2, arch = false, spire = false, countSpire = false })
+		local ok, err = pcall(
+			BaseService.preview,
+			index,
+			set.levels,
+			{
+				stageFlags = { 1, 2, 3, 4, 5 },
+				letterRooms = { "a", "b", "v" },
+				mathRooms = {},
+				flags = 4,
+				mathFlags = 2,
+				arch = false,
+				spire = false,
+				countSpire = false,
+			}
+		)
 		note(`{set.name} on plot {index}: {ok} {err}`)
 		local at = BaseService.plotCFrame(index)
 		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -52,7 +89,17 @@ return function(player, note)
 			root.CFrame = at * CFrame.new(0, 6, -40)
 		end
 		task.wait(3)
-		_G.ZZ_Shot(player, `{set.name}_front`, CFrame.lookAt((at * CFrame.new(10, 13, -46)).Position, (at * CFrame.new(0, 8, 0)).Position), 60)
-		_G.ZZ_Shot(player, `{set.name}_corner`, CFrame.lookAt((at * CFrame.new(-40, 22, -30)).Position, (at * CFrame.new(0, 6, 0)).Position), 60)
+		_G.ZZ_Shot(
+			player,
+			`{set.name}_front`,
+			CFrame.lookAt((at * CFrame.new(10, 13, -46)).Position, (at * CFrame.new(0, 8, 0)).Position),
+			60
+		)
+		_G.ZZ_Shot(
+			player,
+			`{set.name}_corner`,
+			CFrame.lookAt((at * CFrame.new(-40, 22, -30)).Position, (at * CFrame.new(0, 6, 0)).Position),
+			60
+		)
 	end
 end

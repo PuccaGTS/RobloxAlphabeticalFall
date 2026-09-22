@@ -37,7 +37,10 @@ return function(player, note)
 		end
 		model.Parent = workspace
 		local box, size = model:GetBoundingBox()
-		model:PivotTo(model:GetPivot() + (base - Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z)))
+		model:PivotTo(
+			model:GetPivot()
+				+ (base - Vector3.new(box.Position.X, box.Position.Y - size.Y / 2, box.Position.Z))
+		)
 		if root then
 			root.Anchored = true
 			root.CFrame = CFrame.new(base + Vector3.new(size.X / 2 + 4, 3, 0))
@@ -45,7 +48,12 @@ return function(player, note)
 		local reach = math.max(size.X, size.Y, size.Z, 8)
 		local eye = base + Vector3.new(reach * 0.9, reach * 0.6, reach * 1.4)
 		note(string.format("%s size %.1f x %.1f x %.1f", template.Name, size.X, size.Y, size.Z))
-		_G.ZZ_Shot(player, "show_" .. template.Name, CFrame.lookAt(eye, base + Vector3.new(0, size.Y * 0.4, 0)), 60)
+		_G.ZZ_Shot(
+			player,
+			"show_" .. template.Name,
+			CFrame.lookAt(eye, base + Vector3.new(0, size.Y * 0.4, 0)),
+			60
+		)
 		model:Destroy()
 	end
 end

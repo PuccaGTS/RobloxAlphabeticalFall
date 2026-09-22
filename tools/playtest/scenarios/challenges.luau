@@ -33,7 +33,15 @@ return function(player, note)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if root then
 				local look = root.CFrame
-				_G.ZZ_Shot(player, "ch_pet", CFrame.lookAt((look * CFrame.new(4, 3, -12)).Position, look.Position + Vector3.new(0, 2, 0)), 60)
+				_G.ZZ_Shot(
+					player,
+					"ch_pet",
+					CFrame.lookAt(
+						(look * CFrame.new(4, 3, -12)).Position,
+						look.Position + Vector3.new(0, 2, 0)
+					),
+					60
+				)
 			end
 			continue
 		end
@@ -45,7 +53,12 @@ return function(player, note)
 		task.wait(4)
 		note(`{id} busy={ChallengeService.isBusy(player)}`)
 		local center = Venues.center(id)
-		_G.ZZ_Shot(player, `ch_{id}`, CFrame.lookAt(entry.Position + Vector3.new(0, 4, 6), center + Vector3.new(0, 6, 0)), 70)
+		_G.ZZ_Shot(
+			player,
+			`ch_{id}`,
+			CFrame.lookAt(entry.Position + Vector3.new(0, 4, 6), center + Vector3.new(0, 6, 0)),
+			70
+		)
 	end
 	ChallengeService.abort(player)
 end

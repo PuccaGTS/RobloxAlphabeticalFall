@@ -28,7 +28,12 @@ return function(player, note)
 		end
 		task.wait(0.5)
 	end
-	note("profile " .. tostring(ProfileService.get(player) ~= nil) .. " character " .. tostring(player.Character ~= nil))
+	note(
+		"profile "
+			.. tostring(ProfileService.get(player) ~= nil)
+			.. " character "
+			.. tostring(player.Character ~= nil)
+	)
 	local only = workspace:GetAttribute("ZZ_Only")
 
 	for _, name in TARGETS do
@@ -59,14 +64,27 @@ return function(player, note)
 		end
 		if not started then
 			local root = player.Character.HumanoidRootPart
-			note(string.format("   NOT STARTED, root at %s, target at %s", tostring(root.Position), tostring(target.Position)))
+			note(
+				string.format(
+					"   NOT STARTED, root at %s, target at %s",
+					tostring(root.Position),
+					tostring(target.Position)
+				)
+			)
 			continue
 		end
 		for i = 1, 12 do
 			task.wait(0.5)
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if i % 2 == 0 then
-				note(string.format("   t%.1f pos %s busy=%s", i * 0.5, root and tostring(root.Position) or "-", tostring(ChallengeService.isBusy(player))))
+				note(
+					string.format(
+						"   t%.1f pos %s busy=%s",
+						i * 0.5,
+						root and tostring(root.Position) or "-",
+						tostring(ChallengeService.isBusy(player))
+					)
+				)
 			end
 		end
 		pcall(ChallengeService.abort, player)

@@ -25,7 +25,20 @@ return function(player, note)
 
 	-- Двор достроен, пара буквят: на витрине дом, а не шалаш.
 	ProfileService.update(player, function(p)
-		for _, id in { "house", "roof", "yard", "fence", "furniture", "decor", "garden", "playground", "pets", "transport" } do
+		for _, id in
+			{
+				"house",
+				"roof",
+				"yard",
+				"fence",
+				"furniture",
+				"decor",
+				"garden",
+				"playground",
+				"pets",
+				"transport",
+			}
+		do
 			p.base[id] = 4
 		end
 		for _, id in { "a", "b", "v" } do
@@ -47,7 +60,8 @@ return function(player, note)
 
 	for _, placement in Decor.placements do
 		if placement.id == Decor.POND_UNDER then
-			local frame = CFrame.new(placement.x, 1, placement.z) * CFrame.Angles(0, math.rad(placement.rotation), 0)
+			local frame = CFrame.new(placement.x, 1, placement.z)
+				* CFrame.Angles(0, math.rad(placement.rotation), 0)
 			-- Персонаж за камерой: карпы плывут, только когда камера рядом, а в кадре он не нужен.
 			local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if root then
@@ -55,7 +69,15 @@ return function(player, note)
 			end
 			task.wait(3)
 			for index = 1, 3 do
-				_G.ZZ_Shot(player, `store_pond_{index}`, CFrame.lookAt((frame * CFrame.new(-6, 7, 13)).Position, (frame * CFrame.new(0.5, 0.5, 0)).Position), 55)
+				_G.ZZ_Shot(
+					player,
+					`store_pond_{index}`,
+					CFrame.lookAt(
+						(frame * CFrame.new(-6, 7, 13)).Position,
+						(frame * CFrame.new(0.5, 0.5, 0)).Position
+					),
+					55
+				)
 			end
 			break
 		end
@@ -69,7 +91,12 @@ return function(player, note)
 		ChallengeService.startFor(player, id, extra)
 		task.wait(4.5)
 		local entry = Venues.entry(id)
-		_G.ZZ_Shot(player, name, CFrame.lookAt((entry * offset).Position, Venues.center(id) + Vector3.new(0, lookUp, 0)), 60)
+		_G.ZZ_Shot(
+			player,
+			name,
+			CFrame.lookAt((entry * offset).Position, Venues.center(id) + Vector3.new(0, lookUp, 0)),
+			60
+		)
 	end
 	venueShot("letter_rain", "store_rain", CFrame.new(6, 9, 14), 6)
 	venueShot("bubbles", "store_bubbles", CFrame.new(4, 5, 6), 9)
@@ -81,7 +108,12 @@ return function(player, note)
 	ChallengeService.startFor(player, "mirror", { focus = "ya" })
 	task.wait(3)
 	local origin = Venues.stage("mirror") * CFrame.new(0, 4.5, 0) * CFrame.Angles(0, math.pi, 0)
-	_G.ZZ_Shot(player, "store_mirror", CFrame.lookAt(origin.Position + origin.LookVector * 15 + Vector3.new(0, 2.5, 0), origin.Position), 55)
+	_G.ZZ_Shot(
+		player,
+		"store_mirror",
+		CFrame.lookAt(origin.Position + origin.LookVector * 15 + Vector3.new(0, 2.5, 0), origin.Position),
+		55
+	)
 	ChallengeService.abort(player)
 	task.wait(1.2)
 
@@ -93,6 +125,11 @@ return function(player, note)
 	end)
 	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 	if root then
-		_G.ZZ_Shot(player, "ui_store_intro", CFrame.lookAt((root.CFrame * CFrame.new(6, 6, 16)).Position, root.Position + Vector3.new(0, 2, 0)), 60)
+		_G.ZZ_Shot(
+			player,
+			"ui_store_intro",
+			CFrame.lookAt((root.CFrame * CFrame.new(6, 6, 16)).Position, root.Position + Vector3.new(0, 2, 0)),
+			60
+		)
 	end
 end

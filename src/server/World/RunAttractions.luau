@@ -644,6 +644,192 @@ function BUILDERS.clouds(model: Model, path, ride)
 end
 
 --[[
+	Ленты: транспортёры над пропастью. Каждая лента поперёк трассы тащит вбок,
+	к своему обрыву, — перебегать сразу, не стоя. Последняя, длинная, везёт
+	назад, к щели перед ней. Сама лента не движется: скорость ей задаёт клиент
+	(атрибут Belt, как у облачка), а бегут по ней полоски — по ним видно,
+	куда тащит. На концах валики, как у настоящего транспортёра.
+]]
+local BELT_RUBBER = Color3.fromRGB(70, 75, 95)
+local BELT_STRIPE = Color3.fromRGB(255, 210, 70)
+local BELT_BACK_STRIPE = Color3.fromRGB(255, 120, 110)
+local BELT_ROLLER = Color3.fromRGB(150, 160, 185)
+
+local function belt(
+	model: Model,
+	name: string,
+	center: CFrame,
+	size: Vector3,
+	velocity: Vector3,
+	stripeColor: Color3
+)
+	local surface = part(model, name, size, center * CFrame.new(0, -size.Y / 2, 0), BELT_RUBBER)
+	surface.Material = Enum.Material.Rubber
+	mover(surface, "belt", { Belt = velocity })
+
+	-- Полоски поперёк хода ленты: едут вместе с ней и ныряют под валик на конце.
+	local along = if math.abs(velocity.X) > 0 then Vector3.xAxis else Vector3.zAxis
+	local span = if along == Vector3.xAxis then size.X else size.Z
+	local across = if along == Vector3.xAxis then size.Z else size.X
+	local speed = velocity.X + velocity.Z
+	local count = math.max(3, math.floor(span / 3))
+	for index = 1, count do
+		local stripeSize = if along == Vector3.xAxis
+			then Vector3.new(0.7, 0.1, across - 0.6)
+			else Vector3.new(across - 0.6, 0.1, 0.7)
+		local stripe = ghost(
+			part(model, `{name}_Stripe{index}`, stripeSize, center * CFrame.new(0, 0.05, 0), stripeColor)
+		)
+		stripe.Material = Enum.Material.SmoothPlastic
+		mover(stripe, "scroll", {
+			Travel = span - 1,
+			Speed = speed,
+			Phase = (index - 1) * (span - 1) / count,
+			Axis = along,
+		})
+	end
+
+	-- Валики на концах: по ним видно, где лента кончается и куда с неё падают.
+	for _, side in { -1, 1 } do
+		local offset = along * side * span / 2
+		local roller = ghost(
+			part(
+				model,
+				`{name}_Roller{side}`,
+				Vector3.new(across + 0.4, 1.3, 1.3),
+				center
+					* CFrame.new(offset.X, -0.55, offset.Z)
+					* CFrame.Angles(0, if along == Vector3.xAxis then math.pi / 2 else 0, 0),
+				BELT_ROLLER
+			)
+		)
+		roller.Shape = Enum.PartType.Cylinder
+		roller.Material = Enum.Material.Metal
+	end
+end
+
+function BUILDERS.belts(model: Model, path, ride)
+	for _, row in ride.belts do
+		belt(
+			model,
+			`Belt_{ride.index}_{row.row}`,
+			at(path, ride, 0, 0, row.z),
+			Vector3.new(ride.span, 1, ride.depth),
+			Vector3.new(row.direction * ride.speed, 0, 0),
+			BELT_STRIPE
+		)
+	end
+	-- Назад — это к началу трассы: в координатах пути начало лежит в +Z.
+	belt(
+		model,
+		`Belt_{ride.index}_back`,
+		at(path, ride, 0, 0, ride.back.z),
+		Vector3.new(Attractions.BELT_BACK_WIDTH, 1, ride.back.length),
+		Vector3.new(0, 0, ride.back.speed),
+		BELT_BACK_STRIPE
+	)
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 12, 0), "⏩")
+end
+
+--[[
+	Качели: доски на верёвках под перекладинами, качаются вдоль бега, соседние —
+	навстречу друг другу. Доска всегда стоит ровно, как сиденье, верёвки ходят
+	маятником. Доска везёт стоящего (Carry): клиент считает её скорость сам.
+]]
+local SWING_BOARDS = {
+	Color3.fromRGB(245, 120, 120),
+	Color3.fromRGB(120, 190, 245),
+	Color3.fromRGB(250, 200, 90),
+	Color3.fromRGB(140, 215, 130),
+	Color3.fromRGB(200, 150, 240),
+	Color3.fromRGB(250, 160, 90),
+}
+
+function BUILDERS.swings(model: Model, path, ride)
+	local rope = Attractions.SWING_ROPE
+	local half = Tunnel.WIDTH / 2
+	local board = ride.board
+	for _, swing in ride.swings do
+		local pivot = at(path, ride, 0, rope, swing.z)
+		-- Перекладина и столбы у бортиков: качели висят не в воздухе.
+		for _, side in { -1, 1 } do
+			local post = ghost(
+				part(
+					model,
+					`SwingPost_{ride.index}_{swing.index}_{side}`,
+					Vector3.new(1.2, rope + 20, 1.2),
+					at(path, ride, side * (half - 0.6), rope - (rope + 20) / 2 + 1, swing.z),
+					Color3.fromRGB(160, 110, 75)
+				)
+			)
+			post.Material = Enum.Material.Wood
+		end
+		local beam = ghost(
+			part(
+				model,
+				`SwingBeam_{ride.index}_{swing.index}`,
+				Vector3.new(Tunnel.WIDTH, 1.2, 1.2),
+				pivot * CFrame.new(0, 0.6, 0),
+				Color3.fromRGB(160, 110, 75)
+			)
+		)
+		beam.Material = Enum.Material.Wood
+
+		local color = SWING_BOARDS[(swing.index - 1) % #SWING_BOARDS + 1]
+		local motion = {
+			Period = ride.period,
+			Phase = swing.phase,
+			Amplitude = ride.amplitude,
+		}
+		local seat = part(
+			model,
+			`Swing_{ride.index}_{swing.index}`,
+			Vector3.new(board, 1, board),
+			pivot * CFrame.new(0, -rope - 0.5, 0),
+			color
+		)
+		seat.Material = Enum.Material.WoodPlanks
+		mover(seat, "pendulum", motion)
+		seat:SetAttribute("Base", pivot)
+		seat:SetAttribute("Hang", rope + 0.5)
+		seat:SetAttribute("Carry", true)
+
+		-- Белая кромка по краю доски: край виден и в прыжке.
+		local rim = ghost(
+			part(
+				model,
+				`SwingRim_{ride.index}_{swing.index}`,
+				Vector3.new(board + 0.5, 0.5, board + 0.5),
+				pivot * CFrame.new(0, -rope - 0.9, 0),
+				Color3.fromRGB(255, 255, 255)
+			)
+		)
+		mover(rim, "pendulum", motion)
+		rim:SetAttribute("Base", pivot)
+		rim:SetAttribute("Hang", rope + 0.9)
+
+		for _, side in { -1, 1 } do
+			local offset = CFrame.new(side * (board / 2 - 0.4), -rope / 2, 0)
+			local line = ghost(
+				part(
+					model,
+					`SwingRope_{ride.index}_{swing.index}_{side}`,
+					Vector3.new(0.3, rope, 0.3),
+					pivot * offset,
+					Color3.fromRGB(235, 220, 180)
+				)
+			)
+			line.Material = Enum.Material.Fabric
+			local attributes = table.clone(motion)
+			attributes.Offset = offset
+			mover(line, "pendulum", attributes)
+			line:SetAttribute("Base", pivot)
+		end
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, rope + 6, 0), "🐒")
+end
+
+--[[
 	Молоты: узкий мостик над пропастью, над ним качаются три молота поперёк
 	мостика. Молот сбивает вниз — и ребёнок возвращается к флажку.
 ]]

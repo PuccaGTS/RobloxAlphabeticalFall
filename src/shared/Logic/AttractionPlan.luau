@@ -175,6 +175,76 @@ local function clouds(heat: number, random: Random)
 	}
 end
 
+--[[
+	Ленты: ряды лент поперёк трассы, каждая тащит к своему обрыву. Направление
+	случайное, но три ленты подряд в одну сторону не тянут: пришлось бы просто
+	держаться одного края. Последняя лента длинная и везёт назад, к щели.
+]]
+local function belts(heat: number, random: Random)
+	local rows = Attractions.param("belts", "rows", heat)
+	local depth = Attractions.param("belts", "depth", heat)
+	local gap = Attractions.param("belts", "gap", heat)
+	local list = {}
+	local z = gap + depth / 2
+	for row = 1, rows do
+		local direction = if random:NextInteger(1, 2) == 1 then 1 else -1
+		if row >= 3 and list[row - 1].direction == list[row - 2].direction then
+			direction = -list[row - 1].direction
+		end
+		table.insert(list, { row = row, z = z, direction = direction })
+		z += depth + gap
+	end
+	local back = Attractions.param("belts", "back", heat)
+	-- z стоит на краю следующей ленты плюс её половина: последняя лента начинается после щели.
+	local backZ = z - depth / 2 + back / 2
+	return {
+		belts = list,
+		depth = depth,
+		gap = gap,
+		span = Attractions.param("belts", "span", heat),
+		speed = Attractions.param("belts", "speed", heat),
+		back = { z = backZ, length = back, speed = Attractions.param("belts", "backSpeed", heat) },
+		-- Последняя лента упирается в пол выхода: сойти с неё можно, только добежав.
+		length = backZ + back / 2,
+	}
+end
+
+--[[
+	Качели: доски на верёвках качаются вдоль бега, соседние — в противофазе.
+	Ось каждой следующей стоит так, чтобы сошедшиеся доски разделяла щель near,
+	а разошедшиеся — пропасть в near плюс два размаха. Первая сходится с полом
+	входа, последняя — с полом выхода.
+]]
+local function swings(heat: number, _random: Random)
+	local count = Attractions.param("swings", "count", heat)
+	local board = Attractions.param("swings", "board", heat)
+	local near = Attractions.param("swings", "near", heat)
+	local period = Attractions.param("swings", "period", heat)
+	local amplitude = Attractions.param("swings", "swing", heat)
+	local reach = Attractions.SWING_ROPE * math.sin(amplitude) -- на сколько доска уходит от оси вдоль бега
+	local step = board + 2 * reach + near
+	local list = {}
+	local z = near + board / 2 + reach
+	for index = 1, count do
+		table.insert(list, {
+			index = index,
+			z = z,
+			-- Нечётные в фазе, чётные навстречу: соседи сходятся и расходятся.
+			phase = if index % 2 == 1 then 0 else period / 2,
+		})
+		z += step
+	end
+	return {
+		swings = list,
+		board = board,
+		near = near,
+		period = period,
+		amplitude = amplitude,
+		reach = reach,
+		length = list[#list].z + reach + board / 2 + near,
+	}
+end
+
 local function hammers(heat: number, _random: Random)
 	local period = Attractions.param("hammers", "period", heat)
 	local list = {}
@@ -201,6 +271,8 @@ local MAKERS = {
 	spinner = spinner,
 	boulders = boulders,
 	clouds = clouds,
+	belts = belts,
+	swings = swings,
 	hammers = hammers,
 }
 

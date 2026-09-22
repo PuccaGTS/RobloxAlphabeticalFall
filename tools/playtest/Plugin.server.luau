@@ -54,7 +54,12 @@ local function explicit(value)
 		return { Vector3 = vec(value) }
 	elseif kind == "CFrame" then
 		local _, _, _, r00, r01, r02, r10, r11, r12, r20, r21, r22 = value:GetComponents()
-		return { CFrame = { position = vec(value.Position), orientation = { { r00, r01, r02 }, { r10, r11, r12 }, { r20, r21, r22 } } } }
+		return {
+			CFrame = {
+				position = vec(value.Position),
+				orientation = { { r00, r01, r02 }, { r10, r11, r12 }, { r20, r21, r22 } },
+			},
+		}
 	elseif kind == "Color3" then
 		return { Color3 = { value.R, value.G, value.B } }
 	elseif kind == "EnumItem" then
@@ -71,10 +76,36 @@ local function explicit(value)
 	return nil
 end
 
-local CONTENT = { MeshId = true, TextureID = true, TextureId = true, Texture = true, ColorMap = true, NormalMap = true, RoughnessMap = true, MetalnessMap = true, SkyboxBk = true, SkyboxDn = true, SkyboxFt = true, SkyboxLf = true, SkyboxRt = true, SkyboxUp = true, SunTextureId = true, MoonTextureId = true }
+local CONTENT = {
+	MeshId = true,
+	TextureID = true,
+	TextureId = true,
+	Texture = true,
+	ColorMap = true,
+	NormalMap = true,
+	RoughnessMap = true,
+	MetalnessMap = true,
+	SkyboxBk = true,
+	SkyboxDn = true,
+	SkyboxFt = true,
+	SkyboxLf = true,
+	SkyboxRt = true,
+	SkyboxUp = true,
+	SunTextureId = true,
+	MoonTextureId = true,
+}
 
 local PROPS = {
-	BasePart = { "Size", "CFrame", "Color", "Material", "Transparency", "Reflectance", "CanCollide", "CastShadow" },
+	BasePart = {
+		"Size",
+		"CFrame",
+		"Color",
+		"Material",
+		"Transparency",
+		"Reflectance",
+		"CanCollide",
+		"CastShadow",
+	},
 	Part = { "Shape" },
 	MeshPart = { "MeshId", "TextureID", "DoubleSided" },
 	SpecialMesh = { "MeshType", "MeshId", "TextureId", "Scale", "Offset", "VertexColor" },
@@ -86,14 +117,42 @@ local PROPS = {
 	PointLight = { "Brightness", "Range", "Color", "Shadows" },
 	SpotLight = { "Brightness", "Range", "Color", "Angle", "Face" },
 	-- Небо: берётся ради id текстур, в игру его ставит WorldService, а не декор.
-	Sky = { "SkyboxBk", "SkyboxDn", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp", "SunTextureId", "MoonTextureId", "CelestialBodiesShown", "StarCount", "SunAngularSize" },
+	Sky = {
+		"SkyboxBk",
+		"SkyboxDn",
+		"SkyboxFt",
+		"SkyboxLf",
+		"SkyboxRt",
+		"SkyboxUp",
+		"SunTextureId",
+		"MoonTextureId",
+		"CelestialBodiesShown",
+		"StarCount",
+		"SunAngularSize",
+	},
 }
 
 local SUPPORTED = {
-	Model = true, Folder = true, Part = true, WedgePart = true, CornerWedgePart = true, TrussPart = true,
-	MeshPart = true, SpecialMesh = true, BlockMesh = true, CylinderMesh = true, Decal = true, Texture = true,
-	SurfaceAppearance = true, PointLight = true, SpotLight = true, Seat = true, VehicleSeat = true,
-	Accessory = true, Tool = true, Sky = true,
+	Model = true,
+	Folder = true,
+	Part = true,
+	WedgePart = true,
+	CornerWedgePart = true,
+	TrussPart = true,
+	MeshPart = true,
+	SpecialMesh = true,
+	BlockMesh = true,
+	CylinderMesh = true,
+	Decal = true,
+	Texture = true,
+	SurfaceAppearance = true,
+	PointLight = true,
+	SpotLight = true,
+	Seat = true,
+	VehicleSeat = true,
+	Accessory = true,
+	Tool = true,
+	Sky = true,
 }
 
 -- Классы, которые пишутся другим классом: сиденье — просто деталь, аксессуар и инструмент — модель.
@@ -130,7 +189,9 @@ local function meshPartAsPart(instance)
 		end
 	end
 	local node = { Name = instance.Name, ClassName = "Part", Properties = {}, Children = {} }
-	for _, name in { "Size", "CFrame", "Color", "Material", "Transparency", "Reflectance", "CanCollide", "CastShadow" } do
+	for _, name in
+		{ "Size", "CFrame", "Color", "Material", "Transparency", "Reflectance", "CanCollide", "CastShadow" }
+	do
 		node.Properties[name] = explicit(instance[name])
 	end
 	node.Properties.Anchored = { Bool = true }
@@ -163,7 +224,12 @@ local function serialize(instance)
 		skipped[instance.ClassName] = (skipped[instance.ClassName] or 0) + 1
 		return nil
 	end
-	local node = { Name = instance.Name, ClassName = WRITE_AS[instance.ClassName] or instance.ClassName, Properties = {}, Children = {} }
+	local node = {
+		Name = instance.Name,
+		ClassName = WRITE_AS[instance.ClassName] or instance.ClassName,
+		Properties = {},
+		Children = {},
+	}
 	for class, names in PROPS do
 		if instance:IsA(class) then
 			for _, name in names do
@@ -255,7 +321,15 @@ for _, entry in ids do
 	for class, count in skipped do
 		table.insert(skippedText, `{class}×{count}`)
 	end
-	post(HttpService:JSONEncode({ id = entry.id, model = encoded, skipped = table.concat(skippedText, ", "), size = { bounds.X, bounds.Y, bounds.Z } }), "model")
+	post(
+		HttpService:JSONEncode({
+			id = entry.id,
+			model = encoded,
+			skipped = table.concat(skippedText, ", "),
+			size = { bounds.X, bounds.Y, bounds.Z },
+		}),
+		"model"
+	)
 	root:Destroy()
 end
 post("DONE")

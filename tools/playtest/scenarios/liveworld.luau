@@ -25,7 +25,12 @@ return function(player, note)
 		_G.ZZ_Shot(player, "pond_side", CFrame.lookAt((frame * CFrame.new(3, 7, 15)).Position, center), 60)
 		_G.ZZ_Shot(player, "pond_top", CFrame.lookAt((frame * CFrame.new(0, 16, 5)).Position, center), 60)
 		for index = 1, 3 do
-			_G.ZZ_Shot(player, `pond_close_{index}`, CFrame.lookAt((frame * CFrame.new(-4, 5, 9)).Position, center + Vector3.new(0, 0.5, 0)), 50)
+			_G.ZZ_Shot(
+				player,
+				`pond_close_{index}`,
+				CFrame.lookAt((frame * CFrame.new(-4, 5, 9)).Position, center + Vector3.new(0, 0.5, 0)),
+				50
+			)
 		end
 	end
 	workspace:SetAttribute("ZZ_Rainbow", os.clock())

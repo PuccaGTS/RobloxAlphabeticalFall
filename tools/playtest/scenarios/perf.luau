@@ -21,7 +21,22 @@ return function(player, note)
 
 	-- Худший случай для площади: все двадцать участков застроены до конца.
 	for index = 2, 20 do
-		pcall(BaseService.preview, index, { house = 4, roof = 4, yard = 4, fence = 4, furniture = 4, decor = 4, garden = 4, playground = 4, pets = 4, transport = 4 })
+		pcall(
+			BaseService.preview,
+			index,
+			{
+				house = 4,
+				roof = 4,
+				yard = 4,
+				fence = 4,
+				furniture = 4,
+				decor = 4,
+				garden = 4,
+				playground = 4,
+				pets = 4,
+				transport = 4,
+			}
+		)
 	end
 	task.wait(2)
 
@@ -51,14 +66,28 @@ return function(player, note)
 		return a[2] > b[2]
 	end)
 	for _, row in rows do
-		note(string.format("WORLD %-28s parts=%5d shadow=%5d lights=%3d emitters=%3d guis=%4d", row[1], row[2], row[3], row[4], row[5], row[6]))
+		note(
+			string.format(
+				"WORLD %-28s parts=%5d shadow=%5d lights=%3d emitters=%3d guis=%4d",
+				row[1],
+				row[2],
+				row[3],
+				row[4],
+				row[5],
+				row[6]
+			)
+		)
 	end
 
 	-- Кто тяжелее всех: детали по видам (имя без номера) внутри площади и одного участка.
 	local function breakdown(root, label)
 		local kinds = {}
 		for _, child in root:GetDescendants() do
-			if child:IsA("Model") and child.Parent and (child.Parent == root or child.Parent.Parent == root) then
+			if
+				child:IsA("Model")
+				and child.Parent
+				and (child.Parent == root or child.Parent.Parent == root)
+			then
 				local kind = string.gsub(child.Name, "_%d+$", "")
 				local count = 0
 				for _, d in child:GetDescendants() do
@@ -80,7 +109,15 @@ return function(player, note)
 			return a[2].parts > b[2].parts
 		end)
 		for i = 1, math.min(14, #list) do
-			note(string.format("KIND %s %-28s x%-3d parts=%d", label, list[i][1], list[i][2].n, list[i][2].parts))
+			note(
+				string.format(
+					"KIND %s %-28s x%-3d parts=%d",
+					label,
+					list[i][1],
+					list[i][2].n,
+					list[i][2].parts
+				)
+			)
 		end
 	end
 	breakdown(workspace.Hub, "hub")
@@ -121,7 +158,8 @@ return function(player, note)
 	if workspace:GetAttribute("ZZ_Only") == "tris" then
 		local view = CFrame.lookAt(Vector3.new(60, 80, 120), Vector3.new(0, 0, -20))
 		-- Первый замер дважды: пока мир догружается, число треугольников растёт само.
-		local kinds = { false, false, "Plots", false, "HubBalls", false, "HubMeshes", false, "PlotCylinders", false }
+		local kinds =
+			{ false, false, "Plots", false, "HubBalls", false, "HubMeshes", false, "PlotCylinders", false }
 		local balls, cylinders, parts = 0, 0, 0
 		for _, d in workspace.Plots:GetDescendants() do
 			if d:IsA("BasePart") then

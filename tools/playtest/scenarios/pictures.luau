@@ -37,7 +37,12 @@ return function(player, note)
 		local away = (middle - tower) * Vector3.new(1, 0, 1)
 		local eye = tower + away.Unit * 20 + Vector3.new(0, 14, 0)
 		_G.ZZ_Shot(player, "tower_front", CFrame.lookAt(eye, tower + Vector3.new(0, 14, 0)), 70)
-		_G.ZZ_Shot(player, "tower_close", CFrame.lookAt(tower + away.Unit * 9 + Vector3.new(0, 5, 0), tower + Vector3.new(0, 5, 0)), 70)
+		_G.ZZ_Shot(
+			player,
+			"tower_close",
+			CFrame.lookAt(tower + away.Unit * 9 + Vector3.new(0, 5, 0), tower + Vector3.new(0, 5, 0)),
+			70
+		)
 	end
 	_G.ZZ_Shot(player, "portals_far", CFrame.lookAt(Vector3.new(0, 40, 125), Vector3.new(0, 20, -6)), 70)
 end

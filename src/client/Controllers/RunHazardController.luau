@@ -38,6 +38,7 @@ local movers: { [BasePart]: boolean } = {}
 local hurting: { [BasePart]: boolean } = {}
 local lastHit = 0
 local originalColor: { [BasePart]: Color3 } = {}
+local lastCarry: { [BasePart]: { position: Vector3, time: number } } = {}
 
 local function positionFor(part: BasePart, now: number): CFrame?
 	local kind = part:GetAttribute("Mover")
@@ -78,6 +79,26 @@ local function positionFor(part: BasePart, now: number): CFrame?
 		local travel = part:GetAttribute("Travel") or 0
 		local x = travel * math.sin(2 * math.pi * (now + phase) / period)
 		return base * CFrame.new(x, 0, 0) * offset
+	elseif kind == "scroll" then
+		-- Полоска ленты транспортёра: едет вдоль оси и с конца возвращается к началу.
+		local travel = part:GetAttribute("Travel") or 1
+		local speed = part:GetAttribute("Speed") or 0
+		local axis = part:GetAttribute("Axis")
+		if typeof(axis) ~= "Vector3" then
+			axis = Vector3.xAxis
+		end
+		local s = (now * speed + phase) % travel - travel / 2
+		return base * CFrame.new(axis * s) * offset
+	elseif kind == "pendulum" then
+		-- Качели: верёвки ходят маятником вдоль бега, доска на их конце стоит ровно.
+		local amplitude = part:GetAttribute("Amplitude") or 0.4
+		local angle = amplitude * math.sin(2 * math.pi * (now + phase) / period)
+		local swung = base * CFrame.Angles(angle, 0, 0)
+		local hang = part:GetAttribute("Hang")
+		if hang then
+			return CFrame.new((swung * CFrame.new(0, -hang, 0)).Position) * base.Rotation * offset
+		end
+		return swung * offset
 	elseif kind == "sink" then
 		local s = (now + phase) % period
 		local solid = part:GetAttribute("Solid") or period
@@ -140,15 +161,35 @@ local function step()
 	for part in movers do
 		if not part.Parent then
 			movers[part] = nil
+			lastCarry[part] = nil
 			continue
 		end
 		local base = part:GetAttribute("Base")
 		if rootPosition and typeof(base) == "CFrame" and (base.Position - rootPosition).Magnitude > NEAR then
+			lastCarry[part] = nil
+			continue
+		end
+		-- Лента транспортёра стоит на месте, а везёт: скорость закреплённой детали.
+		local beltVelocity = part:GetAttribute("Belt")
+		if typeof(beltVelocity) == "Vector3" and typeof(base) == "CFrame" then
+			part.AssemblyLinearVelocity = base:VectorToWorldSpace(beltVelocity)
 			continue
 		end
 		local cframe = positionFor(part, now)
 		if cframe then
 			part.CFrame = cframe
+			if part:GetAttribute("Carry") and part:GetAttribute("Mover") ~= "slide" then
+				-- Доска качелей: скорость — сдвиг с прошлого кадра. После паузы — ноль, а не рывок.
+				local last = lastCarry[part]
+				local dt = if last then now - last.time else 0
+				part.AssemblyLinearVelocity = if last
+						and dt > 0
+						and dt < 0.25
+					then (cframe.Position - last.position) / dt
+					else Vector3.zero
+				lastCarry[part] = { position = cframe.Position, time = now }
+				continue
+			end
 			--[[
 				Везёт стоящего: у закреплённой детали скорость — это «лента
 				транспортёра», и персонаж на облаке едет вместе с ним, а не
@@ -192,6 +233,7 @@ local function watch(tag: string, set: { [BasePart]: boolean })
 	CollectionService:GetInstanceRemovedSignal(tag):Connect(function(instance: Instance)
 		set[instance :: BasePart] = nil
 		originalColor[instance :: BasePart] = nil
+		lastCarry[instance :: BasePart] = nil
 	end)
 end
 

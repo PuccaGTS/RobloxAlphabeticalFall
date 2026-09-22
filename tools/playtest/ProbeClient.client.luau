@@ -11,7 +11,9 @@ if perf then
 		-- hideKind: спрятать детали предметов этого вида (имя модели без номера) и мерить без них.
 		if hideKind then
 			for _, d in workspace:GetDescendants() do
-				if d:IsA("Model") and (string.gsub(d.Name, "_%d+$", "") == hideKind or d.Name == hideKind) then
+				if
+					d:IsA("Model") and (string.gsub(d.Name, "_%d+$", "") == hideKind or d.Name == hideKind)
+				then
 					for _, piece in d:GetDescendants() do
 						if piece:IsA("BasePart") then
 							piece.LocalTransparencyModifier = 1
@@ -27,15 +29,25 @@ if perf then
 					end
 				elseif hideKind == "HubMeshes" and d.Name == "Hub" then
 					for _, piece in d:GetDescendants() do
-						if piece:IsA("BasePart") and (piece:FindFirstChildOfClass("SpecialMesh") or piece:IsA("MeshPart")) then
+						if
+							piece:IsA("BasePart")
+							and (piece:FindFirstChildOfClass("SpecialMesh") or piece:IsA("MeshPart"))
+						then
 							piece.LocalTransparencyModifier = 1
 							piece:SetAttribute("ZZ_Hidden", true)
 						end
 					end
-				elseif (hideKind == "PlotBalls" or hideKind == "PlotCylinders" or hideKind == "PlotWedges") and d.Name == "Plots" then
-					local shape = if hideKind == "PlotBalls" then Enum.PartType.Ball else Enum.PartType.Cylinder
+				elseif
+					(hideKind == "PlotBalls" or hideKind == "PlotCylinders" or hideKind == "PlotWedges")
+					and d.Name == "Plots"
+				then
+					local shape = if hideKind == "PlotBalls"
+						then Enum.PartType.Ball
+						else Enum.PartType.Cylinder
 					for _, piece in d:GetDescendants() do
-						local match = if hideKind == "PlotWedges" then piece:IsA("WedgePart") else piece:IsA("Part") and piece.Shape == shape
+						local match = if hideKind == "PlotWedges"
+							then piece:IsA("WedgePart")
+							else piece:IsA("Part") and piece.Shape == shape
 						if match then
 							piece.LocalTransparencyModifier = 1
 							piece:SetAttribute("ZZ_Hidden", true)
@@ -104,8 +116,18 @@ if perf then
 		end
 		return string.format(
 			"fps=%.0f worst=%.0fms parts=%d near250=%d nearShadow=%d lights=%d emitters=%d billboards=%d surfaceGuis=%d draw=%s tris=%s shadowDraw=%s mem=%s",
-			frames / total, worst * 1000, parts, near, shadows, lights, emitters, billboards, surfaces,
-			stat("SceneDrawcallCount"), stat("SceneTriangleCount"), stat("ShadowsDrawcallCount"),
+			frames / total,
+			worst * 1000,
+			parts,
+			near,
+			shadows,
+			lights,
+			emitters,
+			billboards,
+			surfaces,
+			stat("SceneDrawcallCount"),
+			stat("SceneTriangleCount"),
+			stat("ShadowsDrawcallCount"),
 			tostring(math.floor(Stats:GetTotalMemoryUsageMb()))
 		)
 	end
@@ -129,7 +151,12 @@ task.wait(2)
 for _, screen in gui:GetChildren() do
 	if screen:IsA("ScreenGui") then
 		for _, button in screen:GetDescendants() do
-			if workspace:GetAttribute("ZZ_Buttons") and button:IsA("GuiButton") and button.AbsoluteSize.X > 0 and button.AbsolutePosition.X < 200 then
+			if
+				workspace:GetAttribute("ZZ_Buttons")
+				and button:IsA("GuiButton")
+				and button.AbsoluteSize.X > 0
+				and button.AbsolutePosition.X < 200
+			then
 				local shown = button.Visible and screen.Enabled
 				local cursor = button.Parent
 				while shown and cursor and cursor ~= screen do
@@ -139,7 +166,18 @@ for _, screen in gui:GetChildren() do
 					cursor = cursor.Parent
 				end
 				local text = if button:IsA("TextButton") then button.Text else "img"
-				report:FireServer(string.format("BUTTON %s.%s '%s' at %s size %s shown=%s order=%d", screen.Name, button.Name, text, tostring(button.AbsolutePosition), tostring(button.AbsoluteSize), tostring(shown), screen.DisplayOrder))
+				report:FireServer(
+					string.format(
+						"BUTTON %s.%s '%s' at %s size %s shown=%s order=%d",
+						screen.Name,
+						button.Name,
+						text,
+						tostring(button.AbsolutePosition),
+						tostring(button.AbsoluteSize),
+						tostring(shown),
+						screen.DisplayOrder
+					)
+				)
 			end
 		end
 	end
@@ -152,7 +190,11 @@ task.delay(12, function()
 			if d.MeshSize.Magnitude > 0 then
 				loaded += 1
 				if sample == "" then
-					sample = d:GetFullName() .. " MeshSize " .. tostring(d.MeshSize) .. " Size " .. tostring(d.Size)
+					sample = d:GetFullName()
+						.. " MeshSize "
+						.. tostring(d.MeshSize)
+						.. " Size "
+						.. tostring(d.Size)
 				end
 			else
 				empty += 1
@@ -164,7 +206,12 @@ task.delay(12, function()
 	local statuses = {}
 	local seen = {}
 	for _, d in workspace:GetDescendants() do
-		if d:IsA("SpecialMesh") and d.MeshType == Enum.MeshType.FileMesh and d.MeshId ~= "" and not seen[d.MeshId] then
+		if
+			d:IsA("SpecialMesh")
+			and d.MeshType == Enum.MeshType.FileMesh
+			and d.MeshId ~= ""
+			and not seen[d.MeshId]
+		then
 			seen[d.MeshId] = true
 			ContentProvider:PreloadAsync({ d })
 			local status = ContentProvider:GetAssetFetchStatus(d.MeshId)
@@ -185,11 +232,24 @@ workspace:GetAttributeChangedSignal("ZZ_AudioReport"):Connect(function()
 	for _, root in { SoundService, workspace } do
 		for _, d in root:GetDescendants() do
 			if d:IsA("Sound") and d.SoundId ~= "" and not d.SoundId:find("^rbxasset://") then
-				table.insert(lines, string.format("%s[%s] loaded=%s len=%.0f playing=%s vol=%.2f", d.Name, d.SoundId:match("%d+") or "?", tostring(d.IsLoaded), d.TimeLength, tostring(d.IsPlaying), d.Volume))
+				table.insert(
+					lines,
+					string.format(
+						"%s[%s] loaded=%s len=%.0f playing=%s vol=%.2f",
+						d.Name,
+						d.SoundId:match("%d+") or "?",
+						tostring(d.IsLoaded),
+						d.TimeLength,
+						tostring(d.IsPlaying),
+						d.Volume
+					)
+				)
 			end
 		end
 	end
-	report:FireServer("AUDIO " .. workspace:GetAttribute("ZZ_AudioReport") .. ": " .. table.concat(lines, " | "))
+	report:FireServer(
+		"AUDIO " .. workspace:GetAttribute("ZZ_AudioReport") .. ": " .. table.concat(lines, " | ")
+	)
 end)
 
 -- Танец по просьбе сценария (метка ZZ_Emote): открыть ряд жестов, станцевать, доложить дорожки.
@@ -208,10 +268,21 @@ workspace:GetAttributeChangedSignal("ZZ_Emote"):Connect(function()
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		for _, t in humanoid:FindFirstChildOfClass("Animator"):GetPlayingAnimationTracks() do
-			table.insert(tracks, string.format("%s(%s len=%.1f)", t.Name, t.Animation and t.Animation.AnimationId:match("%d+") or "?", t.Length))
+			table.insert(
+				tracks,
+				string.format(
+					"%s(%s len=%.1f)",
+					t.Name,
+					t.Animation and t.Animation.AnimationId:match("%d+") or "?",
+					t.Length
+				)
+			)
 		end
 	end
-	report:FireServer(`EMOTE {id} called={ok} rig={humanoid and humanoid.RigType.Name} tracks: ` .. table.concat(tracks, ", "))
+	report:FireServer(
+		`EMOTE {id} called={ok} rig={humanoid and humanoid.RigType.Name} tracks: `
+			.. table.concat(tracks, ", ")
+	)
 end)
 
 -- Раз в секунду: что под ногами у персонажа на клиенте.
@@ -227,7 +298,10 @@ while true do
 		local venues = workspace:FindFirstChild("Venues")
 		local line = string.format(
 			"root %.0f,%.0f,%.0f anchored=%s below=%s venues=%s",
-			root.Position.X, root.Position.Y, root.Position.Z, tostring(root.Anchored),
+			root.Position.X,
+			root.Position.Y,
+			root.Position.Z,
+			tostring(root.Anchored),
 			hit and (hit.Instance:GetFullName() .. " @" .. string.format("%.1f", hit.Distance)) or "nothing",
 			venues and tostring(#venues:GetDescendants()) or "none"
 		)

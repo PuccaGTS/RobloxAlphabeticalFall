@@ -20,7 +20,20 @@ local levels = {}
 for _, id in Base.ids() do
 	levels[id] = Base.maxLevel(id)
 end
-BaseService.preview(1, levels, { flags = 11, mathFlags = 11, arch = true, spire = true, countSpire = true, letterRooms = {}, mathRooms = {}, stageFlags = {} })
+BaseService.preview(
+	1,
+	levels,
+	{
+		flags = 11,
+		mathFlags = 11,
+		arch = true,
+		spire = true,
+		countSpire = true,
+		letterRooms = {},
+		mathRooms = {},
+		stageFlags = {},
+	}
+)
 workspace.Plots:SetAttribute("YardPets_1", "1:a,b,v,g,d,ye,yo,zh")
 
 -- Буквята дома не рисуются дальше 220 студов от камеры: ставим камеру к участку.

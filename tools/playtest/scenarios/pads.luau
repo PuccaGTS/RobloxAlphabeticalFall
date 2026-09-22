@@ -36,7 +36,9 @@ return function(player, note)
 			table.insert(targets, child)
 		end
 	end
-	table.sort(targets, function(a, b) return a.Name < b.Name end)
+	table.sort(targets, function(a, b)
+		return a.Name < b.Name
+	end)
 
 	for _, pad in targets do
 		local r = root()
@@ -52,7 +54,15 @@ return function(player, note)
 			local rr = root()
 			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 			if i % 2 == 0 or i > 8 then
-				note(string.format("   t%.1f pos %s busy=%s hp=%s", i * 0.5, rr and tostring(rr.Position) or "-", tostring(ChallengeService.isBusy(player)), humanoid and tostring(humanoid.Health) or "-"))
+				note(
+					string.format(
+						"   t%.1f pos %s busy=%s hp=%s",
+						i * 0.5,
+						rr and tostring(rr.Position) or "-",
+						tostring(ChallengeService.isBusy(player)),
+						humanoid and tostring(humanoid.Health) or "-"
+					)
+				)
 			end
 		end
 		if ChallengeService.isBusy(player) then

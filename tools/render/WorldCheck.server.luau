@@ -57,19 +57,16 @@ for _, placement in Decor.placements do
 	local id = placement.id
 	if
 		not seen[id]
-		and table.find(
-			{
-				"mushroom_house",
-				"windmill",
-				"abacus",
-				"crayons",
-				"picnic_table",
-				"mushroom",
-				"log",
-				"hay_bales",
-			},
-			id
-		)
+		and table.find({
+			"mushroom_house",
+			"windmill",
+			"abacus",
+			"crayons",
+			"picnic_table",
+			"mushroom",
+			"log",
+			"hay_bales",
+		}, id)
 	then
 		seen[id] = true
 		local item = Decor.expect(id)
