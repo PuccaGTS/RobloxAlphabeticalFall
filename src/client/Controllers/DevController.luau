@@ -22,6 +22,7 @@ local RemoteDefs = require(Shared.Net.RemoteDefs)
 local Venues = require(Shared.Config.Venues)
 
 local LiveWorldController = require(script.Parent.LiveWorldController)
+local FireworksController = require(script.Parent.FireworksController)
 
 local DevController = {}
 
@@ -289,6 +290,10 @@ local function build()
 	-- Радуга приходит сама раз в несколько минут или за три звезды — ждать долго.
 	button(panel, "🌈 Радуга", 12, function()
 		LiveWorldController.rainbow(60)
+	end)
+	-- Салют бывает только за пройденный уровень — проверять его так дольше всего.
+	button(panel, "🎆 Салют", 13, function()
+		FireworksController.show()
 	end)
 
 	button(panel, "➜ Площадь", 20, function()

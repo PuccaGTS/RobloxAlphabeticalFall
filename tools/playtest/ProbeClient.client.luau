@@ -285,6 +285,29 @@ workspace:GetAttributeChangedSignal("ZZ_Emote"):Connect(function()
 	)
 end)
 
+-- Сценарий просит салют (Controllers/FireworksController): кадр ставит ZZ_Shot следом.
+workspace:GetAttributeChangedSignal("ZZ_Fireworks"):Connect(function()
+	task.delay(0.3, function()
+		local client = player:WaitForChild("PlayerScripts"):WaitForChild("Client")
+		require(client.Controllers.FireworksController).show()
+		report:FireServer("fireworks shown")
+	end)
+end)
+-- Итог испытания глазами клиента: пройден ли уровень (тогда будет салют).
+task.spawn(function()
+	local net = ReplicatedStorage:WaitForChild("Net", 30)
+	local ending = net and net:WaitForChild("ChallengeEnd", 30)
+	if ending then
+		ending.OnClientEvent:Connect(function(result)
+			report:FireServer(
+				`challenge end: stars {result.stars} levelCleared {tostring(result.levelCleared)} reason {tostring(
+					result.reason
+				)}`
+			)
+		end)
+	end
+end)
+
 -- Раз в секунду: что под ногами у персонажа на клиенте.
 local lastLine = ""
 while true do

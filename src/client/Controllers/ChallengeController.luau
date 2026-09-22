@@ -32,6 +32,7 @@ local LavaController = require(script.Parent.LavaController)
 local PetController = require(script.Parent.PetController)
 local HUD = require(script.Parent.Parent.UI.HUD)
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
+local FireworksController = require(script.Parent.FireworksController)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
 
 local ChallengeController = {}
@@ -762,6 +763,10 @@ local function onEnd(result: any)
 		-- Три звезды — над парком радуга: вернёшься на площадь и увидишь.
 		if result.stars == 3 then
 			LiveWorldController.rainbow()
+		end
+		-- Пройден уровень пути — салют в небе над площадью, куда ребёнка вернуло.
+		if cleared then
+			task.delay(1, FireworksController.show)
 		end
 	end
 	print(
