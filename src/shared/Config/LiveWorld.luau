@@ -31,11 +31,11 @@ LiveWorld.BUTTERFLIES_PER_BED = 2
 	много, и бабочки у каждой съели бы весь бюджет кадра: здесь ребёнок бывает
 	чаще всего, здесь им и летать.
 ]]
-LiveWorld.MAX_BUTTERFLY_BEDS = 8 -- было 14: часть бюджета отдана уткам, зайчикам и катаниям
+LiveWorld.MAX_BUTTERFLY_BEDS = 7 -- было 14: часть бюджета отдана уткам, зайчикам, белкам и катаниям
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
-LiveWorld.LEAVES_AT_ONCE = 8 -- было 12: четыре места отданы карпам и брызгам в пруду
+LiveWorld.LEAVES_AT_ONCE = 6 -- было 12: места отданы карпам, брызгам и воздушным змеям
 LiveWorld.LEAF_INTERVAL = 0.9 -- секунд между листьями
 LiveWorld.LEAF_FALL_SECONDS = { 4, 6.5 }
 
@@ -177,6 +177,61 @@ function LiveWorld.leafSources(): { LeafSource }
 	return sources
 end
 
+--[[
+	Воздушные змеи над лугами: привязаны к колышку в траве, висят по ветру
+	высоко над парком и покачиваются восьмёркой. Хвост из бантиков тянется
+	следом. Видно их издалека: это небо, а не кусты.
+]]
+LiveWorld.KITES = {
+	{ angle = 150, distance = 214, colors = { Color3.fromRGB(240, 90, 90), Color3.fromRGB(250, 210, 80) } },
+	{ angle = 330, distance = 212, colors = { Color3.fromRGB(80, 170, 240), Color3.fromRGB(150, 220, 120) } },
+}
+LiveWorld.WIND = Vector3.new(-0.6, 0, -0.8) -- куда дует ветер: змеи улетают туда от колышка
+LiveWorld.KITE_HEIGHT = 36
+LiveWorld.KITE_REACH = 24 -- на сколько змей отлетает от колышка по ветру
+LiveWorld.KITE_SIZE = 5
+LiveWorld.KITE_TAIL = 7 -- бантиков в хвосте
+LiveWorld.KITE_VISIBLE = 420 -- змей виден дальше, чем бабочка: он в небе
+
+function LiveWorld.kiteStake(index: number): Vector3
+	local kite = LiveWorld.KITES[index]
+	local angle = math.rad(kite.angle)
+	local x, z = math.cos(angle) * kite.distance, math.sin(angle) * kite.distance
+	return Vector3.new(x, Decor.groundY(x, z), z)
+end
+
+--[[
+	Белки: живут на деревьях у площади. Сидят у ствола и грызут орех,
+	взбегают по стволу спиралью, сидят на высоте, сбегают и перебегают к
+	соседнему дереву. Подбежал — белка тут же удирает вверх по стволу.
+]]
+LiveWorld.SQUIRREL_COUNT = 2
+LiveWorld.SQUIRREL_TREES = 4 -- сколько ближайших к площади деревьев делят белки
+LiveWorld.SQUIRREL_SCARE_DISTANCE = 12
+LiveWorld.SQUIRREL_SPEED = 11 -- по земле, студов в секунду
+LiveWorld.SQUIRREL_CLIMB = 6 -- по стволу вверх
+
+export type SquirrelTree = { position: Vector3, trunk: number, climb: number }
+
+-- Деревья белок: ближайшие к площади, у каждого радиус ствола и высота, до которой белка лезет.
+function LiveWorld.squirrelTrees(): { SquirrelTree }
+	local trees: { SquirrelTree } = {}
+	for _, source in LiveWorld.leafSources() do
+		table.insert(trees, {
+			position = source.position,
+			trunk = math.clamp(source.spread * 0.16, 0.6, 1.6),
+			climb = math.clamp(source.height * 0.55, 5, 14),
+		})
+	end
+	table.sort(trees, function(a: SquirrelTree, b: SquirrelTree): boolean
+		return a.position.Magnitude < b.position.Magnitude
+	end)
+	while #trees > LiveWorld.SQUIRREL_TREES do
+		table.remove(trees)
+	end
+	return trees
+end
+
 function LiveWorld.butterflyCount(): number
 	return #LiveWorld.butterflyHomes() * LiveWorld.BUTTERFLIES_PER_BED
 end
@@ -191,6 +246,8 @@ function LiveWorld.movingBudget(): number
 		+ #LiveWorld.ponds() * (LiveWorld.KOI_PER_POND + 1)
 		-- Катания: паровозик, колесо, карусель, воздушный шар (Config/Rides).
 		+ Rides.MOVING
+		+ #LiveWorld.KITES
+		+ LiveWorld.SQUIRREL_COUNT
 end
 
 return LiveWorld

@@ -315,5 +315,17 @@ while true do
 			report:FireServer(line)
 			lastLine = line
 		end
+		-- Сценарий просит следить за клиентскими моделями (белки, змеи): где они сейчас.
+		local track = workspace:GetAttribute("ZZ_Track")
+		if track then
+			for _, model in workspace:GetDescendants() do
+				if model:IsA("Model") and model.Name == track then
+					local pivot = model:GetPivot().Position
+					local body = model:FindFirstChild("Body")
+					local at = if body then body.Position else pivot
+					report:FireServer(string.format("TRACK %s %.1f,%.1f,%.1f", track, at.X, at.Y, at.Z))
+				end
+			end
+		end
 	end
 end

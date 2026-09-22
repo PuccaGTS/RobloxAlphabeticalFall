@@ -58,6 +58,34 @@ return function()
 			end
 		)
 
+		it(
+			"воздушные змеи привязаны в парке и летают над ним, выше деревьев",
+			function()
+				for index = 1, #LiveWorld.KITES do
+					local stake = LiveWorld.kiteStake(index)
+					local clear, why = Decor.isClear(stake.X, stake.Z, 1.5)
+					if not clear then
+						error(`колышек змея {index} мешает: {why}`)
+					end
+					local flying = stake + LiveWorld.WIND.Unit * LiveWorld.KITE_REACH
+					expect(Vector2.new(flying.X, flying.Z).Magnitude < Decor.MAX_RADIUS).to.equal(true)
+				end
+				expect(LiveWorld.KITE_HEIGHT > 25).to.equal(true)
+			end
+		)
+
+		it(
+			"белкам есть по каким деревьям бегать, и лезут они не выше кроны",
+			function()
+				local trees = LiveWorld.squirrelTrees()
+				expect(#trees >= 2).to.equal(true)
+				for _, tree in trees do
+					expect(tree.climb >= 5).to.equal(true)
+					expect(tree.trunk > 0).to.equal(true)
+				end
+			end
+		)
+
 		it("утки ходят по площади и не заходят в порталы", function()
 			local loop = LiveWorld.DUCK_LOOP
 			for step = 0, 15 do

@@ -1,7 +1,8 @@
 --!nonstrict
 --[[
 	Бабочки у клумб, листья с деревьев, утки у фонтана, зайчики на полянках,
-	карпы в пруду под мостиком и радуга над парком.
+	карпы в пруду под мостиком, белки на деревьях, воздушные змеи над лугами
+	и радуга над парком.
 	Места, количество и бюджет — Config/LiveWorld.
 
 	Всё движется твинами (TweenService) по закреплённым деталям, без физики —
@@ -474,6 +475,243 @@ local function startPond(pond: LiveWorld.Pond): (number) -> ()
 	end
 end
 
+-- ===== Воздушные змеи ==============================================================
+
+--[[
+	Змей — ромб из двух цветов с крестовиной, привязанный нитью (Beam) к колышку.
+	Висит по ветру и ходит восьмёркой; хвост из бантиков догоняет змея с запаздыванием,
+	поэтому вьётся, а не висит палкой. Один змей — одна «вещь» в бюджете кадра.
+]]
+local function startKite(index: number): (number) -> ()
+	local spec = LiveWorld.KITES[index]
+	local stake = LiveWorld.kiteStake(index)
+	local size = LiveWorld.KITE_SIZE
+	local model = Instance.new("Model")
+	model.Name = "Kite"
+	model.Parent = container()
+
+	local post = ghostPart("KiteStake", Vector3.new(0.35, 1.6, 0.35), Color3.fromRGB(150, 110, 70))
+	post.CFrame = CFrame.new(stake + Vector3.new(0, 0.8, 0))
+	post.Parent = model
+	local reel = ghostPart("KiteReel", Vector3.new(0.5, 0.9, 0.9), spec.colors[1])
+	reel.Shape = Enum.PartType.Cylinder
+	reel.CFrame = CFrame.new(stake + Vector3.new(0, 1.3, 0))
+	reel.Parent = model
+
+	-- Ромб: квадрат, повёрнутый на 45°, и на нём ромб поменьше другого цвета.
+	local sail =
+		ghostPart("KiteSail", Vector3.new(size / math.sqrt(2), size / math.sqrt(2), 0.12), spec.colors[1])
+	sail.Parent = model
+	local inner = ghostPart("KiteInner", Vector3.new(size * 0.38, size * 0.38, 0.14), spec.colors[2])
+	inner.Parent = model
+	local spar = ghostPart("KiteSpar", Vector3.new(0.12, size, 0.2), Color3.fromRGB(120, 85, 60))
+	spar.Parent = model
+	local cross = ghostPart("KiteCross", Vector3.new(size * 0.8, 0.12, 0.2), Color3.fromRGB(120, 85, 60))
+	cross.Parent = model
+
+	local bows = {}
+	for bow = 1, LiveWorld.KITE_TAIL do
+		local part = ghostPart("KiteBow", Vector3.new(0.9, 0.5, 0.2), spec.colors[(bow % 2) + 1])
+		part.Parent = model
+		table.insert(bows, part)
+	end
+
+	local from = Instance.new("Attachment")
+	from.Position = Vector3.new(0, 0.5, 0)
+	from.Parent = reel
+	local to = Instance.new("Attachment")
+	to.Parent = spar
+	local line = Instance.new("Beam")
+	line.Attachment0 = from
+	line.Attachment1 = to
+	line.Width0 = 0.08
+	line.Width1 = 0.08
+	line.Color = ColorSequence.new(Color3.fromRGB(250, 250, 250))
+	line.FaceCamera = true
+	line.Segments = 12
+	line.CurveSize0 = -6 -- нить провисает к земле
+	line.Parent = reel
+
+	local wind = LiveWorld.WIND.Unit
+	local side = Vector3.new(-wind.Z, 0, wind.X)
+	local trail: { Vector3 } = {}
+	local phase = index * 2.1
+	return function(now: number)
+		local camera = workspace.CurrentCamera
+		if not camera or (camera.CFrame.Position - stake).Magnitude > LiveWorld.KITE_VISIBLE then
+			return
+		end
+		-- Восьмёрка: вбок с одной частотой, вверх-вниз с двойной.
+		local t = now * 0.45 + phase
+		local center = stake
+			+ wind * LiveWorld.KITE_REACH
+			+ Vector3.new(0, LiveWorld.KITE_HEIGHT, 0)
+			+ side * math.sin(t) * 5
+			+ Vector3.new(0, math.sin(t * 2) * 2.2, 0)
+		-- Змей смотрит лицом на колышек, чуть наклонён по ветру и качается.
+		local face = CFrame.lookAt(center, stake + Vector3.new(0, LiveWorld.KITE_HEIGHT * 0.4, 0))
+			* CFrame.Angles(0, 0, math.sin(t) * 0.35)
+		sail.CFrame = face * CFrame.Angles(0, 0, math.rad(45))
+		inner.CFrame = face * CFrame.new(0, 0.3, -0.05) * CFrame.Angles(0, 0, math.rad(45))
+		spar.CFrame = face * CFrame.new(0, 0, -0.12)
+		cross.CFrame = face * CFrame.new(0, size * 0.15, -0.12)
+
+		-- Хвост: каждый бантик тянется к предыдущему, на шаг ниже и дальше по ветру.
+		local anchor = (face * CFrame.new(0, -size / 2, 0)).Position
+		for bow, part in bows do
+			local target = anchor
+				+ wind * 1.1
+				+ Vector3.new(0, -1, 0)
+				+ side * math.sin(t * 3 - bow * 0.7) * 0.5
+			local previous = trail[bow] or target
+			local current = previous:Lerp(target, 0.25)
+			trail[bow] = current
+			part.CFrame = CFrame.lookAt(current, current + wind)
+			anchor = current
+		end
+	end
+end
+
+-- ===== Белки =======================================================================
+
+local SQUIRREL_FUR = Color3.fromRGB(200, 110, 55)
+
+local function squirrelRecipe(): { any }
+	local belly = Color3.fromRGB(245, 215, 175)
+	return {
+		{ "Body", Vector3.new(0.8, 0.9, 1.2), CFrame.new(0, 0.55, 0), SQUIRREL_FUR },
+		{ "Belly", Vector3.new(0.55, 0.65, 0.5), CFrame.new(0, 0.55, -0.4), belly },
+		{ "Head", Vector3.new(0.7, 0.65, 0.7), CFrame.new(0, 1.05, -0.55), SQUIRREL_FUR },
+		{
+			"EarL",
+			Vector3.new(0.18, 0.35, 0.12),
+			CFrame.new(-0.2, 1.45, -0.5),
+			SQUIRREL_FUR,
+			Enum.PartType.Block,
+		},
+		{
+			"EarR",
+			Vector3.new(0.18, 0.35, 0.12),
+			CFrame.new(0.2, 1.45, -0.5),
+			SQUIRREL_FUR,
+			Enum.PartType.Block,
+		},
+		{ "EyeL", Vector3.one * 0.12, CFrame.new(-0.2, 1.12, -0.86), EYE },
+		{ "EyeR", Vector3.one * 0.12, CFrame.new(0.2, 1.12, -0.86), EYE },
+		{ "Nose", Vector3.one * 0.1, CFrame.new(0, 1, -0.92), Color3.fromRGB(60, 40, 35) },
+		-- Пушистый хвост вопросом: три шара всё выше и дальше назад.
+		{ "Tail1", Vector3.new(0.6, 0.8, 0.6), CFrame.new(0, 0.7, 0.7), SQUIRREL_FUR },
+		{ "Tail2", Vector3.new(0.75, 0.9, 0.7), CFrame.new(0, 1.35, 0.95), SQUIRREL_FUR },
+		{ "Tail3", Vector3.new(0.7, 0.75, 0.65), CFrame.new(0, 1.95, 0.75), Color3.fromRGB(215, 130, 70) },
+		{ "Nut", Vector3.new(0.3, 0.36, 0.3), CFrame.new(0, 0.85, -0.85), Color3.fromRGB(150, 100, 55) },
+	}
+end
+
+--[[
+	Белка живёт у нескольких деревьев. Цикл: сидит у ствола и грызёт орех,
+	взбегает по стволу спиралью, сидит наверху, сбегает, перебегает к другому
+	дереву. Ребёнок подбежал — бросает всё и удирает вверх.
+]]
+local function startSquirrel(index: number, trees: { LiveWorld.SquirrelTree }): (number) -> ()
+	local animal = critter("Squirrel", squirrelRecipe(), 1.3)
+	local nut = animal.model:FindFirstChild("Nut") :: BasePart
+	local treeIndex = (index - 1) % #trees + 1
+	local mode = "sit"
+	local modeStart = os.clock() + index
+	local modeSeconds = random:NextNumber(2, 4)
+	local height = 0 -- на какой высоте ствола сидит
+	local angle = random:NextNumber(0, math.pi * 2) -- с какой стороны ствола
+	local runFrom, runTo = Vector3.zero, Vector3.zero
+
+	local function tree(): LiveWorld.SquirrelTree
+		return trees[treeIndex]
+	end
+
+	local function foot(at: LiveWorld.SquirrelTree, a: number): Vector3
+		return at.position + Vector3.new(math.cos(a), 0, math.sin(a)) * (at.trunk + 0.5)
+	end
+
+	local function setMode(name: string, now: number, seconds: number)
+		mode, modeStart, modeSeconds = name, now, seconds
+	end
+
+	return function(now: number)
+		local here = tree()
+		if not nearCamera(here.position) then
+			return
+		end
+		local t = math.clamp((now - modeStart) / modeSeconds, 0, 1)
+		local root = localRoot()
+		local scared = root ~= nil
+			and (root.Position - foot(here, angle)).Magnitude < LiveWorld.SQUIRREL_SCARE_DISTANCE
+		if scared and mode == "sit" then
+			-- Удирает вверх вдвое быстрее обычного.
+			setMode("up", now, here.climb / (LiveWorld.SQUIRREL_CLIMB * 2))
+			t = 0
+		end
+
+		if t >= 1 then
+			if mode == "sit" then
+				setMode("up", now, here.climb / LiveWorld.SQUIRREL_CLIMB)
+			elseif mode == "up" then
+				height = here.climb
+				setMode("perch", now, random:NextNumber(3, 6))
+			elseif mode == "perch" then
+				setMode("down", now, here.climb / (LiveWorld.SQUIRREL_CLIMB * 1.4))
+			elseif mode == "down" then
+				height = 0
+				local next = treeIndex
+				while next == treeIndex and #trees > 1 do
+					next = random:NextInteger(1, #trees)
+				end
+				runFrom = foot(here, angle)
+				treeIndex = next
+				angle = random:NextNumber(0, math.pi * 2)
+				runTo = foot(tree(), angle)
+				setMode("run", now, math.max(1, (runTo - runFrom).Magnitude / LiveWorld.SQUIRREL_SPEED))
+			elseif mode == "run" then
+				setMode("sit", now, random:NextNumber(3, 6))
+			end
+			t = 0
+			here = tree()
+		end
+
+		nut.Transparency = if mode == "sit" then 0 else 1
+		local frame
+		if mode == "run" then
+			-- Бежит скачками: дуги по полстуда.
+			local at = runFrom:Lerp(runTo, t) + Vector3.new(0, math.abs(math.sin(t * 30)) * 0.5, 0)
+			local ahead = (runTo - runFrom) * Vector3.new(1, 0, 1)
+			frame = CFrame.lookAt(at, at + (if ahead.Magnitude > 0.01 then ahead.Unit else Vector3.zAxis))
+		elseif mode == "sit" then
+			-- Сидит у ствола спиной к нему и грызёт: голова кивает.
+			local at = foot(here, angle)
+			local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
+			frame = CFrame.lookAt(at, at + out) * CFrame.Angles(math.sin(now * 14) * 0.08, 0, 0)
+		else
+			-- По стволу: спиралью, головой вверх или вниз, брюшком к стволу.
+			local y = if mode == "up"
+				then height + (here.climb - height) * t
+				elseif mode == "down" then here.climb * (1 - t)
+				else here.climb
+			if mode == "up" and t >= 1 then
+				height = here.climb
+			end
+			local turn = angle + y * 0.35
+			local out = Vector3.new(math.cos(turn), 0, math.sin(turn))
+			local at = here.position + out * (here.trunk + 0.35) + Vector3.new(0, y, 0)
+			local look = if mode == "down" then -Vector3.yAxis else Vector3.yAxis
+			frame = CFrame.lookAt(at, at + look, out)
+			if mode == "perch" then
+				-- Наверху сидит боком и вертит хвостом.
+				frame = CFrame.lookAt(at, at + Vector3.new(-out.Z, 0, out.X))
+					* CFrame.Angles(0, math.sin(now * 3) * 0.3, 0)
+			end
+		end
+		place(animal, frame)
+	end
+end
+
 -- ===== Радуга ======================================================================
 
 local rainbow: { beams: { Beam }, fade: NumberValue }? = nil
@@ -582,6 +820,15 @@ function LiveWorldController.init()
 		end
 		for _, pond in LiveWorld.ponds() do
 			table.insert(animators, startPond(pond))
+		end
+		for kite = 1, #LiveWorld.KITES do
+			table.insert(animators, startKite(kite))
+		end
+		local trees = LiveWorld.squirrelTrees()
+		if #trees > 0 then
+			for squirrel = 1, LiveWorld.SQUIRREL_COUNT do
+				table.insert(animators, startSquirrel(squirrel, trees))
+			end
 		end
 
 		-- Радуга изредка сама по себе; после трёх звёзд её зовёт ChallengeController.
