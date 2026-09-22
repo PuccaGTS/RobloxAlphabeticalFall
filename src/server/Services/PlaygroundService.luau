@@ -532,6 +532,213 @@ function BUILDERS.balloon(model: Model, origin: CFrame)
 end
 
 --[[
+	Тайный сад: круг высоких кустов. С площади видна только зелёная стена;
+	вход — с дальней стороны, занавес из листвы, сквозь который проходишь
+	(там кусты не твёрдые). К нему ведут камешки-следы вокруг круга. Внутри —
+	светлая полянка, светящиеся грибы, светлячки, гирлянда между кустами,
+	прудик с кувшинкой и сундук у стены (Config/Chests, chest_secret).
+]]
+local HEDGE = Color3.fromRGB(60, 135, 70)
+local HEDGE_LIGHT = Color3.fromRGB(85, 160, 80)
+
+function BUILDERS.secret(model: Model, origin: CFrame)
+	local radius = Playground.SECRET_RADIUS
+	local height = Playground.SECRET_HEDGE
+	local segments = 22
+	-- Вход — за садом, если смотреть с площади: +Z кадра origin.
+	local entrance = math.pi / 2
+	local function around(a: number, r: number, y: number): CFrame
+		return origin * CFrame.new(math.cos(a) * r, y, math.sin(a) * r)
+	end
+	local function isEntrance(a: number): boolean
+		return math.abs(math.atan2(math.sin(a - entrance), math.cos(a - entrance)))
+			< math.pi / segments + 0.01
+	end
+
+	for index = 0, segments - 1 do
+		local a = index / segments * math.pi * 2
+		local width = 2 * math.pi * radius / segments + 0.8
+		local wall = part(
+			model,
+			if isEntrance(a) then "LeafCurtain" else "Hedge",
+			Vector3.new(3, height, width),
+			around(a, radius, height / 2) * CFrame.Angles(0, -a, 0),
+			if index % 2 == 0 then HEDGE else HEDGE_LIGHT
+		)
+		wall.Material = Enum.Material.Grass
+		-- Кудрявый верх: шары листвы по кромке.
+		local top = part(
+			model,
+			"HedgeTop",
+			Vector3.new(3.6, 3.6, 3.6),
+			around(a, radius, height + 0.2),
+			if index % 2 == 0 then HEDGE_LIGHT else HEDGE
+		)
+		top.Shape = Enum.PartType.Ball
+		top.Material = Enum.Material.Grass
+		top.CanCollide = false
+		if isEntrance(a) then
+			-- Занавес: та же листва, но сквозь неё проходишь. Чуть светлее — для того, кто ищет.
+			wall.CanCollide = false
+			wall.Transparency = 0.15
+			wall.Color = Color3.fromRGB(110, 175, 90)
+		end
+	end
+
+	-- Полянка внутри: светлая трава и ковёр цветов.
+	local lawn = cylinder(
+		model,
+		"Lawn",
+		0.2,
+		radius * 2 - 2,
+		origin * CFrame.new(0, 0.1, 0),
+		Color3.fromRGB(150, 210, 120)
+	)
+	lawn.Material = Enum.Material.Grass
+	lawn.CanCollide = false
+	local random = Random.new(276)
+	for index = 1, 40 do
+		local a = random:NextNumber(0, math.pi * 2)
+		local r = random:NextNumber(2, radius - 2.5)
+		local flower = part(
+			model,
+			"Flower",
+			Vector3.new(0.6, 0.6, 0.6),
+			origin * CFrame.new(math.cos(a) * r, 0.35, math.sin(a) * r),
+			RAINBOW[(index - 1) % #RAINBOW + 1]
+		)
+		flower.Shape = Enum.PartType.Ball
+		flower.CanCollide = false
+	end
+
+	-- Светящиеся грибы по кругу у стены.
+	for index = 1, 7 do
+		local a = entrance + math.pi + (index - 4) * 0.55
+		local at = around(a, radius - 2.3, 0)
+		local size = 0.8 + (index % 3) * 0.35
+		local stem = cylinder(
+			model,
+			"GlowStem",
+			size * 1.4,
+			size * 0.45,
+			at * CFrame.new(0, size * 0.7, 0),
+			Color3.fromRGB(250, 245, 230)
+		)
+		stem.CanCollide = false
+		-- Шляпка: плоский диск и купол над ним. Цвет густой — неон светлые цвета выбеливает.
+		local color = if index % 2 == 0 then Color3.fromRGB(30, 150, 210) else Color3.fromRGB(150, 70, 220)
+		local brim =
+			cylinder(model, "GlowCap", size * 0.35, size * 1.9, at * CFrame.new(0, size * 1.45, 0), color)
+		brim.Material = Enum.Material.Neon
+		brim.CanCollide = false
+		local dome = part(
+			model,
+			"GlowDome",
+			Vector3.new(size * 1.3, size * 1.3, size * 1.3),
+			at * CFrame.new(0, size * 1.6, 0),
+			color
+		)
+		dome.Shape = Enum.PartType.Ball
+		dome.Material = Enum.Material.Neon
+		dome.CanCollide = false
+		local dot = part(
+			model,
+			"GlowDot",
+			Vector3.new(size * 0.35, size * 0.35, size * 0.35),
+			at * CFrame.new(size * 0.35, size * 2.1, 0),
+			Color3.fromRGB(255, 255, 255)
+		)
+		dot.Shape = Enum.PartType.Ball
+		dot.CanCollide = false
+	end
+
+	-- Прудик с кувшинкой — справа от входа.
+	local pond = cylinder(
+		model,
+		"SecretPond",
+		0.25,
+		5.5,
+		around(entrance - 0.9, radius - 5.5, 0.12),
+		Color3.fromRGB(90, 170, 220)
+	)
+	pond.Material = Enum.Material.Glass
+	pond.Transparency = 0.2
+	pond.CanCollide = false
+	local lily = cylinder(
+		model,
+		"Lily",
+		0.1,
+		1.6,
+		around(entrance - 0.85, radius - 5, 0.28),
+		Color3.fromRGB(90, 180, 90)
+	)
+	lily.CanCollide = false
+	local bloom = part(
+		model,
+		"LilyBloom",
+		Vector3.new(0.6, 0.6, 0.6),
+		around(entrance - 0.85, radius - 5, 0.55),
+		Color3.fromRGB(255, 190, 220)
+	)
+	bloom.Shape = Enum.PartType.Ball
+	bloom.CanCollide = false
+
+	-- Гирлянда: огоньки дугой через сад, от стены к стене.
+	local from = around(entrance + 1.2, radius - 0.5, height + 1)
+	local to = around(entrance + math.pi - 0.3, radius - 0.5, height + 1)
+	local bulbs = 16
+	for index = 0, bulbs do
+		local t = index / bulbs
+		local point = from.Position:Lerp(to.Position, t) - Vector3.new(0, math.sin(t * math.pi) * 2.5, 0)
+		local bulb = part(
+			model,
+			"FairyLight",
+			Vector3.new(0.45, 0.45, 0.45),
+			CFrame.new(point),
+			RAINBOW[index % #RAINBOW + 1]
+		)
+		bulb.Shape = Enum.PartType.Ball
+		bulb.Material = Enum.Material.Neon
+		bulb.CanCollide = false
+	end
+
+	-- Светлячки: медленные искры над полянкой.
+	local air = part(
+		model,
+		"Fireflies",
+		Vector3.new(radius * 1.6, 4, radius * 1.6),
+		origin * CFrame.new(0, 3, 0),
+		Color3.new(1, 1, 1)
+	)
+	air.Transparency = 1
+	air.CanCollide = false
+	air.CanQuery = false
+	air.CanTouch = false
+	local glow = Instance.new("ParticleEmitter")
+	glow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	glow.Color = ColorSequence.new(Color3.fromRGB(230, 255, 120), Color3.fromRGB(255, 220, 100))
+	glow.LightEmission = 1
+	glow.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.3, 0.5),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	glow.Lifetime = NumberRange.new(3, 5)
+	glow.Rate = 6
+	glow.Speed = NumberRange.new(0.3, 0.8)
+	glow.SpreadAngle = Vector2.new(180, 180)
+	glow.Parent = air
+
+	-- Камешки-следы от площади вокруг круга ко входу: кто пойдёт по ним, найдёт.
+	for index = 0, 9 do
+		local a = entrance + math.pi - 0.5 - index * 0.36
+		local stone =
+			cylinder(model, "StepStone", 0.2, 1.5, around(a, radius + 3, 0.1), Color3.fromRGB(215, 210, 200))
+		stone.CanCollide = false
+	end
+end
+
+--[[
 	Фото-зона: небесный задник с радугой в золотой раме, по бокам объёмные
 	А и Я, перед рамкой — метка с фотоаппаратом. Встал на метку — снимок
 	(PlaygroundController, AF_PhotoMark). Рама смотрит на площадь: оттуда

@@ -25,6 +25,8 @@ export type Chest = {
 	angle: number, -- направление от центра площади, в градусах
 	distance: number, -- расстояние от центра
 	rotation: number, -- куда смотрит крышка, в градусах
+	-- Сундук спрятан внутри игрового места (Config/Playground): его зона — свой дом, а не помеха.
+	insideSpot: string?,
 }
 
 --[[
@@ -35,6 +37,19 @@ local CHESTS: { Chest } = {
 	{ id = "chest_pines", itemId = "hat_mushroom", angle = 35, distance = 92, rotation = 215 },
 	{ id = "chest_pond", itemId = "back_hedgehog", angle = 150, distance = 104, rotation = 330 },
 	{ id = "chest_meadow", itemId = "trail_leaves", angle = 250, distance = 98, rotation = 70 },
+	--[[
+		Четвёртый — в Тайном саду (Config/Playground, secret): за стеной кустов,
+		вход с дальней от площади стороны, сквозь занавес из листвы. Находка
+		для того, кто обойдёт круг кустов, а не для того, кто бежит мимо.
+	]]
+	{
+		id = "chest_secret",
+		itemId = "back_firefly_jar",
+		angle = 276,
+		distance = 211, -- у дальней от входа стены сада, замком ко входу
+		rotation = 354,
+		insideSpot = "secret",
+	},
 }
 
 Chests.all = CHESTS

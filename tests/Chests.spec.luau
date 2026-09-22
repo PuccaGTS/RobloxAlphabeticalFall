@@ -69,7 +69,9 @@ return function()
 					-- поэтому проверяем все зоны, кроме неё.
 					local clear, why = true, nil
 					for _, zone in Decor.zones do
-						if zone.why ~= `сундук {chest.id}` then
+						local host = chest.insideSpot
+							and zone.why == `игровое место {chest.insideSpot}`
+						if zone.why ~= `сундук {chest.id}` and not host then
 							if
 								(Vector2.new(position.X, position.Z) - zone.center).Magnitude
 								< zone.radius + 3

@@ -652,6 +652,64 @@ local Items: { [string]: ShopItem } = {
 		},
 	},
 
+	-- Фонарик светлячков = палочка через плечо + банка со светящимися светлячками + крышка
+	back_firefly_jar = {
+		id = "back_firefly_jar",
+		category = "back",
+		title = "Фонарик светлячков",
+		grantedBy = "chest:chest_secret",
+		tier = 2,
+		unlockStage = 1,
+		icon = "🏮",
+		visual = {
+			piece(
+				"Cylinder",
+				Color3.fromRGB(150, 105, 70),
+				Vector3.new(3.4, 0.22, 0.22),
+				CFrame.new(0.9, 1.2, 0.75) * CFrame.Angles(0, 0, math.rad(55)),
+				Enum.Material.Wood
+			),
+			glass(
+				piece(
+					"Cylinder",
+					Color3.fromRGB(200, 240, 220),
+					Vector3.new(1.3, 1.1, 1.1),
+					CFrame.new(1.95, 1.75, 0.95) * CFrame.Angles(0, 0, math.rad(90)),
+					Enum.Material.Glass
+				),
+				0.45
+			),
+			piece(
+				"Cylinder",
+				Color3.fromRGB(240, 190, 80),
+				Vector3.new(0.25, 1.2, 1.2),
+				CFrame.new(1.95, 2.45, 0.95) * CFrame.Angles(0, 0, math.rad(90)),
+				Enum.Material.Metal
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(230, 255, 120),
+				Vector3.new(0.35, 0.35, 0.35),
+				CFrame.new(1.8, 1.55, 0.95),
+				Enum.Material.Neon
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 240, 140),
+				Vector3.new(0.3, 0.3, 0.3),
+				CFrame.new(2.15, 1.85, 0.8),
+				Enum.Material.Neon
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(200, 255, 150),
+				Vector3.new(0.28, 0.28, 0.28),
+				CFrame.new(1.9, 2.05, 1.1),
+				Enum.Material.Neon
+			),
+		},
+	},
+
 	-- Воздушный шарик = ниточка от плеча + красный шар + узелок
 	back_balloon = {
 		id = "back_balloon",
@@ -1173,6 +1231,13 @@ local EFFECTS: { [string]: ItemEffect } = {
 		size = 0.6,
 		lightEmission = 1,
 		trail = { color = RAINBOW, lifetime = 1.6, width = 2.4 },
+	},
+	back_firefly_jar = {
+		particles = "sparkle",
+		color = ColorSequence.new(Color3.fromRGB(230, 255, 130), Color3.fromRGB(255, 220, 110)),
+		rate = 8,
+		size = 0.45,
+		lightEmission = 1,
 	},
 	trail_rainbow = {
 		particles = "sparkle",

@@ -69,7 +69,16 @@ Playground.spots = {
 	{ id = "carousel", title = "🎠 Карусель", angle = 300, distance = 160, radius = 16 },
 	{ id = "slide", title = "🌀 Горка", angle = 192, distance = 196, radius = 17 },
 	{ id = "balloon", title = "🎈 Воздушный шар", angle = 120, distance = 190, radius = 14 },
-} :: { Spot }
+	--[[
+		Тайный сад: круг высоких кустов, а вход — с дальней от площади стороны,
+		занавес из листвы, сквозь который проходишь. Внутри светящиеся грибы,
+		светлячки, гирлянда и сундук (Config/Chests, chest_secret).
+	]]
+	{ id = "secret", title = "🌿 Тайный сад", angle = 276, distance = 216, radius = 16 },
+}
+
+Playground.SECRET_RADIUS = 12.5 -- радиус стены кустов
+Playground.SECRET_HEDGE = 7 -- её высота: поверх не заглянуть :: { Spot }
 
 -- Сила батутов: от маленького к большому. Выше 90 ребёнок улетает из кадра.
 Playground.TRAMPOLINE_POWER = { 60, 75, 90 }

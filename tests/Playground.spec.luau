@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage.Shared
 local Playground = require(Shared.Config.Playground)
 local Decor = require(Shared.Config.Decor)
 local Base = require(Shared.Config.Base)
+local Chests = require(Shared.Config.Chests)
 
 local function flat(spot)
 	local position = Playground.position(spot)
@@ -44,6 +45,12 @@ return function()
 			for _, spot in Playground.spots do
 				for _, zone in Decor.zones do
 					local own = string.find(zone.why, "игровое место", 1, true) ~= nil
+					-- Сундук, спрятанный в самом месте (Тайный сад), — его часть, а не помеха.
+					for _, chest in Chests.all do
+						if chest.insideSpot == spot.id and zone.why == `сундук {chest.id}` then
+							own = true
+						end
+					end
 					if not own then
 						local distance = (flat(spot) - zone.center).Magnitude
 						if distance < spot.radius + zone.radius then
