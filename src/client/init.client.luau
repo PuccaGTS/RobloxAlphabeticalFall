@@ -32,6 +32,7 @@ local EmoteController = require(Controllers.EmoteController)
 local DetailLodController = require(Controllers.DetailLodController)
 local RunHazardController = require(Controllers.RunHazardController)
 local SkateController = require(Controllers.SkateController)
+local SplashController = require(Controllers.SplashController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -71,6 +72,7 @@ EmoteController.init()
 DetailLodController.init()
 RunHazardController.init()
 SkateController.init()
+SplashController.init()
 DevController.init() -- панель появится только в Studio и у владельца места
 
 ShopUI.build({

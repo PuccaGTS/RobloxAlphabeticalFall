@@ -4,6 +4,16 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local report = ReplicatedStorage:WaitForChild("ZZ_ProbeReport")
 local player = Players.LocalPlayer
+-- Ошибки клиента — в отчёт: без этого упавший каждый кадр контроллер виден только по снимкам.
+do
+	local seen = {}
+	game:GetService("LogService").MessageOut:Connect(function(message, kind)
+		if kind == Enum.MessageType.MessageError and not seen[message] then
+			seen[message] = true
+			report:FireServer("CLIENT ERROR " .. message)
+		end
+	end)
+end
 -- Замер производительности по просьбе сценария perf: камера в точку, три секунды кадров, счётчики отрисовки.
 local perf = if workspace:GetAttribute("ZZ_Perf") then ReplicatedStorage:WaitForChild("ZZ_Perf", 30) else nil
 if perf then
@@ -250,6 +260,47 @@ workspace:GetAttributeChangedSignal("ZZ_AudioReport"):Connect(function()
 	report:FireServer(
 		"AUDIO " .. workspace:GetAttribute("ZZ_AudioReport") .. ": " .. table.concat(lines, " | ")
 	)
+end)
+
+-- Деталь глазами клиента (метка ZZ_Inspect = "Hub.Playground.…"): где стоит, что в ней излучает.
+workspace:GetAttributeChangedSignal("ZZ_Inspect"):Connect(function()
+	for path in string.gmatch(workspace:GetAttribute("ZZ_Inspect") or "", "[^;]+") do
+		local node = workspace
+		for name in string.gmatch(path, "[^%.]+") do
+			node = node and node:FindFirstChild(name)
+		end
+		if not node then
+			report:FireServer("INSPECT " .. path .. ": нет у клиента")
+			continue
+		end
+		local lines = { node.ClassName }
+		if node:IsA("BasePart") then
+			table.insert(
+				lines,
+				string.format(
+					"pos %.1f,%.1f,%.1f rot %s",
+					node.Position.X,
+					node.Position.Y,
+					node.Position.Z,
+					tostring(node.Orientation)
+				)
+			)
+		end
+		for _, child in node:GetChildren() do
+			if child:IsA("ParticleEmitter") then
+				table.insert(
+					lines,
+					string.format("emitter rate=%.0f enabled=%s", child.Rate, tostring(child.Enabled))
+				)
+			elseif child:IsA("Sound") then
+				table.insert(
+					lines,
+					string.format("sound playing=%s vol=%.2f", tostring(child.IsPlaying), child.Volume)
+				)
+			end
+		end
+		report:FireServer("INSPECT " .. path .. ": " .. table.concat(lines, " | "))
+	end
 end)
 
 -- Загрузка звуков библиотеки (метка ZZ_SoundCheck = "ключ,ключ"): грузится ли и сколько длится.

@@ -102,4 +102,60 @@ return function()
 			expect(found).to.equal(true)
 		end)
 	end)
+	describe("Брызгалки и зимняя полянка", function()
+		it(
+			"струи бьют в долях от нуля до единицы, и есть время пробежать насквозь",
+			function()
+				local calm = 0
+				for step = 0, Playground.SPLASH_CYCLE * 10 do
+					local now = step / 10
+					local on = 0
+					for index = 0, Playground.SPLASH_JETS do
+						local share = Playground.splashJet(index, now)
+						expect(share >= 0 and share <= 1).to.equal(true)
+						if index > 0 and share > 0.6 then
+							on += 1
+						end
+					end
+					if on == 0 then
+						calm += 1
+					end
+				end
+				-- Больше четверти цикла кольцо не бьёт высоко: вбежать к гейзеру успеваешь.
+				expect(calm > Playground.SPLASH_CYCLE * 10 / 4).to.equal(true)
+			end
+		)
+
+		it("по кругу бежит одна струя, а не все", function()
+			for step = 0, 39 do
+				local on = 0
+				for index = 1, Playground.SPLASH_JETS do
+					if Playground.splashJet(index, step / 10) > 0 then
+						on += 1
+					end
+				end
+				expect(on).to.equal(1)
+			end
+		end)
+
+		it("ведро опрокидывается и возвращается", function()
+			expect(Playground.splashBucket(0)).to.equal(0)
+			expect(Playground.splashBucket(1)).to.equal(1)
+			expect(Playground.splashBucket(Playground.SPLASH_BUCKET_EVERY - 1)).to.equal(0)
+			for step = 0, Playground.SPLASH_BUCKET_EVERY * 10 do
+				local tip = Playground.splashBucket(step / 10)
+				expect(tip >= 0 and tip <= 1).to.equal(true)
+			end
+		end)
+
+		it(
+			"каток помещается на снежном круге, а круг — в своём месте",
+			function()
+				expect(Playground.ICE_RADIUS + 2 < Playground.WINTER_RADIUS).to.equal(true)
+				expect(Playground.WINTER_RADIUS <= Playground.expect("winter").radius).to.equal(true)
+				expect(Playground.SPLASH_RADIUS <= Playground.expect("splash").radius).to.equal(true)
+				expect(Playground.SKATE_GRIP > 0.2).to.equal(true)
+			end
+		)
+	end)
 end

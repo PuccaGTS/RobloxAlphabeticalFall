@@ -164,6 +164,9 @@ studio = subprocess.Popen([str(exe), str(place)])
 try:
     if not done.wait(int(os.environ.get("ZZ_WAIT", "300"))):
         print("TIMEOUT: отчёта нет за отведённое время (ZZ_WAIT)")
+        # Что на экране у зависшей Studio: диалог, ошибка, пустое окно — снимок timeout.png.
+        with capture_lock:
+            capture_window("timeout")
     for body in received:
         if body != "DONE":
             print(body)
