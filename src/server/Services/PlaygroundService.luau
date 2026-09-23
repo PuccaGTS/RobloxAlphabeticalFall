@@ -526,6 +526,80 @@ function BUILDERS.slide(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(8, 0, -14), "🌀")
 end
 
+-- Озеро с лодочками-лебедями: воду, мостки и лодочки строит World/Rides, здесь — берег.
+function BUILDERS.lake(model: Model, origin: CFrame)
+	RidesBuilder.buildSwans(model, origin)
+	local lake = RidesBuilder.SWAN_LAKE
+	local DecorService = require(script.Parent.DecorService)
+	-- Цветущее дерево на островке: его видно с дорожки к домам.
+	local tree = DecorService.modelFor("tree_blossom", 1.2)
+	if tree then
+		tree.Name = "IslandTree"
+		tree:PivotTo(origin)
+		local box, extent = tree:GetBoundingBox()
+		tree:PivotTo(
+			tree:GetPivot()
+				+ Vector3.new(
+					origin.X - box.Position.X,
+					origin.Y + 0.8 - (box.Position.Y - extent.Y / 2),
+					origin.Z - box.Position.Z
+				)
+		)
+		tree.Parent = model
+	end
+	-- Кувшинки на воде и камыш у берега, но не на пути лодочек.
+	local random = Random.new(12)
+	for index = 1, 10 do
+		local a = index / 10 * math.pi * 2 + random:NextNumber(0, 0.4)
+		local r = if index % 2 == 0 then lake.loop + 4.5 else lake.island + 2.5
+		local at = origin * CFrame.new(math.cos(a) * r, 0.42, math.sin(a) * r)
+		local pad = cylinder(model, `LilyPad_{index}`, 0.1, 1.8, at, Color3.fromRGB(80, 170, 80))
+		pad.CanCollide = false
+		if index % 3 == 0 then
+			local lily = part(
+				model,
+				`Lily_{index}`,
+				Vector3.new(0.7, 0.7, 0.7),
+				at * CFrame.new(0.2, 0.3, 0),
+				Color3.fromRGB(255, 180, 210)
+			)
+			lily.Shape = Enum.PartType.Ball
+			lily.CanCollide = false
+		end
+	end
+	for index = 1, 14 do
+		local a = index / 14 * math.pi * 2 + random:NextNumber(-0.1, 0.1)
+		-- Со стороны мостков камыша нет: проход к воде.
+		if math.abs(math.sin(a) + 1) < 0.25 then
+			continue
+		end
+		local r = lake.lake + random:NextNumber(0.5, 1.8)
+		for stalk = 1, 3 do
+			local at = origin * CFrame.new(math.cos(a) * r + stalk * 0.4 - 0.8, 0, math.sin(a) * r)
+			local height = 2.5 + random:NextNumber(0, 1.5)
+			local reed = part(
+				model,
+				`Reed_{index}_{stalk}`,
+				Vector3.new(0.18, height, 0.18),
+				at
+					* CFrame.new(0, height / 2, 0)
+					* CFrame.Angles(random:NextNumber(-0.15, 0.15), 0, random:NextNumber(-0.15, 0.15)),
+				Color3.fromRGB(90, 150, 70)
+			)
+			reed.CanCollide = false
+			local top = part(
+				model,
+				`ReedTop_{index}_{stalk}`,
+				Vector3.new(0.35, 0.9, 0.35),
+				reed.CFrame * CFrame.new(0, height / 2 - 0.3, 0),
+				Color3.fromRGB(130, 85, 50)
+			)
+			top.CanCollide = false
+		end
+	end
+	sign(model, origin * CFrame.new(-5, 0, -(lake.lake + 4)), "🦢")
+end
+
 function BUILDERS.balloon(model: Model, origin: CFrame)
 	RidesBuilder.buildBalloon(model, origin)
 	sign(model, origin * CFrame.new(8, 0, -9), "🎈")

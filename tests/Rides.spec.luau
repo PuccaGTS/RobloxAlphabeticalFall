@@ -213,4 +213,38 @@ return function()
 			expect(spot.radius >= Rides.WHEEL.diameter / 2 - 2).to.equal(true)
 		end)
 	end)
+	describe("Лодочки-лебеди", function()
+		it(
+			"плывут по воде: не задевают островок и не вылезают на берег",
+			function()
+				local spec = Rides.SWANS
+				for step = 0, 40 do
+					local now = step * spec.period / 40
+					local angle = Rides.swanAngle(now)
+					for index = 1, spec.boats do
+						local at = Rides.swanFrame(index, angle, now).Position
+						local r = Vector2.new(at.X, at.Z).Magnitude
+						-- Лодочка шириной около шести студов вдоль хода и четырёх поперёк.
+						expect(r - 3.5 > spec.island).to.equal(true)
+						expect(r + 3.5 < spec.lake).to.equal(true)
+						expect(math.abs(at.Y) <= spec.bob + 1e-6).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it("лодочки идут друг за другом, а не кучей", function()
+			local spec = Rides.SWANS
+			local a = Rides.swanFrame(1, 0, 0).Position
+			local b = Rides.swanFrame(2, 0, 0).Position
+			expect((a - b).Magnitude > 10).to.equal(true)
+		end)
+
+		it("клювом по ходу: голова впереди по кругу", function()
+			local before = Rides.swanFrame(1, 0, 0)
+			local after = Rides.swanFrame(1, 0.05, 0)
+			local heading = (after.Position - before.Position).Unit
+			expect(before.LookVector:Dot(heading) > 0.9).to.equal(true)
+		end)
+	end)
 end

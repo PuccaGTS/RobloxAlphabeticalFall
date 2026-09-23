@@ -190,6 +190,57 @@ function attachCarousel(model: Instance)
 	carousels[model] = { center = center, rotor = collect(rotorModel, center), horses = horses }
 end
 
+-- ===== Лодочки-лебеди =====
+
+type Swans = { center: CFrame, boats: { Group } }
+local lakes: { [Instance]: Swans } = {}
+
+local attachSwans: (Instance) -> ()
+function attachSwans(model: Instance)
+	local center = model:GetAttribute("Center")
+	if typeof(center) ~= "CFrame" then
+		return
+	end
+	local boats: { Group } = {}
+	for index = 1, Rides.SWANS.boats do
+		local boat = model:FindFirstChild(`Swan_{index}`)
+		if not boat then
+			if model.Parent then
+				task.delay(2, attachSwans, model)
+			end
+			return
+		end
+		boats[index] = collect(boat, center * Rides.swanFrame(index, 0, 0))
+	end
+	lakes[model] = { center = center, boats = boats }
+end
+
+local function stepSwans(now: number, camera: Vector3)
+	local angle = Rides.swanAngle(now)
+	for model, lake in lakes do
+		if not model.Parent then
+			lakes[model] = nil
+		elseif (lake.center.Position - camera).Magnitude < ANIMATE_DISTANCE then
+			for index, boat in lake.boats do
+				move(boat, lake.center * Rides.swanFrame(index, angle, now))
+			end
+		end
+	end
+end
+
+-- Лодочка, которая сейчас ближе всех к мосткам.
+local function nearestSwan(lake: Swans, pad: BasePart, now: number): number
+	local angle = Rides.swanAngle(now)
+	local best, bestDistance = 1, math.huge
+	for index = 1, Rides.SWANS.boats do
+		local distance = ((lake.center * Rides.swanFrame(index, angle, now)).Position - pad.Position).Magnitude
+		if distance < bestDistance then
+			best, bestDistance = index, distance
+		end
+	end
+	return best
+end
+
 local function stepCarousels(now: number, camera: Vector3)
 	local angle = Rides.carouselAngle(now)
 	for model, carousel in carousels do
@@ -296,13 +347,15 @@ end
 
 -- ===== Катание =====
 
-type Kind = "train" | "wheel" | "carousel" | "slide" | "balloon"
+type Kind = "train" | "wheel" | "carousel" | "slide" | "balloon" | "swan"
 type Ride = {
 	kind: Kind,
 	wheel: Wheel?,
 	cabin: number?,
 	carousel: Carousel?,
 	horse: number?,
+	lake: Swans?,
+	boat: number?,
 	slide: CFrame?, -- опорная точка горки
 	balloon: Balloon?,
 	started: number,
@@ -327,7 +380,14 @@ local function onPad(root: BasePart, pad: BasePart): boolean
 end
 
 local function seatFrame(current: Ride, now: number): CFrame?
-	if current.kind == "carousel" then
+	if current.kind == "swan" then
+		local lake = current.lake
+		if not lake or not current.boat then
+			return nil
+		end
+		local frame = lake.center * Rides.swanFrame(current.boat, Rides.swanAngle(now), now)
+		return frame * CFrame.new(0, 1.4 + SEAT_HEIGHT - 0.3, 0.9)
+	elseif current.kind == "carousel" then
 		local carousel = current.carousel
 		if not carousel or not current.horse then
 			return nil
@@ -513,6 +573,12 @@ local function stepRide(now: number)
 				finish(true) -- облетели парк и сели на ту же лужайку
 				return
 			end
+		elseif current.kind == "swan" then
+			-- Круг по озеру — и обратно на мостки.
+			if now - current.started >= Rides.SWANS.period then
+				finish(true)
+				return
+			end
 		elseif current.kind == "carousel" then
 			if now - current.started >= Rides.CAROUSEL.period * Rides.CAROUSEL.laps then
 				finish(true)
@@ -558,6 +624,15 @@ local function stepRide(now: number)
 		if started then
 			started.carousel = carousel
 			started.horse = nearestHorse(carousel, pad, now)
+		end
+	end) or checkPads("AF_SwanBoard", root, function(pad)
+		return ownerOf(pad, lakes) ~= nil
+	end, function(pad)
+		local lake = ownerOf(pad, lakes)
+		local started = start("swan", pad, now, nil)
+		if started then
+			started.lake = lake
+			started.boat = nearestSwan(lake, pad, now)
 		end
 	end) or checkPads("AF_SlideBoard", root, function(pad)
 		return pad.Parent ~= nil and typeof(pad.Parent:GetAttribute("Base")) == "CFrame"
@@ -614,6 +689,7 @@ function RideController.init()
 	watch("AF_Train", attachTrain)
 	watch("AF_Wheel", attachWheel)
 	watch("AF_Carousel", attachCarousel)
+	watch("AF_Swans", attachSwans)
 	watch("AF_Balloon", attachBalloon)
 
 	RunService:BindToRenderStep("AF_Rides", Enum.RenderPriority.Camera.Value - 1, function()
@@ -623,6 +699,7 @@ function RideController.init()
 		local eye = if camera then camera.CFrame.Position else Vector3.zero
 		stepWheels(now, eye)
 		stepCarousels(now, eye)
+		stepSwans(now, eye)
 		stepBalloons(now)
 		stepRide(now)
 	end)

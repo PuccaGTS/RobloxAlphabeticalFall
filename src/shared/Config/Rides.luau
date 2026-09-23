@@ -276,9 +276,45 @@ function Rides.balloonAt(now: number, inward: Vector3): (Vector3, boolean, boole
 	return flat + Vector3.new(0, y, 0), false, t < spec.rise + spec.drift
 end
 
+-- ===== Лодочки-лебеди =====
+
+--[[
+	Озеро с островком и ивой посередине, по кругу плывут три лодочки-лебедя.
+	Встал на круг в конце мостков — сел в ближнюю лодочку и проплыл круг
+	по озеру, лодочка привозит обратно к мосткам. Рядом играет «Танец
+	маленьких лебедей» (APM, без загрузки) и плещется вода.
+]]
+Rides.SWANS = {
+	spot = "lake",
+	lake = 21, -- радиус воды
+	island = 5, -- радиус островка посередине
+	loop = 13, -- по какому кругу плывут лодочки
+	boats = 3,
+	period = 42, -- круг лодочки
+	bob = 0.18, -- покачивание на воде
+}
+
+function Rides.swanAngle(now: number): number
+	return (now % Rides.SWANS.period) / Rides.SWANS.period * math.pi * 2
+end
+
+--[[
+	Лодочка index в системе озера (центр воды): на кругу, клювом по ходу,
+	чуть покачивается. Плывут против часовой, если смотреть сверху.
+]]
+function Rides.swanFrame(index: number, angle: number, now: number): CFrame
+	local spec = Rides.SWANS
+	local a = angle + (index - 1) / spec.boats * math.pi * 2
+	local bob = spec.bob * math.sin(now * 1.7 + index * 2)
+	local roll = 0.04 * math.sin(now * 1.3 + index)
+	-- Та же запись, что у лошадок: CFrame.Angles(0, -a, 0) несёт +X к +Z.
+	return CFrame.Angles(0, -a, 0) * CFrame.new(spec.loop, bob, 0) * CFrame.Angles(0, math.pi, roll)
+end
+
 -- Сколько объектов шевелится в кадре (для бюджета Config/LiveWorld):
--- поезд, колесо, карусель и воздушный шар. Горка стоит, едет только ребёнок.
-Rides.MOVING = 4
+-- поезд, колесо, карусель, воздушный шар и лебеди (плывут одним кругом).
+-- Горка стоит, едет только ребёнок.
+Rides.MOVING = 5
 
 -- Эстакада лежит в свободной полосе между парком и участками.
 Rides.PLOT_INNER = Base.RING_RADIUS - Base.PLOT_SIZE / 2

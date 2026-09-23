@@ -38,6 +38,10 @@ Ambient.CAROUSEL = { key = "amb_carousel", volume = 0.45, radius = 60 }
 -- Зимняя полянка (Config/Playground winter): «Jingle Bells» у ёлки, слышно только рядом.
 Ambient.WINTER = { key = "amb_winter_bells", volume = 0.4, radius = 55 }
 
+-- Озеро с лебедями (Config/Rides.SWANS): «Танец маленьких лебедей» и плеск воды.
+Ambient.SWANS = { key = "amb_swan_dance", volume = 0.4, radius = 60 }
+Ambient.LAKE = { key = "amb_lake", volume = 0.5, radius = 45 }
+
 -- Струйки воды водопада: за сколько секунд пробегают пласт сверху вниз.
 Ambient.FALL_STRIPE_SECONDS = 1.6
 

@@ -140,6 +140,8 @@ local LIBRARY: { [string]: number } = {
 	amb_splash_spray = 9120591281, -- Water Spray 1, 15 с: шипят струи брызгалок
 	sfx_splash_bucket = 9120585252, -- Water Splash Big Water Splash Dive In 1: ведро опрокинулось
 	sfx_splash_burst = 9120502958, -- Water Burst Boom Blast Hissing Spray 1: кнопка «всё сразу»
+	amb_swan_dance = 1836282349, -- APM Swan Lake: Dance Of The Swans, 89 с: у озера с лебедями
+	amb_lake = 9116203162, -- Lake Lap Water Movement 2, 46 с: плеск озера
 	amb_run_lava = 9112752570, -- Bubbles Dribble Small Bloops 1, 14 с: лава булькает
 }
 for key, assetId in LIBRARY do

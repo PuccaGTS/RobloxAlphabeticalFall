@@ -35,7 +35,7 @@ LiveWorld.MAX_BUTTERFLY_BEDS = 7 -- было 14: часть бюджета от�
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
-LiveWorld.LEAVES_AT_ONCE = 6 -- было 12: места отданы карпам, брызгам и воздушным змеям
+LiveWorld.LEAVES_AT_ONCE = 5 -- было 12: места отданы карпам, брызгам, змеям и лебедям
 LiveWorld.LEAF_INTERVAL = 0.9 -- секунд между листьями
 LiveWorld.LEAF_FALL_SECONDS = { 4, 6.5 }
 
@@ -244,7 +244,7 @@ function LiveWorld.movingBudget(): number
 		+ #LiveWorld.BUNNY_HOMES
 		-- В каждом пруду карпы и одно кольцо брызг от прыжка.
 		+ #LiveWorld.ponds() * (LiveWorld.KOI_PER_POND + 1)
-		-- Катания: паровозик, колесо, карусель, воздушный шар (Config/Rides).
+		-- Катания: паровозик, колесо, карусель, воздушный шар, лебеди (Config/Rides).
 		+ Rides.MOVING
 		+ #LiveWorld.KITES
 		+ LiveWorld.SQUIRREL_COUNT

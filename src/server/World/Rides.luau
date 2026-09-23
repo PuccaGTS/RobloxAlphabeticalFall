@@ -726,6 +726,159 @@ function RidesBuilder.buildCarousel(model: Model, origin: CFrame)
 	CollectionService:AddTag(model, "AF_Carousel")
 end
 
+-- ===== Лодочки-лебеди =====
+
+local SWAN_WHITE = Color3.fromRGB(252, 252, 255)
+local SWAN_SEATS = {
+	Color3.fromRGB(250, 150, 190),
+	Color3.fromRGB(120, 180, 250),
+	Color3.fromRGB(250, 210, 90),
+}
+
+-- Эллипсоид: шар, растянутый мешем. Столкновений нет — это облик, а не опора.
+local function ellipsoid(parent: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3): Part
+	local p = part(parent, name, size, cframe, color)
+	p.CanCollide = false
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = p
+	return p
+end
+
+-- Лодочка-лебедь в кадре frame (ватерлиния, клювом по LookVector).
+local function swan(parent: Model, frame: CFrame, index: number)
+	ellipsoid(parent, "Hull", Vector3.new(4.4, 2.4, 6.6), frame * CFrame.new(0, 0.3, 0.3), SWAN_WHITE)
+	part(parent, "Seat", Vector3.new(2.6, 0.5, 2.4), frame * CFrame.new(0, 1.15, 0.9), SWAN_SEATS[index]).CanCollide =
+		false
+	part(parent, "SeatBack", Vector3.new(2.6, 1.3, 0.4), frame * CFrame.new(0, 1.7, 2.1), SWAN_SEATS[index]).CanCollide =
+		false
+	ellipsoid(
+		parent,
+		"Tail",
+		Vector3.new(1.6, 1.6, 2.2),
+		frame * CFrame.new(0, 1.3, 3.3) * CFrame.Angles(math.rad(30), 0, 0),
+		SWAN_WHITE
+	)
+	for _, side in { -1, 1 } do
+		ellipsoid(
+			parent,
+			"Wing",
+			Vector3.new(0.7, 1.9, 4.2),
+			frame * CFrame.new(side * 2.05, 1.25, 0.8) * CFrame.Angles(math.rad(-12), 0, side * math.rad(-12)),
+			Color3.fromRGB(240, 242, 250)
+		)
+	end
+	-- Шея изгибом: шарики от груди к голове.
+	local neck = {
+		Vector3.new(0, 1.2, -2.5),
+		Vector3.new(0, 2.0, -2.95),
+		Vector3.new(0, 2.85, -3.05),
+		Vector3.new(0, 3.65, -2.85),
+		Vector3.new(0, 4.3, -2.9),
+	}
+	for link, at in neck do
+		ball(parent, `Neck_{link}`, 1.25 - link * 0.07, frame * CFrame.new(at), SWAN_WHITE).CanCollide = false
+	end
+	ball(parent, "Head", 1.35, frame * CFrame.new(0, 4.75, -3.25), SWAN_WHITE).CanCollide = false
+	local beak = part(
+		parent,
+		"Beak",
+		Vector3.new(0.5, 0.5, 1.2),
+		frame * CFrame.new(0, 4.6, -4.1) * CFrame.Angles(math.rad(-90), 0, 0),
+		Color3.fromRGB(255, 150, 50)
+	)
+	beak.CanCollide = false
+	local cone = Instance.new("SpecialMesh")
+	cone.MeshType = Enum.MeshType.FileMesh
+	cone.MeshId = "rbxassetid://1033714" -- конус из библиотеки Roblox
+	cone.Scale = Vector3.new(0.35, 1, 0.35)
+	cone.Parent = beak
+	for _, side in { -1, 1 } do
+		ball(parent, "Eye", 0.3, frame * CFrame.new(side * 0.5, 4.95, -3.6), Color3.fromRGB(30, 30, 40)).CanCollide =
+			false
+	end
+	-- У одной лодочки корона: её хочется догнать.
+	if index == 1 then
+		local crown = column(parent, "Crown", 0.5, 0.9, frame * CFrame.new(0, 5.55, -3.2), YELLOW)
+		crown.Material = Enum.Material.Neon
+		crown.CanCollide = false
+	end
+end
+
+--[[
+	Озеро с лодочками-лебедями (Config/Rides.SWANS). Вода по щиколотку
+	поверх травы: в неё можно зайти, утонуть нельзя. Мостки с кругом посадки
+	со стороны площади (-Z). Лодочки — отдельные модели со своей опорной
+	точкой Rides.swanFrame(i, 0, 0), плывут у клиента (RideController).
+	Островок с деревом посередине ставит PlaygroundService: деревья — его.
+]]
+function RidesBuilder.buildSwans(model: Model, origin: CFrame)
+	local spec = Rides.SWANS
+	local waterTop = 0.25
+	local center = origin * CFrame.new(0, waterTop, 0)
+	model:SetAttribute("Center", center)
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+
+	local shore = column(
+		model,
+		"Shore",
+		0.2,
+		spec.lake * 2 + 4,
+		origin * CFrame.new(0, 0.1, 0),
+		Color3.fromRGB(235, 215, 160)
+	)
+	shore.Material = Enum.Material.Sand
+	local water = column(
+		model,
+		"LakeWater",
+		0.3,
+		spec.lake * 2,
+		origin * CFrame.new(0, 0.1, 0),
+		Color3.fromRGB(70, 160, 225)
+	)
+	water.Material = Enum.Material.Glass
+	water.Transparency = 0.2
+	water.Reflectance = 0.15
+	water.CanCollide = false
+	local island = column(model, "Island", 0.8, spec.island * 2, origin * CFrame.new(0, 0.4, 0), GREEN)
+	island.Material = Enum.Material.Grass
+
+	-- Мостки со стороны площади: доски на сваях, в конце круг посадки.
+	local from, to = spec.lake + 3, spec.loop + 3.2
+	local length = from - to
+	local deckY = 1.1
+	local deck = part(
+		model,
+		"Pier",
+		Vector3.new(4, 0.4, length),
+		origin * CFrame.new(0, deckY, -(from + to) / 2),
+		WOOD
+	)
+	deck.Material = Enum.Material.WoodPlanks
+	for step = 0, 2 do
+		for _, side in { -1, 1 } do
+			local z = -(to + step * length / 2)
+			column(model, "PierPost", 1.6, 0.5, origin * CFrame.new(side * 1.8, deckY - 0.6, z), WOOD_DARK)
+		end
+	end
+	-- Ступенька с берега на мостки.
+	part(model, "PierStep", Vector3.new(4, 0.4, 1.5), origin * CFrame.new(0, 0.55, -(from + 0.7)), WOOD_DARK).Material =
+		Enum.Material.WoodPlanks
+
+	for index = 1, spec.boats do
+		local boat = Instance.new("Model")
+		boat.Name = `Swan_{index}`
+		boat.Parent = model
+		swan(boat, center * Rides.swanFrame(index, 0, 0), index)
+	end
+
+	boardPad(model, origin * CFrame.new(0, deckY + 0.35, -(to + 1)), "AF_SwanBoard")
+	CollectionService:AddTag(model, "AF_Swans")
+end
+
+-- Размеры озера для того, кто ставит берег (PlaygroundService).
+RidesBuilder.SWAN_LAKE = Rides.SWANS
+
 -- ===== Горка-спираль =====
 
 --[[

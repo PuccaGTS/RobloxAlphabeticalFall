@@ -88,6 +88,8 @@ Playground.spots = {
 		опрокидывается на того, кто под ним. Кого окатило — с того капает.
 	]]
 	{ id = "splash", title = "💦 Брызгалки", angle = 172, distance = 226, radius = 16 },
+	-- Озеро с лодочками-лебедями (Config/Rides.SWANS): видно с дорожки к домам.
+	{ id = "lake", title = "🦢 Лебеди", angle = 10, distance = 218, radius = 26 },
 }
 
 Playground.WINTER_RADIUS = 20 -- снежный круг
