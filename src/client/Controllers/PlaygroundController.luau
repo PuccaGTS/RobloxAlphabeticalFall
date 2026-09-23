@@ -374,6 +374,31 @@ HANDLERS.AF_Spin = function(anchor: BasePart)
 	end)
 end
 
+--[[
+	Огоньки гирлянды на ёлке зимней полянки: мигают вразнобой. Один общий
+	цикл на все огоньки, а не по циклу на каждый, и только когда ёлку видно.
+]]
+local twinkles: { BasePart } = {}
+local twinkleClock = 0
+HANDLERS.AF_Twinkle = function(light: BasePart)
+	table.insert(twinkles, light)
+	if #twinkles > 1 then
+		return
+	end
+	RunService.Heartbeat:Connect(function(dt: number)
+		twinkleClock += dt
+		local camera = workspace.CurrentCamera
+		for index = #twinkles, 1, -1 do
+			local bulb = twinkles[index]
+			if not bulb.Parent then
+				table.remove(twinkles, index)
+			elseif camera and (camera.CFrame.Position - bulb.Position).Magnitude < ANIMATE_DISTANCE then
+				bulb.Transparency = 0.5 - 0.5 * math.max(0, math.sin(twinkleClock * 2.6 + index * 1.7))
+			end
+		end
+	end)
+end
+
 -- Воздушный шар на привязи: плавно вверх и вниз.
 HANDLERS.AF_Float = function(anchor: BasePart)
 	local amplitude = anchor:GetAttribute("Amplitude") or 0.5

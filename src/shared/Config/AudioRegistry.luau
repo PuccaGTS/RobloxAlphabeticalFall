@@ -135,6 +135,8 @@ local LIBRARY: { [string]: number } = {
 	sfx_run_whoosh = 9120972444, -- Wood Whoosh Slicing Air Quick Swings 1: молот прошёл низ
 	sfx_run_roll = 9118661490, -- Rock Rolls Down Concrete Ramp Tumble 1: валун покатился
 	sfx_run_creak = 9120839010, -- Wood Door Creak Squeak 2: качели развернулись
+	amb_winter_bells = 1839945406, -- APM Jingle Bells, джазовое фортепиано, 116 с: зимняя полянка
+	sfx_skate = 9114868847, -- Ice Skates 1: скрип коньков на катке, 26 с
 	amb_run_lava = 9112752570, -- Bubbles Dribble Small Bloops 1, 14 с: лава булькает
 }
 for key, assetId in LIBRARY do

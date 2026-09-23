@@ -130,6 +130,8 @@ function AmbientController.init()
 		Vector3.new(carousel.X, Decor.groundY(carousel.X, carousel.Z) + 6, carousel.Z),
 		Ambient.CAROUSEL
 	)
+	local winter = Playground.position(Playground.expect("winter"))
+	placeSpot(sounds, Vector3.new(winter.X, Decor.groundY(winter.X, winter.Z) + 6, winter.Z), Ambient.WINTER)
 	animateFallStripes()
 
 	local bed = makeSound(Ambient.BED.key, 0, SoundService)

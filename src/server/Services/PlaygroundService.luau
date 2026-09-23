@@ -897,6 +897,295 @@ function BUILDERS.photo(model: Model, origin: CFrame)
 	CollectionService:AddTag(mark, "AF_PhotoMark")
 end
 
+--[[
+	Зимняя полянка: снежный круг, каток посередине (метка AF_Ice — на нём
+	катаются, Controllers/SkateController), снеговик, нарядная ёлка
+	с огоньками и подарками, заснеженные ёлочки по краю и снегопад только
+	над полянкой. -Z смотрит на площадь: оттуда приходят, туда и снеговик.
+]]
+local SNOW = Color3.fromRGB(245, 250, 255)
+local SNOW_SHADE = Color3.fromRGB(215, 230, 245)
+
+local function ball(parent: Instance, name: string, diameter: number, at: CFrame, color: Color3): BasePart
+	local p = part(parent, name, Vector3.new(diameter, diameter, diameter), at, color)
+	p.Shape = Enum.PartType.Ball
+	return p
+end
+
+-- Поставить модель на землю в точке at: низ рамки — на земле, середина — над точкой.
+local function plant(object: Model, at: CFrame)
+	object:PivotTo(at)
+	local box, extent = object:GetBoundingBox()
+	local bottom = box.Position.Y - extent.Y / 2
+	object:PivotTo(
+		object:GetPivot() + Vector3.new(at.X - box.Position.X, at.Y - bottom, at.Z - box.Position.Z)
+	)
+end
+
+local function snowman(model: Model, at: CFrame)
+	local sizes = { 5, 3.8, 2.8 }
+	local y = 0
+	local centers = {}
+	for index, size in sizes do
+		y += size / 2 - (if index > 1 then 0.5 else 0.3)
+		local body = ball(model, `SnowmanBall_{index}`, size, at * CFrame.new(0, y, 0), SNOW)
+		body.Material = Enum.Material.Snow
+		centers[index] = y
+		y += size / 2
+	end
+	local head = at * CFrame.new(0, centers[3], 0)
+	for _, side in { -1, 1 } do
+		ball(
+			model,
+			"SnowmanEye",
+			0.45,
+			head * CFrame.new(side * 0.5, 0.35, -1.25),
+			Color3.fromRGB(30, 30, 35)
+		).CanCollide =
+			false
+	end
+	-- Нос-морковка смотрит на площадь.
+	local nose = part(
+		model,
+		"SnowmanNose",
+		Vector3.new(0.4, 0.4, 1.5),
+		head * CFrame.new(0, 0, -1.9),
+		Color3.fromRGB(255, 140, 40)
+	)
+	nose.CanCollide = false
+	local cone = Instance.new("SpecialMesh")
+	cone.MeshType = Enum.MeshType.FileMesh
+	cone.MeshId = "rbxassetid://1033714" -- конус из библиотеки Roblox
+	cone.Scale = Vector3.new(0.35, 1.4, 0.35)
+	cone.Parent = nose
+	nose.CFrame = head * CFrame.new(0, 0, -1.9) * CFrame.Angles(math.rad(-90), 0, 0)
+	for button = 1, 3 do
+		ball(
+			model,
+			"SnowmanButton",
+			0.4,
+			at * CFrame.new(0, centers[2] - 1 + button * 0.6, -1.75),
+			Color3.fromRGB(30, 30, 35)
+		).CanCollide =
+			false
+	end
+	-- Шарф и ведро-шляпа.
+	local scarf = cylinder(
+		model,
+		"SnowmanScarf",
+		0.6,
+		3.3,
+		at * CFrame.new(0, centers[3] - 1.2, 0),
+		Color3.fromRGB(230, 60, 70)
+	)
+	scarf.CanCollide = false
+	local tail = part(
+		model,
+		"SnowmanScarfTail",
+		Vector3.new(0.6, 1.6, 0.2),
+		at * CFrame.new(0.9, centers[3] - 2, -1.4) * CFrame.Angles(0, 0, math.rad(-15)),
+		Color3.fromRGB(230, 60, 70)
+	)
+	tail.CanCollide = false
+	local bucket =
+		cylinder(model, "SnowmanHat", 1.5, 2, head * CFrame.new(0, 1.6, 0), Color3.fromRGB(70, 110, 220))
+	bucket.CanCollide = false
+	-- Руки-веточки.
+	for _, side in { -1, 1 } do
+		local arm = part(
+			model,
+			"SnowmanArm",
+			Vector3.new(3.2, 0.25, 0.25),
+			at * CFrame.new(side * 2.8, centers[2] + 0.6, 0) * CFrame.Angles(0, 0, side * math.rad(25)),
+			Color3.fromRGB(120, 80, 50)
+		)
+		arm.CanCollide = false
+	end
+end
+
+-- Нарядная ёлка: модель ёлки из декора, гирлянда спиралью, звезда и подарки.
+local function festiveTree(model: Model, at: CFrame)
+	local DecorService = require(script.Parent.DecorService)
+	local tree = DecorService.modelFor("tree_pine", 1.7)
+	if not tree then
+		return
+	end
+	tree.Name = "WinterTree"
+	plant(tree, at)
+	tree.Parent = model
+	local box, extent = tree:GetBoundingBox()
+	local bottom = box.Position.Y - extent.Y / 2
+	local height = extent.Y
+	--[[
+		Огоньки — по конусу хвои: у ёлки из Store снизу голый ствол (хвоя
+		с трети высоты), а коллизия у неё коробкой, так что луч для посадки
+		не годится. Конус чуть уже рамки: огонёк лежит на ветке, а не над ней.
+	]]
+	local foliage = 0.3
+	local spread = math.min(extent.X, extent.Z) / 2 * 0.85
+	local lights = 30
+	for index = 1, lights do
+		local share = foliage + (0.95 - foliage) * index / lights
+		local angle = index * 2.4
+		local r = spread * (1 - (share - foliage) / (1 - foliage)) + 0.3
+		local light = ball(
+			model,
+			`WinterLight_{index}`,
+			0.8,
+			CFrame.new(
+				box.Position.X + math.cos(angle) * r,
+				bottom + height * share,
+				box.Position.Z + math.sin(angle) * r
+			),
+			RAINBOW[index % #RAINBOW + 1]
+		)
+		light.Material = Enum.Material.Neon
+		light.CanCollide = false
+		CollectionService:AddTag(light, "AF_Twinkle")
+	end
+	local star = ball(
+		model,
+		"WinterStar",
+		1.8,
+		CFrame.new(box.Position.X, bottom + height + 0.6, box.Position.Z),
+		Color3.fromRGB(255, 220, 80)
+	)
+	star.Material = Enum.Material.Neon
+	star.CanCollide = false
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 220, 120)
+	glow.Range = 14
+	glow.Brightness = 1.5
+	glow.Parent = star
+
+	-- Подарки под ёлкой: коробка и лента крест-накрест.
+	local gifts = {
+		{ -3.5, -2.5, 2.2, RAINBOW[1], RAINBOW[3] },
+		{ 3, -3, 1.8, RAINBOW[6], RAINBOW[4] },
+		{ 0.5, -4.2, 1.4, RAINBOW[8], RAINBOW[5] },
+	}
+	for index, gift in gifts do
+		local place = at * CFrame.new(gift[1], gift[3] / 2, gift[2]) * CFrame.Angles(0, index, 0)
+		part(model, `Gift_{index}`, Vector3.new(gift[3], gift[3], gift[3]), place, gift[4])
+		for _, turn in { 0, math.pi / 2 } do
+			part(
+				model,
+				`GiftRibbon_{index}`,
+				Vector3.new(gift[3] + 0.1, gift[3] + 0.1, 0.3),
+				place * CFrame.Angles(0, turn, 0),
+				gift[5]
+			).CanCollide =
+				false
+		end
+	end
+end
+
+function BUILDERS.winter(model: Model, origin: CFrame)
+	local radius = Playground.WINTER_RADIUS
+	local snow = cylinder(model, "WinterSnow", 0.5, radius * 2, origin * CFrame.new(0, 0.25, 0), SNOW)
+	snow.Material = Enum.Material.Snow
+	-- Сугробы по краю: полянка читается снежной, а не белой тарелкой.
+	for index = 1, 22 do
+		local angle = index / 22 * math.pi * 2
+		local drift = ball(
+			model,
+			`WinterDrift_{index}`,
+			2.6 + (index % 3) * 0.8,
+			origin * CFrame.new(math.cos(angle) * (radius - 0.8), 0.1, math.sin(angle) * (radius - 0.8)),
+			if index % 2 == 0 then SNOW else SNOW_SHADE
+		)
+		drift.Material = Enum.Material.Snow
+		drift.CanCollide = false
+	end
+
+	-- Каток: голубой лёд с белым бортиком из снежков, со стороны площади вход.
+	local iceAt = origin * CFrame.new(0, 0.55, 1)
+	local ice = cylinder(model, "Ice", 0.3, Playground.ICE_RADIUS * 2, iceAt, Color3.fromRGB(185, 225, 250))
+	ice.Material = Enum.Material.Ice
+	ice.Reflectance = 0.25
+	CollectionService:AddTag(ice, "AF_Ice")
+	for index = 1, 24 do
+		local angle = (index - 0.5) / 24 * math.pi * 2
+		-- Проходы на катке: со стороны площади и с дальней стороны.
+		local toward = math.abs(math.sin(angle) + 1) < 0.08 or math.abs(math.sin(angle) - 1) < 0.08
+		if toward then
+			continue
+		end
+		local rim = ball(
+			model,
+			`IceRim_{index}`,
+			1.6,
+			iceAt
+				* CFrame.new(
+					math.cos(angle) * (Playground.ICE_RADIUS + 0.4),
+					0.2,
+					math.sin(angle) * (Playground.ICE_RADIUS + 0.4)
+				),
+			SNOW
+		)
+		rim.Material = Enum.Material.Snow
+	end
+
+	snowman(model, origin * CFrame.new(-13, 0.5, -6))
+	festiveTree(model, origin * CFrame.new(12, 0.5, 9))
+
+	-- Заснеженные ёлочки по дальнему краю.
+	local DecorService = require(script.Parent.DecorService)
+	for index, spot in { { -15, 10, 0.8 }, { -6, 16, 0.95 }, { 17, -4, 0.75 }, { 4, 17, 0.85 } } do
+		local pine = DecorService.modelFor("tree_pine", spot[3])
+		if pine then
+			pine.Name = `WinterPine_{index}`
+			plant(pine, origin * CFrame.new(spot[1], 0.5, spot[2]) * CFrame.Angles(0, index, 0))
+			pine.Parent = model
+			local _, size = pine:GetBoundingBox()
+			-- Сугроб вокруг ствола: плоский, ёлочка из него растёт.
+			local drift = cylinder(
+				model,
+				`WinterPineSnow_{index}`,
+				0.8,
+				size.X * 0.55,
+				origin * CFrame.new(spot[1], 0.7, spot[2]),
+				SNOW
+			)
+			drift.Material = Enum.Material.Snow
+			drift.CanCollide = false
+		end
+	end
+
+	-- Снегопад: большие мягкие хлопья только над полянкой.
+	local cloud =
+		part(model, "Snowfall", Vector3.new(radius * 2, 1, radius * 2), origin * CFrame.new(0, 26, 0), SNOW)
+	cloud.Transparency = 1
+	cloud.CanCollide = false
+	cloud.CanQuery = false
+	cloud.CanTouch = false
+	local flakes = Instance.new("ParticleEmitter")
+	flakes.Name = "Snowflakes"
+	flakes.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	flakes.Shape = Enum.ParticleEmitterShape.Box
+	flakes.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	flakes.EmissionDirection = Enum.NormalId.Bottom
+	flakes.Rate = 45
+	flakes.Lifetime = NumberRange.new(7, 9)
+	flakes.Speed = NumberRange.new(2.5, 4)
+	flakes.SpreadAngle = Vector2.new(15, 15)
+	flakes.Acceleration = Vector3.new(0.4, 0, 0.2)
+	flakes.Rotation = NumberRange.new(0, 360)
+	flakes.RotSpeed = NumberRange.new(-40, 40)
+	flakes.Size = NumberSequence.new(0.45)
+	flakes.Color = ColorSequence.new(Color3.new(1, 1, 1))
+	flakes.LightEmission = 0.4
+	flakes.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.1, 0),
+		NumberSequenceKeypoint.new(0.9, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	flakes.Parent = cloud
+
+	sign(model, origin * CFrame.new(-7, 0.5, -Playground.WINTER_RADIUS + 2), "⛄")
+end
+
 -- Мячи, укатившиеся за бортик или упавшие, возвращаются в песочницу.
 local function watchBalls(model: Model, origin: CFrame)
 	task.spawn(function()

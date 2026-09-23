@@ -35,6 +35,9 @@ Ambient.WATERFALL = { key = "amb_stream", volume = 1, radius = 190 }
 -- Карусель (Config/Rides.CAROUSEL): вальс шарманки, слышно только рядом с ней.
 Ambient.CAROUSEL = { key = "amb_carousel", volume = 0.45, radius = 60 }
 
+-- Зимняя полянка (Config/Playground winter): «Jingle Bells» у ёлки, слышно только рядом.
+Ambient.WINTER = { key = "amb_winter_bells", volume = 0.4, radius = 55 }
+
 -- Струйки воды водопада: за сколько секунд пробегают пласт сверху вниз.
 Ambient.FALL_STRIPE_SECONDS = 1.6
 
