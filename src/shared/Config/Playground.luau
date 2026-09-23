@@ -90,6 +90,12 @@ Playground.spots = {
 	{ id = "splash", title = "💦 Брызгалки", angle = 172, distance = 226, radius = 16 },
 	-- Озеро с лодочками-лебедями (Config/Rides.SWANS): видно с дорожки к домам.
 	{ id = "lake", title = "🦢 Лебеди", angle = 10, distance = 218, radius = 26 },
+	--[[
+		Подсолнуховое поле у озера: подсолнухи выше ребёнка поворачивают головы
+		вслед за ним, как за солнцем, а когда рядом никого — снова к солнцу.
+		Посреди поля пугало в соломенной шляпе.
+	]]
+	{ id = "sunflowers", title = "🌻 Подсолнухи", angle = 354, distance = 232, radius = 14 },
 }
 
 Playground.WINTER_RADIUS = 20 -- снежный круг
@@ -150,6 +156,11 @@ function Playground.splashBucket(now: number): number
 	end
 	return 0
 end
+
+Playground.SUNFLOWER_ROWS = 4
+Playground.SUNFLOWER_PER_ROW = 5
+Playground.SUNFLOWER_WATCH = 28 -- ближе этого ребёнок — подсолнухи смотрят на него
+Playground.SUNFLOWER_TURN = 2.2 -- как быстро поворачивают голову, рад/с
 
 Playground.SECRET_RADIUS = 12.5 -- радиус стены кустов
 Playground.SECRET_HEDGE = 7 -- её высота: поверх не заглянуть :: { Spot }

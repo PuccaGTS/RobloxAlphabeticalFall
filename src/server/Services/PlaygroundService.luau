@@ -1440,6 +1440,152 @@ function BUILDERS.splash(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(-8, 0.4, -radius - 1), "💦")
 end
 
+--[[
+	Подсолнуховое поле: грядки, на них подсолнухи разного роста — многие
+	выше ребёнка. Голова подсолнуха — отдельная модель с меткой AF_Sunflower
+	и опорной точкой Pivot на макушке стебля: её поворачивает клиент
+	(PlaygroundController), вслед за ребёнком или к солнцу.
+]]
+local SUNFLOWER_PETAL = Color3.fromRGB(255, 205, 40)
+local SUNFLOWER_HEART = Color3.fromRGB(110, 70, 35)
+local STEM = Color3.fromRGB(90, 160, 60)
+
+local function sunflower(model: Model, index: number, at: CFrame, height: number)
+	local stem = cylinder(model, `SunStem_{index}`, height, 0.45, at * CFrame.new(0, height / 2, 0), STEM)
+	stem.CanCollide = false
+	for _, side in { -1, 1 } do
+		local leaf = part(
+			model,
+			`SunLeaf_{index}`,
+			Vector3.new(1.6, 0.15, 0.9),
+			at
+				* CFrame.new(side * 0.8, height * (0.4 + side * 0.08), 0)
+				* CFrame.Angles(0, 0, side * math.rad(20)),
+			STEM
+		)
+		leaf.CanCollide = false
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = leaf
+	end
+	-- Голова смотрит на площадь (-Z места); клиент поворачивает её целиком.
+	local head = Instance.new("Model")
+	head.Name = `SunHead_{index}`
+	head.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	head.Parent = model
+	local pivot = at * CFrame.new(0, height + 0.3, 0)
+	local face = pivot * CFrame.new(0, 0, -0.35)
+	local heart =
+		cylinder(head, "Heart", 0.35, 1.9, face * CFrame.Angles(math.rad(90), 0, 0), SUNFLOWER_HEART)
+	heart.Material = Enum.Material.Sand
+	heart.CanCollide = false
+	local petals = 12
+	for petal = 1, petals do
+		local a = petal / petals * math.pi * 2
+		local leafAt = face * CFrame.Angles(0, 0, a) * CFrame.new(1.35, 0, 0.1)
+		local p = part(head, "Petal", Vector3.new(1.3, 0.55, 0.12), leafAt, SUNFLOWER_PETAL)
+		p.CanCollide = false
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+	end
+	head:SetAttribute("Pivot", pivot)
+	CollectionService:AddTag(head, "AF_Sunflower")
+end
+
+local function scarecrow(model: Model, at: CFrame)
+	local wood = Color3.fromRGB(150, 105, 65)
+	part(model, "ScarecrowPole", Vector3.new(0.4, 7, 0.4), at * CFrame.new(0, 3.5, 0), wood)
+	part(model, "ScarecrowArms", Vector3.new(5, 0.35, 0.35), at * CFrame.new(0, 5, 0), wood).CanCollide =
+		false
+	part(
+		model,
+		"ScarecrowShirt",
+		Vector3.new(2, 2.2, 1),
+		at * CFrame.new(0, 4.6, 0),
+		Color3.fromRGB(220, 80, 70)
+	)
+	for _, side in { -1, 1 } do
+		part(
+			model,
+			"ScarecrowSleeve",
+			Vector3.new(1.4, 0.8, 0.8),
+			at * CFrame.new(side * 1.6, 5, 0),
+			Color3.fromRGB(80, 130, 210)
+		).CanCollide =
+			false
+		-- Солома из рукавов.
+		part(
+			model,
+			"ScarecrowStraw",
+			Vector3.new(0.5, 0.5, 0.5),
+			at * CFrame.new(side * 2.5, 5, 0) * CFrame.Angles(0, 0, math.rad(45)),
+			Color3.fromRGB(240, 210, 110)
+		).CanCollide =
+			false
+	end
+	local head = part(
+		model,
+		"ScarecrowHead",
+		Vector3.new(1.5, 1.5, 1.5),
+		at * CFrame.new(0, 6.5, 0),
+		Color3.fromRGB(240, 220, 170)
+	)
+	head.Shape = Enum.PartType.Ball
+	head.CanCollide = false
+	for _, side in { -1, 1 } do
+		local eye = part(
+			model,
+			"ScarecrowEye",
+			Vector3.new(0.25, 0.25, 0.25),
+			at * CFrame.new(side * 0.3, 6.65, -0.7),
+			Color3.fromRGB(40, 35, 40)
+		)
+		eye.Shape = Enum.PartType.Ball
+		eye.CanCollide = false
+	end
+	local smile = part(
+		model,
+		"ScarecrowSmile",
+		Vector3.new(0.7, 0.12, 0.1),
+		at * CFrame.new(0, 6.2, -0.72),
+		Color3.fromRGB(200, 70, 60)
+	)
+	smile.CanCollide = false
+	cylinder(model, "ScarecrowBrim", 0.2, 2.8, at * CFrame.new(0, 7.2, 0), Color3.fromRGB(235, 200, 100)).CanCollide =
+		false
+	cylinder(model, "ScarecrowHat", 1, 1.5, at * CFrame.new(0, 7.7, 0), Color3.fromRGB(235, 200, 100)).CanCollide =
+		false
+end
+
+function BUILDERS.sunflowers(model: Model, origin: CFrame)
+	local rows, perRow = Playground.SUNFLOWER_ROWS, Playground.SUNFLOWER_PER_ROW
+	local random = Random.new(33)
+	local index = 0
+	for row = 1, rows do
+		local z = (row - (rows + 1) / 2) * 5
+		local bed = part(
+			model,
+			`SunBed_{row}`,
+			Vector3.new(perRow * 4 + 2, 0.4, 2.2),
+			origin * CFrame.new(0, 0.2, z),
+			Color3.fromRGB(120, 85, 55)
+		)
+		bed.Material = Enum.Material.Ground
+		for column = 1, perRow do
+			local x = (column - (perRow + 1) / 2) * 4 + random:NextNumber(-0.4, 0.4)
+			-- Посередине поля — пугало, подсолнуха там нет.
+			if row == 2 and column == 3 then
+				continue
+			end
+			index += 1
+			sunflower(model, index, origin * CFrame.new(x, 0.4, z), random:NextNumber(5, 8.5))
+		end
+	end
+	scarecrow(model, origin * CFrame.new(0, 0.4, -2.5))
+	sign(model, origin * CFrame.new(-8, 0, -13), "🌻")
+end
+
 -- Мячи, укатившиеся за бортик или упавшие, возвращаются в песочницу.
 local function watchBalls(model: Model, origin: CFrame)
 	task.spawn(function()

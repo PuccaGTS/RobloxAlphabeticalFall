@@ -18,6 +18,7 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -99,6 +100,8 @@ local function rootOf(): BasePart?
 end
 
 local HANDLERS: { [string]: (BasePart) -> () } = {}
+local addSunflower: (Instance) -> ()
+local stepSunflowers: (number) -> ()
 
 HANDLERS.AF_Trampoline = function(top: BasePart)
 	local home = top.CFrame
@@ -399,6 +402,75 @@ HANDLERS.AF_Twinkle = function(light: BasePart)
 	end)
 end
 
+--[[
+	Подсолнухи на поле у озера смотрят на ребёнка, пока он рядом, а без
+	него — на солнце. Голову поворачивают не рывком, а с угловой скоростью
+	SUNFLOWER_TURN: видно, как всё поле медленно оборачивается следом.
+]]
+type Sunflower = { model: Model, pivot: CFrame, parts: { BasePart }, offsets: { CFrame }, facing: Vector3 }
+local sunflowers: { Sunflower } = {}
+local sunFrames: { CFrame } = {}
+
+function addSunflower(instance: Instance)
+	local pivot = instance:GetAttribute("Pivot")
+	if not instance:IsA("Model") or typeof(pivot) ~= "CFrame" then
+		return
+	end
+	local parts, offsets = {}, {}
+	for _, descendant in instance:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			table.insert(parts, descendant)
+			table.insert(offsets, pivot:ToObjectSpace(descendant.CFrame))
+		end
+	end
+	table.insert(
+		sunflowers,
+		{ model = instance, pivot = pivot, parts = parts, offsets = offsets, facing = pivot.LookVector }
+	)
+end
+
+function stepSunflowers(dt: number)
+	if #sunflowers == 0 then
+		return
+	end
+	local camera = workspace.CurrentCamera
+	local root = rootOf()
+	local sun = Lighting:GetSunDirection()
+	for index = #sunflowers, 1, -1 do
+		local flower = sunflowers[index]
+		if not flower.model.Parent then
+			table.remove(sunflowers, index)
+			continue
+		end
+		local at = flower.pivot.Position
+		if not camera or (camera.CFrame.Position - at).Magnitude > ANIMATE_DISTANCE then
+			continue
+		end
+		local target = sun
+		if root and (root.Position - at).Magnitude < Playground.SUNFLOWER_WATCH then
+			target = root.Position + Vector3.new(0, 1.5, 0) - at
+		end
+		-- Голову не задирают к зениту и не роняют к земле.
+		local flat = target * Vector3.new(1, 0, 1)
+		if flat.Magnitude < 0.05 then
+			flat = flower.facing * Vector3.new(1, 0, 1)
+		end
+		local lift = math.clamp(target.Unit.Y, -0.45, 0.55)
+		target = flat.Unit * math.sqrt(1 - lift * lift) + Vector3.new(0, lift, 0)
+		local angle = math.acos(math.clamp(flower.facing:Dot(target), -1, 1))
+		if angle > 0.002 then
+			local share = math.min(1, Playground.SUNFLOWER_TURN * dt / angle)
+			flower.facing = flower.facing:Lerp(target, share).Unit
+		end
+		local frame = CFrame.lookAt(at, at + flower.facing)
+		table.clear(sunFrames)
+		for i, offset in flower.offsets do
+			sunFrames[i] = frame * offset
+		end
+		workspace:BulkMoveTo(flower.parts, sunFrames, Enum.BulkMoveMode.FireCFrameChanged)
+	end
+end
+
 -- Воздушный шар на привязи: плавно вверх и вниз.
 HANDLERS.AF_Float = function(anchor: BasePart)
 	local amplitude = anchor:GetAttribute("Amplitude") or 0.5
@@ -409,6 +481,13 @@ HANDLERS.AF_Float = function(anchor: BasePart)
 end
 
 function PlaygroundController.init()
+	-- Подсолнухи — модели, а не детали: у них свой цикл.
+	CollectionService:GetInstanceAddedSignal("AF_Sunflower"):Connect(addSunflower)
+	for _, instance in CollectionService:GetTagged("AF_Sunflower") do
+		addSunflower(instance)
+	end
+	RunService.Heartbeat:Connect(stepSunflowers)
+
 	for tag, handler in HANDLERS do
 		local function attach(instance: Instance)
 			if instance:IsA("BasePart") then
