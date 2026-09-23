@@ -265,7 +265,131 @@ local function hammers(heat: number, _random: Random)
 	}
 end
 
+--[[
+	Батуты: «батут — островок» несколько раз подряд. Батут стоит в пропасти
+	ниже пола, островок высоко: обычным прыжком на него не попасть, только
+	с батута. Островок на той же дорожке, что и его батут, — подброс ведёт
+	вперёд, а не вбок; следующий батут на соседней дорожке или на той же.
+]]
+local function bounce(heat: number, random: Random)
+	local count = Attractions.param("bounce", "pairs", heat)
+	local pad = Attractions.param("bounce", "pad", heat)
+	local island = Attractions.param("bounce", "island", heat)
+	local gap = Attractions.param("bounce", "gap", heat)
+	local height = Attractions.param("bounce", "height", heat)
+	local travel = Attractions.param("bounce", "travel", heat)
+	local period = Attractions.param("bounce", "period", heat)
+	-- Ноги поднимаются от верха батута до островка и ещё на запас сверху.
+	local power = Attractions.bouncePower(height - Attractions.BOUNCE_PAD_Y + Attractions.BOUNCE_CLEAR)
+
+	local pads = {}
+	local tops = {}
+	local z = gap + pad / 2
+	local lane = nil
+	for index = 1, count do
+		lane = laneNear(random, lane)
+		-- Едущий батут не выезжает за бортик: крайние дорожки везут к середине.
+		local x = if travel > 0 then math.clamp(lane, -9 + travel, 9 - travel) else lane
+		table.insert(pads, {
+			index = index,
+			x = x,
+			z = z,
+			phase = random:NextNumber(0, period),
+		})
+		z += pad / 2 + gap + island / 2
+		table.insert(tops, { index = index, x = x, z = z, y = height })
+		z += island / 2 + gap + pad / 2
+	end
+	return {
+		pads = pads,
+		islands = tops,
+		pad = pad,
+		island = island,
+		gap = gap,
+		height = height,
+		travel = travel,
+		period = period,
+		power = power,
+		-- После последнего островка спрыгиваешь на пол выхода.
+		length = z - pad / 2,
+	}
+end
+
+--[[
+	Печеньки: ряды по три печеньки на дорожках, в части рядов одной-двух нет.
+	Где печенька в ряду одна, она стоит не дальше соседней дорожки от одной
+	из печенек прошлого ряда: прыжок наискосок есть всегда.
+]]
+local function cookies(heat: number, random: Random)
+	local rows = Attractions.param("cookies", "rows", heat)
+	local size = Attractions.param("cookies", "size", heat)
+	local gap = Attractions.param("cookies", "gap", heat)
+	local missing = Attractions.param("cookies", "missing", heat)
+
+	local list = {}
+	local z = gap + size / 2
+	local previous: { number } = { 0 }
+	for row = 1, rows do
+		local keep: { number } = { table.unpack(LANES) }
+		-- Первый ряд целый: на аттракцион входят, а не угадывают.
+		local drop = if row == 1 then 0 else random:NextInteger(0, missing)
+		if drop >= 2 then
+			keep = { laneNear(random, previous[random:NextInteger(1, #previous)]) }
+		elseif drop == 1 then
+			table.remove(keep, random:NextInteger(1, #keep))
+		end
+		for _, x in keep do
+			table.insert(list, { row = row, x = x, z = z })
+		end
+		previous = keep
+		z += size + gap
+	end
+	return {
+		cookies = list,
+		size = size,
+		gap = gap,
+		hold = Attractions.param("cookies", "hold", heat),
+		length = z - size / 2,
+	}
+end
+
+--[[
+	Кубики-топотуны: ряды по три кубика над дорожками. В ряду кубики топают
+	по очереди, со сдвигом в треть цикла, соседние ряды — со своим сдвигом:
+	волна топота бежит по аттракциону, и переждать её надо с умом.
+]]
+local function stompers(heat: number, random: Random)
+	local rows = Attractions.param("stompers", "rows", heat)
+	local period = Attractions.param("stompers", "period", heat)
+	local size = Attractions.STOMPER_SIZE
+	local gap = Attractions.STOMPER_GAP
+	local list = {}
+	local z = gap + size / 2
+	for row = 1, rows do
+		local shift = random:NextNumber(0, period)
+		for column, x in LANES do
+			table.insert(list, {
+				row = row,
+				column = column,
+				x = x,
+				z = z,
+				phase = (shift + (column - 1) * period / 3) % period,
+			})
+		end
+		z += size + gap
+	end
+	return {
+		stompers = list,
+		period = period,
+		down = Attractions.param("stompers", "down", heat),
+		length = z - size / 2,
+	}
+end
+
 local MAKERS = {
+	bounce = bounce,
+	cookies = cookies,
+	stompers = stompers,
 	islands = islands,
 	lava = lava,
 	spinner = spinner,

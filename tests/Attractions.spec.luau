@@ -279,6 +279,102 @@ return function()
 			end
 		)
 
+		it(
+			"батуты: прыжки в досягаемости, толчок выше островка",
+			function()
+				for _, plan in plans("bounce") do
+					expect(plan.gap <= Attractions.MAX_GAP).to.equal(true)
+					-- Обычным прыжком (7,7 студа) на островок не попасть — только с батута.
+					expect(plan.height - Attractions.BOUNCE_PAD_Y > 7.7).to.equal(true)
+					local rise = plan.power * plan.power / (2 * Attractions.GRAVITY)
+					expect(rise > plan.height - Attractions.BOUNCE_PAD_Y + 2).to.equal(true)
+					-- Потолка у туннеля нет, но подброс не выше двух ростов бортика.
+					expect(rise < Tunnel.HEIGHT * 2).to.equal(true)
+					for index, pad in plan.pads do
+						local island = plan.islands[index]
+						expect(island.x).to.equal(pad.x)
+						expect(math.abs(pad.x) + plan.travel + plan.pad / 2 <= Tunnel.WIDTH / 2).to.equal(
+							true
+						)
+					end
+				end
+			end
+		)
+
+		it(
+			"печеньки: в каждом ряду есть печенька, и до неё допрыгнуть",
+			function()
+				for _, plan in plans("cookies") do
+					local rows = {}
+					for _, cookie in plan.cookies do
+						rows[cookie.row] = rows[cookie.row] or {}
+						table.insert(rows[cookie.row], cookie)
+					end
+					expect(#rows[1]).to.equal(3)
+					for row = 2, #rows do
+						expect(#rows[row] >= 1).to.equal(true)
+						-- До какой-то печеньки ряда можно допрыгнуть с какой-то печеньки прошлого.
+						local best = math.huge
+						for _, a in rows[row - 1] do
+							for _, b in rows[row] do
+								local centers = Vector2.new(a.x - b.x, a.z - b.z).Magnitude
+								best = math.min(best, centers - plan.size)
+							end
+						end
+						expect(best <= Attractions.MAX_GAP).to.equal(true)
+					end
+					expect(plan.gap <= Attractions.MAX_GAP).to.equal(true)
+					expect(plan.hold >= 0.5).to.equal(true)
+				end
+			end
+		)
+
+		it(
+			"топотуны: в каждом ряду всегда есть кубик наверху",
+			function()
+				for _, plan in plans("stompers") do
+					local byRow = {}
+					for _, stomper in plan.stompers do
+						byRow[stomper.row] = byRow[stomper.row] or {}
+						table.insert(byRow[stomper.row], stomper)
+					end
+					for _, row in byRow do
+						expect(#row).to.equal(3)
+						for t = 0, plan.period, 0.02 do
+							local up = false
+							for _, stomper in row do
+								if
+									Attractions.stomperDrop(t + stomper.phase, plan.period, plan.down) == 0
+								then
+									up = true
+								end
+							end
+							expect(up).to.equal(true)
+						end
+					end
+				end
+			end
+		)
+
+		it(
+			"топотуны: дрожь раньше топота, внизу кубик стоит, наверху выше головы",
+			function()
+				for heat = 1, 5 do
+					local period = Attractions.param("stompers", "period", heat)
+					local down = Attractions.param("stompers", "down", heat)
+					local fallAt = period - down
+					expect(Attractions.stomperDrop(fallAt - 0.01, period, down)).to.equal(0)
+					expect(Attractions.stomperWarning(fallAt - 0.1, period, down)).to.equal(true)
+					expect(Attractions.stomperDrop(fallAt + Attractions.STOMPER_FALL + 0.05, period, down)).to.equal(
+						1
+					)
+					expect(down > Attractions.STOMPER_FALL + Attractions.STOMPER_RISE).to.equal(true)
+				end
+				-- Поднятый кубик не задевает голову: корень на трёх студах, голова ещё на 2,5.
+				expect(Attractions.STOMPER_LIFT > 3 + 2.5 + 1).to.equal(true)
+			end
+		)
+
 		it("по тому же генератору — тот же план", function()
 			for _, id in Attractions.ids() do
 				local a = AttractionPlan.make(id, 4, Random.new(99))

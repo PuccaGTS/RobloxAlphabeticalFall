@@ -52,6 +52,9 @@ attrs["ZZ_ProbePort"] = port
 attrs["ZZ_Mode"] = "play"
 if os.environ.get("ZZ_ONLY"):
     attrs["ZZ_Only"] = os.environ["ZZ_ONLY"]
+# ZZ_RIDE=bounce,cookies — сценарий run смотрит только эти аттракционы.
+if os.environ.get("ZZ_RIDE"):
+    attrs["ZZ_Ride"] = os.environ["ZZ_RIDE"]
 if scenario == "perf":
     attrs["ZZ_Perf"] = True
 if os.environ.get("ZZ_YARD"):
@@ -159,8 +162,8 @@ with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Roblox\RobloxStudio") a
 exe = Path(content).parent / "RobloxStudioBeta.exe"
 studio = subprocess.Popen([str(exe), str(place)])
 try:
-    if not done.wait(300):
-        print("TIMEOUT: отчёта нет за 5 минут")
+    if not done.wait(int(os.environ.get("ZZ_WAIT", "300"))):
+        print("TIMEOUT: отчёта нет за отведённое время (ZZ_WAIT)")
     for body in received:
         if body != "DONE":
             print(body)

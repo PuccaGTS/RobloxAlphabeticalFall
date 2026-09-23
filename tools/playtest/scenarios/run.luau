@@ -13,6 +13,7 @@ return function(player, note)
 	local ProfileService = require(Services.ProfileService)
 	local ChallengeService = require(Services.ChallengeService)
 	local Teleport = require(ServerScriptService.Server.World.Teleport)
+	local Attractions = require(game:GetService("ReplicatedStorage").Shared.Config.Attractions)
 	for _ = 1, 60 do
 		if ProfileService.get(player) and player.Character then
 			break
@@ -104,6 +105,10 @@ return function(player, note)
 		local pole = pivotOf(`FlagPole_{index}`)
 		local center, size = child:GetBoundingBox()
 		if not pole then
+			continue
+		end
+		local only = workspace:GetAttribute("ZZ_Ride")
+		if only and not string.find("," .. only .. ",", "," .. id .. ",", 1, true) then
 			continue
 		end
 		-- Вид от флажка: чуть сверху и сзади, на середину аттракциона.
@@ -203,8 +208,59 @@ return function(player, note)
 			end
 		end
 
+		-- Батут должен подбросить выше островка: встать на первый и смотреть высоту.
+		if id == "bounce" then
+			local pad = child:FindFirstChild(`BouncePad_{index}_1`)
+			local island = child:FindFirstChild(`BounceIsland_{index}_1`)
+			if pad and island then
+				local r = standOn(pad)
+				local peak = -math.huge
+				for step = 1, 60 do
+					task.wait(0.05)
+					peak = math.max(peak, r.Position.Y)
+					if step == 7 then
+						_G.ZZ_Shot(
+							player,
+							`run_{index}_bounce_air`,
+							CFrame.lookAt(r.Position + Vector3.new(-18, 2, 10), r.Position),
+							70
+						)
+					end
+				end
+				note(
+					string.format(
+						"   bounce: root peak %.1f above pad, island top %.1f above pad",
+						peak - pad.Position.Y,
+						island.Position.Y + 0.6 - pad.Position.Y
+					)
+				)
+			end
+		end
+
+		-- Печенька должна раскрошиться под стоящим: встать и подождать.
+		if id == "cookies" then
+			local cookie = child:FindFirstChild(`Cookie_{index}_2`)
+			if cookie then
+				local r = standOn(cookie)
+				local startY = r.Position.Y
+				task.wait(0.5)
+				_G.ZZ_Shot(
+					player,
+					`run_{index}_cookies_crack`,
+					CFrame.lookAt(r.Position + Vector3.new(-12, 7, 10), r.Position),
+					70
+				)
+				local lowest = startY
+				for _ = 1, 30 do
+					task.wait(0.1)
+					lowest = math.min(lowest, r.Position.Y)
+				end
+				note(string.format("   cookies: stood at %.1f, fell to %.1f", startY, lowest))
+			end
+		end
+
 		-- Механика: поставить в опасное место и посмотреть, вернёт ли к флажку.
-		if id == "lava" or id == "boulders" or id == "spinner" or id == "hammers" then
+		if id == "lava" or id == "boulders" or id == "spinner" or id == "hammers" or id == "stompers" then
 			-- Сначала через флажок: он и есть точка возврата.
 			local trigger = model:FindFirstChild(`FlagTrigger_{index}`)
 			if trigger then
@@ -214,6 +270,19 @@ return function(player, note)
 			local danger = center.Position + Vector3.new(0, 4, 0)
 			if id == "spinner" then
 				danger = center.Position + dir * 7 + Vector3.new(0, 4, 0)
+			elseif id == "stompers" then
+				-- Прямо под кубиком: он топнет в течение цикла.
+				local cube = child:FindFirstChild(`Stomper_{index}_2`)
+				danger = cube:GetAttribute("Base").Position
+					+ Vector3.new(0, -Attractions.STOMPER_SIZE / 2 + 3, 0)
+				task.delay(1.2, function()
+					_G.ZZ_Shot(
+						player,
+						`run_{index}_stompers_under`,
+						CFrame.lookAt(danger + Vector3.new(-16, 8, 14), danger + Vector3.new(0, 6, 0)),
+						70
+					)
+				end)
 			elseif id == "lava" then
 				-- Середина между колонками кочек — там лава.
 				danger = Vector3.new(center.Position.X, center.Position.Y - size.Y / 2 + 4, center.Position.Z)

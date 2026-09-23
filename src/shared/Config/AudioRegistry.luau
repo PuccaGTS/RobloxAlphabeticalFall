@@ -127,6 +127,15 @@ local LIBRARY: { [string]: number } = {
 	sfx_balloon_burner = 9114440283, -- Fire Whoosh 1: горелка воздушного шара, короткие вспышки
 	sfx_fireworks = 9114447104, -- Fireworks Fast 2: свистящие ракеты и хлопки, салют за уровень
 	mus_fountain_show = 1840422274, -- APM Water Ballet, 55 с: музыка поющего фонтана
+	-- Аттракционы забега (Config/RunSounds)
+	sfx_run_bounce = 12222124, -- Roblox: Short spring sound, батут
+	sfx_run_crack = 9113959332, -- Crack Egg Crunchy 9: печенька треснула
+	sfx_run_crumble = 9113734494, -- Celery Break 2: печенька крошится вниз
+	sfx_run_stomp = 9120912546, -- Wood Impacts 2X4 Planks Hitting Concrete 23: кубик-топотун
+	sfx_run_whoosh = 9120972444, -- Wood Whoosh Slicing Air Quick Swings 1: молот прошёл низ
+	sfx_run_roll = 9118661490, -- Rock Rolls Down Concrete Ramp Tumble 1: валун покатился
+	sfx_run_creak = 9120839010, -- Wood Door Creak Squeak 2: качели развернулись
+	amb_run_lava = 9112752570, -- Bubbles Dribble Small Bloops 1, 14 с: лава булькает
 }
 for key, assetId in LIBRARY do
 	ids[key] = `rbxassetid://{assetId}`

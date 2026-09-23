@@ -252,6 +252,39 @@ workspace:GetAttributeChangedSignal("ZZ_AudioReport"):Connect(function()
 	)
 end)
 
+-- Загрузка звуков библиотеки (метка ZZ_SoundCheck = "ключ,ключ"): грузится ли и сколько длится.
+workspace:GetAttributeChangedSignal("ZZ_SoundCheck"):Connect(function()
+	local AudioRegistry = require(game:GetService("ReplicatedStorage").Shared.Config.AudioRegistry)
+	local sounds = {}
+	for key in string.gmatch(workspace:GetAttribute("ZZ_SoundCheck") or "", "[^,]+") do
+		local sound = Instance.new("Sound")
+		sound.Name = key
+		sound.SoundId = AudioRegistry.ids[key] or ""
+		sound.Parent = game:GetService("SoundService")
+		table.insert(sounds, sound)
+	end
+	local started = os.clock()
+	while os.clock() - started < 12 do
+		local all = true
+		for _, sound in sounds do
+			all = all and sound.IsLoaded
+		end
+		if all then
+			break
+		end
+		task.wait(0.25)
+	end
+	local lines = {}
+	for _, sound in sounds do
+		table.insert(
+			lines,
+			string.format("%s loaded=%s len=%.1f", sound.Name, tostring(sound.IsLoaded), sound.TimeLength)
+		)
+		sound:Destroy()
+	end
+	report:FireServer("SOUNDS " .. table.concat(lines, " | "))
+end)
+
 -- Танец по просьбе сценария (метка ZZ_Emote): открыть ряд жестов, станцевать, доложить дорожки.
 workspace:GetAttributeChangedSignal("ZZ_Emote"):Connect(function()
 	local id = workspace:GetAttribute("ZZ_Emote")

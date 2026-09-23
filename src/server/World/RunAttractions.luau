@@ -30,6 +30,7 @@ local RunAttractions = {}
 
 RunAttractions.MOVER_TAG = "RunMover"
 RunAttractions.HURT_TAG = "RunHurt"
+RunAttractions.BOUNCE_TAG = "RunBounce" -- батут: клиент подбрасывает приземлившегося
 
 local function part(model: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3): BasePart
 	local p = Instance.new("Part")
@@ -530,6 +531,7 @@ function BUILDERS.boulders(model: Model, path, ride)
 		ball.Material = Enum.Material.Slate
 		ball.CanCollide = false
 		ball.CanQuery = false
+		ball:SetAttribute("Sound", "roll") -- грохот, когда валун покатился
 		mover(ball, "roll", {
 			Period = count * ride.interval,
 			Phase = (index - 1) * ride.interval,
@@ -560,6 +562,7 @@ function BUILDERS.lava(model: Model, path, ride)
 	)
 	pool.Material = Enum.Material.CrackedLava
 	hurts(pool)
+	pool:SetAttribute("Loop", "lava")
 	local glow = Instance.new("PointLight")
 	glow.Color = LAVA
 	glow.Range = 16
@@ -789,6 +792,7 @@ function BUILDERS.swings(model: Model, path, ride)
 			color
 		)
 		seat.Material = Enum.Material.WoodPlanks
+		seat:SetAttribute("Sound", "creak") -- скрип, когда доска разворачивается
 		mover(seat, "pendulum", motion)
 		seat:SetAttribute("Base", pivot)
 		seat:SetAttribute("Hang", rope + 0.5)
@@ -902,6 +906,7 @@ function BUILDERS.hammers(model: Model, path, ride)
 		head.Shape = Enum.PartType.Cylinder
 		head.CanCollide = false
 		head.CanQuery = false
+		head:SetAttribute("Sound", "whoosh") -- свист, когда молот проходит низ
 		mover(head, "swing", {
 			Period = ride.period,
 			Phase = hammer.phase,
@@ -912,6 +917,290 @@ function BUILDERS.hammers(model: Model, path, ride)
 		hurts(head)
 	end
 	sign(model, `Sign_{ride.index}`, at(path, ride, 0, pivotY + 6, 0), "🔨")
+end
+
+--[[
+	Батуты: в пропасти круглые батуты на ножках, между ними высокие островки.
+	Подбрасывает клиент (RunHazardController, атрибут Bounce): он видит, что
+	ребёнок приземлился на сетку, и даёт толчок вверх. Едущий батут катается
+	поперёк трассы, как облачко.
+]]
+local PAD_FRAME = Color3.fromRGB(70, 140, 235)
+local PAD_TOPS = {
+	Color3.fromRGB(255, 120, 150),
+	Color3.fromRGB(255, 200, 80),
+	Color3.fromRGB(130, 225, 150),
+	Color3.fromRGB(190, 150, 255),
+}
+
+function BUILDERS.bounce(model: Model, path, ride)
+	local padY = Attractions.BOUNCE_PAD_Y
+	for _, pad in ride.pads do
+		local center = at(path, ride, pad.x, padY - 0.4, pad.z)
+		local motion = if ride.travel > 0
+			then { Period = ride.period, Phase = pad.phase, Travel = ride.travel }
+			else nil
+		local lying = CFrame.Angles(0, 0, math.pi / 2)
+
+		local net = part(
+			model,
+			`BouncePad_{ride.index}_{pad.index}`,
+			Vector3.new(0.8, ride.pad, ride.pad),
+			center * lying,
+			PAD_TOPS[(pad.index - 1) % #PAD_TOPS + 1]
+		)
+		net.Shape = Enum.PartType.Cylinder
+		net.Material = Enum.Material.Neon
+		net:SetAttribute("Bounce", ride.power)
+		net:SetAttribute("BounceRadius", ride.pad / 2)
+		CollectionService:AddTag(net, RunAttractions.BOUNCE_TAG)
+		if motion then
+			local attributes = table.clone(motion)
+			attributes.Offset = lying
+			mover(net, "slide", attributes)
+			net:SetAttribute("Base", center)
+		end
+
+		-- Синяя рама чуть шире сетки и ножки вниз, в пропасть.
+		local frame = ghost(
+			part(
+				model,
+				`BounceFrame_{ride.index}_{pad.index}`,
+				Vector3.new(0.7, ride.pad + 1.2, ride.pad + 1.2),
+				center * CFrame.new(0, -0.1, 0) * lying,
+				PAD_FRAME
+			)
+		)
+		frame.Shape = Enum.PartType.Cylinder
+		if motion then
+			local attributes = table.clone(motion)
+			attributes.Offset = CFrame.new(0, -0.1, 0) * lying
+			mover(frame, "slide", attributes)
+			frame:SetAttribute("Base", center)
+		end
+		for leg = 1, 3 do
+			local angle = leg / 3 * math.pi * 2
+			local offset =
+				CFrame.new(math.cos(angle) * ride.pad * 0.42, -3, math.sin(angle) * ride.pad * 0.42)
+			local stand = ghost(
+				part(
+					model,
+					`BounceLeg_{ride.index}_{pad.index}_{leg}`,
+					Vector3.new(0.5, 5.5, 0.5),
+					center * offset,
+					PAD_FRAME
+				)
+			)
+			if motion then
+				local attributes = table.clone(motion)
+				attributes.Offset = offset
+				mover(stand, "slide", attributes)
+				stand:SetAttribute("Base", center)
+			end
+		end
+	end
+
+	for _, island in ride.islands do
+		local top = at(path, ride, island.x, island.y, island.z)
+		local grass = part(
+			model,
+			`BounceIsland_{ride.index}_{island.index}`,
+			Vector3.new(1.2, ride.island, ride.island),
+			top * CFrame.new(0, -0.6, 0) * CFrame.Angles(0, 0, math.pi / 2),
+			ISLAND_TOPS[(island.index - 1) % #ISLAND_TOPS + 1]
+		)
+		grass.Shape = Enum.PartType.Cylinder
+		grass.Material = Enum.Material.Grass
+		-- Столбик-гриб под островком: он растёт из пропасти и держит островок.
+		local stem = ghost(
+			part(
+				model,
+				`BounceStem_{ride.index}_{island.index}`,
+				Vector3.new(island.y + 14, ride.island * 0.35, ride.island * 0.35),
+				top * CFrame.new(0, -(island.y + 14) / 2 - 1.2, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				Color3.fromRGB(245, 235, 210)
+			)
+		)
+		stem.Shape = Enum.PartType.Cylinder
+		local cap = ghost(
+			part(
+				model,
+				`BounceCap_{ride.index}_{island.index}`,
+				Vector3.new(1.6, ride.island + 1, ride.island + 1),
+				top * CFrame.new(0, -1.8, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				Color3.fromRGB(235, 90, 80)
+			)
+		)
+		cap.Shape = Enum.PartType.Cylinder
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, ride.height + 10, 0), "🦘")
+end
+
+--[[
+	Печеньки: круглые печенья с шоколадной крошкой над пропастью. Встал —
+	печенька трещит, темнеет и через hold секунд крошится вниз; потом
+	вырастает снова. Считает и крошит клиент (Mover = crumble): у каждого
+	ребёнка свои печеньки, и никто не ломает дорогу другому.
+]]
+local COOKIE = Color3.fromRGB(222, 170, 100)
+local COOKIE_EDGE = Color3.fromRGB(190, 130, 70)
+local CHOCOLATE = Color3.fromRGB(85, 50, 35)
+
+function BUILDERS.cookies(model: Model, path, ride)
+	local size = ride.size
+	for index, cookie in ride.cookies do
+		local center = at(path, ride, cookie.x, -0.6, cookie.z)
+		local body = part(
+			model,
+			`Cookie_{ride.index}_{index}`,
+			Vector3.new(1.2, size, size),
+			center * CFrame.Angles(0, 0, math.pi / 2),
+			COOKIE
+		)
+		body.Shape = Enum.PartType.Cylinder
+		body.Material = Enum.Material.Sand
+		mover(body, "crumble", {
+			Hold = ride.hold,
+			Fall = Attractions.COOKIE_FALL,
+			Back = Attractions.COOKIE_BACK,
+		})
+		-- Кромка и крошка — дети печеньки: клиент роняет их вместе с ней.
+		local edge = ghost(
+			part(
+				body,
+				`CookieEdge_{index}`,
+				Vector3.new(1, size + 0.5, size + 0.5),
+				center * CFrame.new(0, -0.15, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				COOKIE_EDGE
+			)
+		)
+		edge.Shape = Enum.PartType.Cylinder
+		edge.Material = Enum.Material.Sand
+		local chips = 5
+		for chip = 1, chips do
+			local angle = chip / chips * math.pi * 2 + index
+			local radius = size * (if chip % 2 == 0 then 0.28 else 0.18)
+			local ball = ghost(
+				part(
+					body,
+					`Chip_{chip}`,
+					Vector3.new(0.9, 0.9, 0.9),
+					center * CFrame.new(math.cos(angle) * radius, 0.55, math.sin(angle) * radius),
+					CHOCOLATE
+				)
+			)
+			ball.Shape = Enum.PartType.Ball
+		end
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 12, 0), "🍪")
+end
+
+--[[
+	Кубики-топотуны: над каждой дорожкой висит огромный игрушечный кубик
+	с буквой и по очереди топает вниз (Mover = stomp, движение считает
+	Attractions.stomperDrop). Под кубиком на полу его тень — видно, куда
+	топнет. Кубик сбивает (RunHurt), но только внизу: наверху он выше головы.
+]]
+local STOMPER_COLORS = {
+	Color3.fromRGB(240, 90, 90),
+	Color3.fromRGB(80, 160, 240),
+	Color3.fromRGB(250, 200, 60),
+	Color3.fromRGB(110, 200, 110),
+	Color3.fromRGB(190, 120, 230),
+	Color3.fromRGB(250, 140, 60),
+}
+local STOMPER_LETTERS =
+	{ "А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "К", "Л", "М", "Н", "О", "П", "Р", "С" }
+
+local function cubeLetter(cube: BasePart, face: Enum.NormalId, text: string)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = face
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 24
+	gui.LightInfluence = 0.3
+	gui.Parent = cube
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(0.8, 0.8)
+	label.Position = UDim2.fromScale(0.1, 0.1)
+	label.BackgroundColor3 = Color3.new(1, 1, 1)
+	label.BackgroundTransparency = 0
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.TextColor3 = cube.Color
+	label.Text = text
+	label.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.18, 0)
+	corner.Parent = label
+end
+
+function BUILDERS.stompers(model: Model, path, ride)
+	local size = Attractions.STOMPER_SIZE
+	local lift = Attractions.STOMPER_LIFT
+	local half = Tunnel.WIDTH / 2
+	for index, stomper in ride.stompers do
+		local color = STOMPER_COLORS[(stomper.row * 3 + stomper.column) % #STOMPER_COLORS + 1]
+		local rest = at(path, ride, stomper.x, size / 2, stomper.z)
+		local cube = part(model, `Stomper_{ride.index}_{index}`, Vector3.new(size, size, size), rest, color)
+		cube.CanCollide = false
+		cube.CanQuery = false
+		-- Сервер держит кубик внизу (Base), клиент поднимает его по циклу.
+		mover(cube, "stomp", {
+			Period = ride.period,
+			Phase = stomper.phase,
+			Down = ride.down,
+			Lift = lift,
+			WarnColor = Color3.fromRGB(255, 70, 60),
+		})
+		cube.CFrame = rest * CFrame.new(0, lift, 0)
+		hurts(cube)
+		local letter = STOMPER_LETTERS[(index * 5 + ride.index) % #STOMPER_LETTERS + 1]
+		for _, face in { Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right, Enum.NormalId.Front } do
+			cubeLetter(cube, face, letter)
+		end
+
+		-- Тень: тёмный круг на полу. Темнеет вместе с дрожью кубика (клиент).
+		local shadow = ghost(
+			part(
+				model,
+				`StomperShadow_{ride.index}_{index}`,
+				Vector3.new(0.1, size - 0.5, size - 0.5),
+				at(path, ride, stomper.x, 0.08, stomper.z) * CFrame.Angles(0, 0, math.pi / 2),
+				Color3.fromRGB(40, 30, 50)
+			)
+		)
+		shadow.Shape = Enum.PartType.Cylinder
+		shadow.Transparency = 0.7
+		shadow.Name = `StomperShadow_{ride.index}_{index}`
+		cube:SetAttribute("Shadow", shadow.Name)
+	end
+
+	-- Рама над трассой, как у игрушечного крана: на ней кубики висят, у бортиков столбы.
+	local CRANE = Color3.fromRGB(255, 200, 70)
+	for row = 1, #ride.stompers // 3 do
+		local z = ride.stompers[(row - 1) * 3 + 1].z
+		ghost(
+			part(
+				model,
+				`StomperBeam_{ride.index}_{row}`,
+				Vector3.new(Tunnel.WIDTH, 1.4, 1.4),
+				at(path, ride, 0, lift + size + 3, z),
+				CRANE
+			)
+		)
+		for _, side in { -1, 1 } do
+			ghost(
+				part(
+					model,
+					`StomperPost_{ride.index}_{row}_{side}`,
+					Vector3.new(1.4, lift + size + 3, 1.4),
+					at(path, ride, side * (half - 0.7), (lift + size + 3) / 2, z),
+					CRANE
+				)
+			)
+		end
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, lift + size + 7, 0), "🧱")
 end
 
 function RunAttractions.buildAttraction(model: Model, path, ride)

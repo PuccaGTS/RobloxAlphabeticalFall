@@ -55,6 +55,14 @@ local CATALOG: { Attraction } = {
 	{ id = "lava", title = "Лавовые кочки", fromLevel = 4, seconds = 8, floor = false },
 	{ id = "swings", title = "Качели", fromLevel = 5, seconds = 10, floor = false },
 	{ id = "hammers", title = "Молоты", fromLevel = 6, seconds = 7, floor = false },
+	--[[
+		С седьмого уровня новых аттракционов не было: самый новый встаёт первым,
+		и дальние уровни встречали ребёнка уже знакомым. Теперь каждый из трёх
+		последних открывает своё — батуты, печеньки, топотунов.
+	]]
+	{ id = "bounce", title = "Батуты", fromLevel = 7, seconds = 8, floor = false },
+	{ id = "cookies", title = "Печеньки", fromLevel = 8, seconds = 7, floor = false },
+	{ id = "stompers", title = "Кубики-топотуны", fromLevel = 9, seconds = 9, floor = true },
 }
 
 Attractions.CATALOG = CATALOG
@@ -163,6 +171,45 @@ Attractions.HEAT = {
 		period = { 4.6, 4.2, 3.8, 3.4, 3.1 }, -- полный взмах туда и обратно
 		bridge = { 10, 9, 8, 7, 6.5 }, -- ширина мостика под молотами
 	},
+	--[[
+		Батуты: над пропастью чередуются батут внизу и высокий островок.
+		Батут подбрасывает выше обычного прыжка — только с него и попадёшь
+		на островок, а с островка спрыгиваешь на следующий батут. Промахнулся
+		мимо батута — вниз, к флажку. С жара 3 батуты ездят поперёк трассы.
+	]]
+	bounce = {
+		pairs = { 3, 3, 4, 4, 5 }, -- сколько раз «батут — островок»
+		pad = { 8, 7, 6.5, 6, 5.5 }, -- поперечник батута
+		island = { 8, 7, 6.5, 6, 5.5 }, -- поперечник островка
+		gap = { 2.5, 3, 3.5, 4, 4.5 }, -- по горизонтали от края до края
+		height = { 7, 8, 9, 10, 10.5 }, -- на сколько островок выше пола трассы
+		travel = { 0, 0, 3, 4, 5 }, -- на сколько батут уезжает вбок от своей дорожки
+		period = { 6, 6, 5.5, 5, 4.5 }, -- полный ход батута туда и обратно
+	},
+	--[[
+		Печеньки: дорожка из круглых печенек над пропастью. Наступил — печенька
+		трещит и через миг крошится вниз, а потом вырастает снова. Стоять
+		нельзя: только бежать и прыгать дальше. Чем жарче, тем быстрее крошатся
+		и тем больше дырок между ними.
+	]]
+	cookies = {
+		rows = { 5, 6, 7, 7, 8 },
+		size = { 7, 6.5, 6, 5.5, 5 }, -- поперечник печеньки
+		gap = { 1.5, 2, 2.5, 3, 3.5 }, -- щель между рядами
+		hold = { 1.2, 1, 0.85, 0.7, 0.6 }, -- сколько печенька держит, когда на неё встали
+		missing = { 0, 1, 1, 2, 2 }, -- печенек из трёх, которых в ряду нет вовсе
+	},
+	--[[
+		Кубики-топотуны: над полом висят огромные игрушечные кубики с буквами,
+		по кубику над каждой дорожкой, и по очереди топают вниз. Перед топотом
+		кубик краснеет и дрожит, тень под ним темнеет. Попался — к флажку.
+		В каждом ряду всегда хотя бы один кубик наверху: стоять под ним можно.
+	]]
+	stompers = {
+		rows = { 3, 4, 4, 5, 5 },
+		period = { 4.2, 3.9, 3.6, 3.3, 3 }, -- полный цикл кубика
+		down = { 1.2, 1.3, 1.4, 1.5, 1.6 }, -- из них внизу (с падением и подъёмом)
+	},
 }
 
 function Attractions.param(id: string, name: string, heat: number): number
@@ -200,5 +247,54 @@ Attractions.HAMMER_PIVOT = 17 -- высота оси над мостиком
 Attractions.HAMMER_ARM = 14
 Attractions.HAMMER_SWING = math.rad(65)
 Attractions.HAMMER_HEAD = Vector3.new(3.5, 4, 4) -- вдоль бега, поперёк, вверх
+
+Attractions.GRAVITY = 196.2 -- workspace.Gravity по умолчанию: проект её не меняет
+Attractions.BOUNCE_PAD_Y = -1.5 -- верх батута ниже пола трассы: он стоит в пропасти
+Attractions.BOUNCE_CLEAR = 3.5 -- на сколько ноги взлетают выше островка
+
+-- Толчок батута, после которого ноги поднимаются на rise студов.
+function Attractions.bouncePower(rise: number): number
+	return math.sqrt(2 * Attractions.GRAVITY * rise)
+end
+
+Attractions.COOKIE_FALL = 0.45 -- за сколько секунд раскрошенная печенька уходит вниз
+Attractions.COOKIE_BACK = 2.5 -- через сколько после этого вырастает снова
+
+Attractions.STOMPER_SIZE = 8 -- сторона кубика: почти во всю дорожку
+Attractions.STOMPER_GAP = 4.5 -- полоса пола между рядами: там можно переждать
+Attractions.STOMPER_LIFT = 10 -- на сколько низ поднятого кубика выше пола
+Attractions.STOMPER_WARN = 0.55 -- сколько кубик дрожит и краснеет перед топотом
+Attractions.STOMPER_FALL = 0.15 -- падение
+Attractions.STOMPER_RISE = 0.6 -- подъём обратно
+
+--[[
+	Где кубик в момент s своего цикла: 0 — наверху, 1 — стоит на полу.
+	Цикл: наверху, в конце — дрожь; топот; стоит; медленно поднимается.
+	Одна функция на клиента, который двигает кубик, и на тест, который
+	проверяет, что в каждом ряду есть где переждать.
+]]
+function Attractions.stomperDrop(s: number, period: number, down: number): number
+	s = s % period
+	local fallAt = period - down
+	if s < fallAt then
+		return 0
+	end
+	local t = s - fallAt
+	if t < Attractions.STOMPER_FALL then
+		return t / Attractions.STOMPER_FALL
+	end
+	local riseAt = down - Attractions.STOMPER_RISE
+	if t < riseAt then
+		return 1
+	end
+	return 1 - (t - riseAt) / Attractions.STOMPER_RISE
+end
+
+-- Дрожит ли кубик перед топотом: по этому ребёнок узнаёт, что пора уходить.
+function Attractions.stomperWarning(s: number, period: number, down: number): boolean
+	s = s % period
+	local fallAt = period - down
+	return s >= fallAt - Attractions.STOMPER_WARN and s < fallAt
+end
 
 return Attractions
