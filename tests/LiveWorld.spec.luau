@@ -134,4 +134,23 @@ return function()
 			end
 		)
 	end)
+	describe("Птички у фонтана", function()
+		it(
+			"есть на какой фонарь вспорхнуть, и стайка клюёт на площади, но не в фонтане",
+			function()
+				expect(#LiveWorld.birdPerches() >= 2).to.equal(true)
+				-- Птицы ни с чем не сталкиваются: им можно и на дорожку, лишь бы на площади.
+				local home = LiveWorld.BIRD_HOME
+				expect(home.Magnitude + LiveWorld.BIRD_RADIUS < 54).to.equal(true)
+				local fountain = LiveWorld.DUCK_LOOP
+				expect((home - fountain.center).Magnitude - LiveWorld.BIRD_RADIUS > fountain.radius).to.equal(
+					true
+				)
+				for _, perch in LiveWorld.birdPerches() do
+					expect(perch.Y > 8).to.equal(true)
+				end
+				expect(LiveWorld.BIRD_SCARE > LiveWorld.BIRD_RADIUS).to.equal(true)
+			end
+		)
+	end)
 end

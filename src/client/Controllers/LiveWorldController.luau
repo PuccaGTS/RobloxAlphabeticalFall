@@ -15,6 +15,7 @@
 	значениям. Так одна бабочка стоит два твина, а не твин на каждую деталь.
 ]]
 
+local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -23,6 +24,8 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local LiveWorld = require(Shared.Config.LiveWorld)
 local Decor = require(Shared.Config.Decor)
+local AudioRegistry = require(Shared.Config.AudioRegistry)
+local AudioController = require(script.Parent.AudioController)
 
 local LiveWorldController = {}
 
@@ -359,6 +362,234 @@ local function startBunny(index: number): (number) -> ()
 		-- Ушами шевелит и в покое: видно, что живой.
 		local twitch = math.sin(now * 3 + index) * 0.03
 		place(animal, CFrame.lookAt(position, position + facing) * CFrame.Angles(twitch, 0, 0))
+	end
+end
+
+-- ===== Птички у фонтана ===========================================================
+
+-- Короткий звук в точке мира: слышно рядом, тише издалека.
+local function sound(key: string, at: Vector3, volume: number): Sound?
+	local id = AudioRegistry.ids[key]
+	if not id or id == "" then
+		return nil
+	end
+	local holder = Instance.new("Attachment")
+	holder.Parent = workspace.Terrain
+	holder.Position = at
+	local effect = Instance.new("Sound")
+	effect.SoundId = id
+	effect.Volume = volume
+	effect.RollOffMode = Enum.RollOffMode.InverseTapered
+	effect.RollOffMinDistance = 8
+	effect.RollOffMaxDistance = 70
+	effect.SoundGroup = AudioController.group("Ambient")
+	effect.Parent = holder
+	effect:Play()
+	Debris:AddItem(holder, 4)
+	return effect
+end
+
+local function birdRecipe(look: any): { any }
+	local beak = Color3.fromRGB(245, 170, 60)
+	return {
+		{ "Body", Vector3.new(0.8, 0.75, 1.15), CFrame.new(0, 0.55, 0), look.back },
+		{ "Belly", Vector3.new(0.7, 0.62, 0.8), CFrame.new(0, 0.45, -0.2), look.belly },
+		{ "Head", Vector3.one * 0.6, CFrame.new(0, 1.0, -0.45), look.back },
+		{ "Beak", Vector3.new(0.14, 0.12, 0.32), CFrame.new(0, 0.95, -0.82), beak, Enum.PartType.Block },
+		{ "EyeL", Vector3.one * 0.12, CFrame.new(-0.2, 1.08, -0.66), EYE },
+		{ "EyeR", Vector3.one * 0.12, CFrame.new(0.2, 1.08, -0.66), EYE },
+		{
+			"Tail",
+			Vector3.new(0.4, 0.12, 0.7),
+			CFrame.new(0, 0.62, 0.75) * CFrame.Angles(0.35, 0, 0),
+			look.back,
+			Enum.PartType.Block,
+		},
+		{ "WingL", Vector3.new(0.6, 0.14, 0.85), CFrame.identity, look.back, Enum.PartType.Block },
+		{ "WingR", Vector3.new(0.6, 0.14, 0.85), CFrame.identity, look.back, Enum.PartType.Block },
+	}
+end
+
+-- Крыло на плече: angle 1.3 — прижато к боку, меньше — раскрыто.
+local function wingOffset(side: number, angle: number, scale: number): CFrame
+	return CFrame.new(side * 0.3 * scale, 0.75 * scale, 0.1 * scale)
+		* CFrame.Angles(0, 0, -side * angle)
+		* CFrame.new(side * 0.28 * scale, 0, 0)
+end
+
+type Bird = {
+	animal: Critter,
+	scale: number,
+	at: Vector3, -- где стоит на земле или сидит
+	from: Vector3,
+	to: Vector3,
+	flyStart: number,
+	hopStart: number,
+	facing: Vector3,
+	nextHop: number,
+}
+
+--[[
+	Стайка: клюют у лавочек; подбежал — все разом вспархивают на дальний
+	от ребёнка фонарь; ушёл — слетают обратно. Состояние общее на стайку:
+	птицы не решают поодиночке, так и выглядит стайкой.
+]]
+local function startBirds(): (number) -> ()
+	local perches = LiveWorld.birdPerches()
+	local home2 = LiveWorld.BIRD_HOME
+	local ground = Decor.groundY(home2.X, home2.Y)
+	local home = Vector3.new(home2.X, ground, home2.Y)
+	local birds: { Bird } = {}
+	for index, look in LiveWorld.BIRD_LOOKS do
+		local angle = index / #LiveWorld.BIRD_LOOKS * math.pi * 2
+		local at = home + Vector3.new(math.cos(angle), 0, math.sin(angle)) * 2.5
+		local animal = critter("Bird", birdRecipe(look), look.size)
+		-- Крылья и хвост — овалы, а не дощечки: так птица читается птицей.
+		for _, piece in animal.pieces do
+			if piece.part.Name == "WingL" or piece.part.Name == "WingR" or piece.part.Name == "Tail" then
+				local mesh = Instance.new("SpecialMesh")
+				mesh.MeshType = Enum.MeshType.Sphere
+				mesh.Parent = piece.part
+			end
+		end
+		table.insert(birds, {
+			animal = animal,
+			scale = look.size,
+			at = at,
+			from = at,
+			to = at,
+			flyStart = -100,
+			hopStart = -100,
+			facing = Vector3.new(0, 0, -1),
+			nextHop = os.clock() + random:NextNumber(0.3, 1.5),
+		})
+	end
+
+	local state = "ground" -- ground | flying | perched
+	local perch: Vector3? = nil
+	local perchUntil = 0
+
+	local function fly(now: number, target: Vector3?)
+		for index, bird in birds do
+			bird.from = bird.at
+			local spot
+			if target then
+				-- На фонаре тесно: садятся рядком.
+				spot = target + Vector3.new((index - 2.5) * 0.7, 0, 0)
+			else
+				local angle = random:NextNumber(0, math.pi * 2)
+				spot = home
+					+ Vector3.new(math.cos(angle), 0, math.sin(angle))
+						* random:NextNumber(1, LiveWorld.BIRD_RADIUS)
+			end
+			bird.to = spot
+			bird.flyStart = now + index * 0.08
+		end
+		state = "flying"
+		perch = target
+		local flutter = sound("sfx_birds_flutter", birds[1].at, 0.6)
+		if flutter then
+			flutter.PlaybackSpeed = random:NextNumber(0.95, 1.1)
+		end
+	end
+
+	return function(now: number)
+		if not nearCamera(home) then
+			return
+		end
+		local root = localRoot()
+		local kid = root and root.Position
+
+		if state == "ground" and kid then
+			for _, bird in birds do
+				if (bird.at - kid).Magnitude < LiveWorld.BIRD_SCARE and #perches > 0 then
+					-- Туда, где ребёнка нет: на самый дальний от него фонарь.
+					local best, far = perches[1], -1
+					for _, candidate in perches do
+						local distance = (candidate - kid).Magnitude
+						if distance > far then
+							best, far = candidate, distance
+						end
+					end
+					fly(now, best)
+					break
+				end
+			end
+		elseif state == "perched" then
+			local calm = not kid or (kid - home).Magnitude > LiveWorld.BIRD_SCARE + 5
+			if kid and perch and (kid - perch).Magnitude < 7 then
+				-- Залез к фонарю — перелетают на другой.
+				for _, candidate in perches do
+					if candidate ~= perch then
+						fly(now, candidate)
+						break
+					end
+				end
+			elseif now > perchUntil and calm then
+				fly(now, nil)
+			end
+		end
+
+		local landed = 0
+		for index, bird in birds do
+			local t = math.clamp((now - bird.flyStart) / LiveWorld.BIRD_FLIGHT, 0, 1)
+			local flying = state == "flying" and t < 1
+			if state == "flying" then
+				local arc = math.sin(t * math.pi) * 4
+				local position = bird.from:Lerp(bird.to, t) + Vector3.new(0, arc, 0)
+				local step = (bird.to - bird.from) * Vector3.new(1, 0, 1)
+				if step.Magnitude > 0.1 then
+					bird.facing = step.Unit
+				end
+				bird.at = position
+				if t >= 1 then
+					landed += 1
+				end
+			elseif state == "ground" and now > bird.nextHop then
+				-- Короткий прыжок к соседней крошке.
+				local angle = random:NextNumber(0, math.pi * 2)
+				local target = bird.at
+					+ Vector3.new(math.cos(angle), 0, math.sin(angle)) * random:NextNumber(0.6, 1.6)
+				local offset = (target - home) * Vector3.new(1, 0, 1)
+				if offset.Magnitude > LiveWorld.BIRD_RADIUS then
+					target = home + offset.Unit * LiveWorld.BIRD_RADIUS
+				end
+				bird.from = bird.at
+				bird.to = Vector3.new(target.X, home.Y, target.Z)
+				bird.facing = ((bird.to - bird.from) * Vector3.new(1, 0, 1)).Unit
+				bird.hopStart = now
+				bird.nextHop = now + random:NextNumber(0.5, 2)
+			end
+
+			local position = bird.at
+			local pitch = 0
+			if state == "ground" then
+				local h = math.clamp((now - bird.hopStart) / 0.22, 0, 1)
+				if h < 1 then
+					position = bird.from:Lerp(bird.to, h) + Vector3.new(0, math.sin(h * math.pi) * 0.5, 0)
+					bird.at = bird.to
+				end
+				-- Клюёт: наклоняется к плитке раз в пару секунд.
+				pitch = if math.sin(now * 2.3 + index * 1.9) > 0.75 then -0.6 else 0
+			elseif state == "perched" then
+				pitch = math.sin(now * 1.1 + index) * 0.08
+			end
+			local frame = CFrame.lookAt(position, position + bird.facing) * CFrame.Angles(pitch, 0, 0)
+			place(bird.animal, frame)
+			-- Крылья: сложены у бока, в полёте машут.
+			local angle = if flying then 0.35 + math.sin(now * 30 + index) * 0.8 else 1.3
+			local pieces = bird.animal.pieces
+			pieces[8].part.CFrame = frame * wingOffset(-1, angle, bird.scale)
+			pieces[9].part.CFrame = frame * wingOffset(1, angle, bird.scale)
+		end
+		if state == "flying" and landed == #birds then
+			if perch then
+				state = "perched"
+				perchUntil = now + random:NextNumber(LiveWorld.BIRD_PERCH[1], LiveWorld.BIRD_PERCH[2])
+			else
+				state = "ground"
+			end
+		end
 	end
 end
 
@@ -814,7 +1045,7 @@ function LiveWorldController.init()
 		end
 
 		-- Зверьки: утки у фонтана и зайчики на полянках, один общий кадровый цикл.
-		local animators = { startDucks() }
+		local animators = { startDucks(), startBirds() }
 		for bunny = 1, #LiveWorld.BUNNY_HOMES do
 			table.insert(animators, startBunny(bunny))
 		end

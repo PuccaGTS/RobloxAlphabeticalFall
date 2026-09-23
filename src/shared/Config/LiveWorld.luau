@@ -31,7 +31,7 @@ LiveWorld.BUTTERFLIES_PER_BED = 2
 	много, и бабочки у каждой съели бы весь бюджет кадра: здесь ребёнок бывает
 	чаще всего, здесь им и летать.
 ]]
-LiveWorld.MAX_BUTTERFLY_BEDS = 7 -- было 14: часть бюджета отдана уткам, зайчикам, белкам и катаниям
+LiveWorld.MAX_BUTTERFLY_BEDS = 5 -- было 14: часть бюджета отдана уткам, зайчикам, белкам, птицам и катаниям
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
@@ -178,6 +178,46 @@ function LiveWorld.leafSources(): { LeafSource }
 end
 
 --[[
+	Птички у лавочек за фонтаном: воробей, синичка, снегирь и голубь скачут
+	по плитке и клюют крошки. Подбежал — стайка вспархивает с шумом крыльев
+	на фонари, сидит там и, когда ребёнок отойдёт, слетает обратно. Это то,
+	за чем пятилетка бегает по площади десять минут.
+]]
+LiveWorld.BIRD_HOME = Vector2.new(-20, -44) -- за фонтаном, у левой лавочки
+LiveWorld.BIRD_RADIUS = 5 -- как далеко от середины стайки клюют
+LiveWorld.BIRD_SCARE = 9 -- ближе этого ребёнок — вспархивают
+LiveWorld.BIRD_FLIGHT = 1.4 -- секунд лёту до фонаря и обратно
+LiveWorld.BIRD_PERCH = { 5, 9 } -- сколько сидят на фонаре, если ребёнок ушёл
+LiveWorld.BIRD_LOOKS = {
+	-- спинка, грудка, клюв
+	{ back = Color3.fromRGB(150, 110, 75), belly = Color3.fromRGB(225, 205, 175), size = 1 }, -- воробей
+	{ back = Color3.fromRGB(80, 140, 225), belly = Color3.fromRGB(255, 225, 70), size = 0.95 }, -- синичка
+	{ back = Color3.fromRGB(70, 75, 90), belly = Color3.fromRGB(235, 80, 70), size = 1.05 }, -- снегирь
+	{ back = Color3.fromRGB(160, 165, 180), belly = Color3.fromRGB(200, 190, 215), size = 1.25 }, -- голубь
+}
+
+-- Куда садятся: верхушки фонарей у площади (Config/Decor), ближайшие к стайке.
+function LiveWorld.birdPerches(): { Vector3 }
+	local home = LiveWorld.BIRD_HOME
+	local lamp = Decor.get("lamp")
+	local height = if lamp then lamp.size.Y else 12
+	local perches = {}
+	for _, placement in Decor.placements do
+		if placement.id == "lamp" then
+			local distance = (Vector2.new(placement.x, placement.z) - home).Magnitude
+			if distance < 45 then
+				local ground = Decor.groundY(placement.x, placement.z)
+				table.insert(
+					perches,
+					Vector3.new(placement.x, ground + height * (placement.scale or 1) + 0.3, placement.z)
+				)
+			end
+		end
+	end
+	return perches
+end
+
+--[[
 	Воздушные змеи над лугами: привязаны к колышку в траве, висят по ветру
 	высоко над парком и покачиваются восьмёркой. Хвост из бантиков тянется
 	следом. Видно их издалека: это небо, а не кусты.
@@ -248,6 +288,7 @@ function LiveWorld.movingBudget(): number
 		+ Rides.MOVING
 		+ #LiveWorld.KITES
 		+ LiveWorld.SQUIRREL_COUNT
+		+ #LiveWorld.BIRD_LOOKS
 end
 
 return LiveWorld
