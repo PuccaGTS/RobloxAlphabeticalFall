@@ -345,9 +345,65 @@ local function stepBalloons(now: number)
 	end
 end
 
+-- ===== Корабль-качели =====
+
+type Ship = { pivot: CFrame, group: Group, hull: BasePart?, creak: Sound?, wasStanding: boolean? }
+local ships: { [Instance]: Ship } = {}
+
+local attachShip: (Instance) -> ()
+function attachShip(model: Instance)
+	local pivot = model:GetAttribute("Pivot")
+	local swing = model:FindFirstChild("Ship")
+	local hull = swing and swing:FindFirstChild("Hull")
+	if typeof(pivot) ~= "CFrame" or not swing or not hull then
+		if model.Parent then
+			task.delay(2, attachShip, model)
+		end
+		return
+	end
+	local creak = hull:FindFirstChild("Creak")
+	local id = AudioRegistry.ids.amb_ship_creak
+	if creak and creak:IsA("Sound") and id and id ~= "" then
+		creak.SoundId = id
+		creak.SoundGroup = AudioController.group("SFX")
+		creak.Volume = 0
+	end
+	ships[model] = {
+		pivot = pivot,
+		group = collect(swing, pivot),
+		hull = hull :: BasePart,
+		creak = if creak and creak:IsA("Sound") then creak else nil,
+	}
+end
+
+local function stepShips(now: number, camera: Vector3)
+	local angle, standing, envelope = Rides.shipAt(now)
+	for model, current in ships do
+		if not model.Parent then
+			ships[model] = nil
+		elseif (current.pivot.Position - camera).Magnitude < ANIMATE_DISTANCE then
+			move(current.group, current.pivot * CFrame.Angles(0, 0, angle))
+			-- Скрип тем громче, чем выше раскачка; на стоянке тихо.
+			local creak = current.creak
+			if creak and creak.SoundId ~= "" then
+				creak.Volume = 0.45 * envelope
+				if envelope > 0.05 and not creak.IsPlaying then
+					creak:Play()
+				elseif envelope <= 0.05 and creak.IsPlaying then
+					creak:Stop()
+				end
+			end
+			if current.wasStanding == true and not standing then
+				playAt("sfx_seagulls", current.hull, 0.6, 120) -- отплыли: кричат чайки
+			end
+			current.wasStanding = standing
+		end
+	end
+end
+
 -- ===== Катание =====
 
-type Kind = "train" | "wheel" | "carousel" | "slide" | "balloon" | "swan"
+type Kind = "train" | "wheel" | "carousel" | "slide" | "balloon" | "swan" | "ship"
 type Ride = {
 	kind: Kind,
 	wheel: Wheel?,
@@ -358,6 +414,7 @@ type Ride = {
 	boat: number?,
 	slide: CFrame?, -- опорная точка горки
 	balloon: Balloon?,
+	ship: Ship?,
 	started: number,
 	departed: boolean,
 	exit: CFrame,
@@ -380,7 +437,18 @@ local function onPad(root: BasePart, pad: BasePart): boolean
 end
 
 local function seatFrame(current: Ride, now: number): CFrame?
-	if current.kind == "swan" then
+	if current.kind == "ship" then
+		local boat = current.ship
+		if not boat then
+			return nil
+		end
+		local spec = Rides.SHIP
+		local deck = boat.pivot * Rides.shipFrame((Rides.shipAt(now)))
+		local lift = 0.85 + SEAT_HEIGHT - 0.3
+		-- Лицом к середине корабля: с кормы видна вся палуба и небо на взмахе.
+		local seat = deck * CFrame.new(spec.benches[spec.riderBench], lift, 0)
+		return CFrame.lookAt(seat.Position, (deck * CFrame.new(0, lift, 0)).Position, deck.UpVector)
+	elseif current.kind == "swan" then
 		local lake = current.lake
 		if not lake or not current.boat then
 			return nil
@@ -573,6 +641,14 @@ local function stepRide(now: number)
 				finish(true) -- облетели парк и сели на ту же лужайку
 				return
 			end
+		elseif current.kind == "ship" then
+			local _, standing = Rides.shipAt(now)
+			if not standing then
+				current.departed = true
+			elseif current.departed then
+				finish(true) -- раскачка кончилась, корабль снова у посадки
+				return
+			end
 		elseif current.kind == "swan" then
 			-- Круг по озеру — и обратно на мостки.
 			if now - current.started >= Rides.SWANS.period then
@@ -642,6 +718,13 @@ local function stepRide(now: number)
 			started.slide = (pad.Parent :: Instance):GetAttribute("Base")
 			playAt("sfx_slide_whistle", pad, 0.9, 120)
 		end
+	end) or checkPads("AF_ShipBoard", root, function(pad)
+		return ownerOf(pad, ships) ~= nil and select(2, Rides.shipAt(now))
+	end, function(pad)
+		local started = start("ship", pad, now, nil)
+		if started then
+			started.ship = ownerOf(pad, ships)
+		end
 	end) or checkPads("AF_BalloonBoard", root, function(pad)
 		local balloon = ownerOf(pad, balloons)
 		return balloon ~= nil and select(2, Rides.balloonAt(now, balloon.inward))
@@ -691,6 +774,7 @@ function RideController.init()
 	watch("AF_Carousel", attachCarousel)
 	watch("AF_Swans", attachSwans)
 	watch("AF_Balloon", attachBalloon)
+	watch("AF_Ship", attachShip)
 
 	RunService:BindToRenderStep("AF_Rides", Enum.RenderPriority.Camera.Value - 1, function()
 		local now = workspace:GetServerTimeNow()
@@ -701,6 +785,7 @@ function RideController.init()
 		stepCarousels(now, eye)
 		stepSwans(now, eye)
 		stepBalloons(now)
+		stepShips(now, eye)
 		stepRide(now)
 	end)
 end

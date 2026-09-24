@@ -523,6 +523,12 @@ function BUILDERS.carousel(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(11, 0, -12), "🎠")
 end
 
+-- Корабль-качели: строит World/Rides, качает и катает RideController.
+function BUILDERS.ship(model: Model, origin: CFrame)
+	RidesBuilder.buildShip(model, origin)
+	sign(model, origin * CFrame.new(10, 0, -13), "🏴‍☠️")
+end
+
 function BUILDERS.slide(model: Model, origin: CFrame)
 	RidesBuilder.buildSlide(model, origin)
 	sign(model, origin * CFrame.new(8, 0, -14), "🌀")

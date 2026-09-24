@@ -44,6 +44,9 @@ Ambient.WINTER = { key = "amb_winter_bells", volume = 0.4, radius = 55 }
 Ambient.SWANS = { key = "amb_swan_dance", volume = 0.4, radius = 60 }
 Ambient.LAKE = { key = "amb_lake", volume = 0.5, radius = 45 }
 
+-- Корабль-качели (Config/Rides.SHIP): морская песня, слышно только рядом.
+Ambient.SHIP = { key = "amb_ship_shanty", volume = 0.4, radius = 60 }
+
 -- Струйки воды водопада: за сколько секунд пробегают пласт сверху вниз.
 Ambient.FALL_STRIPE_SECONDS = 1.6
 

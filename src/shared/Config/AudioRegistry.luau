@@ -150,6 +150,9 @@ local LIBRARY: { [string]: number } = {
 	amb_swan_dance = 1836282349, -- APM Swan Lake: Dance Of The Swans, 89 с: у озера с лебедями
 	amb_lake = 9116203162, -- Lake Lap Water Movement 2, 46 с: плеск озера
 	sfx_birds_flutter = 9113444620, -- Bird Wing Flaps Pigeon Two 1: стайка вспорхнула
+	amb_ship_shanty = 1836603892, -- APM Deep Blue Sea Shanty 1, 203 с: морская песня у корабля-качелей
+	amb_ship_creak = 9112750181, -- Boat Creaks 1, 36 с: скрип корабля в раскачке
+	sfx_seagulls = 9118858259, -- Seagull Squawks 3: чайки кричат, когда корабль отплывает
 	amb_run_lava = 9112752570, -- Bubbles Dribble Small Bloops 1, 14 с: лава булькает
 }
 for key, assetId in LIBRARY do

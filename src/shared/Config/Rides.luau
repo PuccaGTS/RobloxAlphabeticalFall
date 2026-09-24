@@ -311,10 +311,60 @@ function Rides.swanFrame(index: number, angle: number, now: number): CFrame
 	return CFrame.Angles(0, -a, 0) * CFrame.new(spec.loop, bob, 0) * CFrame.Angles(0, math.pi, roll)
 end
 
+-- ===== Корабль-качели =====
+
+--[[
+	Пиратский кораблик на двух опорах качается, как огромные качели: сначала
+	чуть-чуть, потом всё выше — почти до горизонтали, — и снова затихает.
+	Пока стоит, круг посадки зелёный: встал — сел на скамейку на корме,
+	качаешься одну раскачку и сходишь у того же круга. Рядом морская песня
+	(APM, без загрузки), на отплытии кричат чайки, в качке скрипит дерево.
+]]
+Rides.SHIP = {
+	spot = "ship",
+	pivot = 15, -- высота оси над землёй
+	arm = 9.5, -- от оси до палубы
+	length = 16, -- длина корпуса вдоль качания
+	width = 6,
+	swing = math.rad(52), -- наибольший размах
+	period = 5.6, -- полный мах туда и обратно
+	dwell = 9, -- стоит у посадки
+	ride = 32, -- раскачка от начала до остановки
+	ramp = 8, -- столько размах растёт в начале и затихает в конце
+	benches = { -5.4, -2.2, 2.2, 5.4 }, -- где скамейки вдоль корпуса
+	riderBench = 1, -- на какую садится ребёнок: крайняя, с неё виднее всего
+}
+
+function Rides.shipCycle(): number
+	return Rides.SHIP.dwell + Rides.SHIP.ride
+end
+
+--[[
+	Угол корабля в момент now (серверные часы) и стоит ли он у посадки.
+	Размах растёт плавно (ramp), держится и так же затихает — корабль не
+	дёргается ни на старте, ни при остановке.
+]]
+function Rides.shipAt(now: number): (number, boolean, number)
+	local spec = Rides.SHIP
+	local t = now % Rides.shipCycle()
+	if t < spec.dwell then
+		return 0, true, 0
+	end
+	local s = t - spec.dwell
+	local envelope = math.clamp(math.min(s / spec.ramp, (spec.ride - s) / spec.ramp), 0, 1)
+	envelope = envelope * envelope * (3 - 2 * envelope)
+	return spec.swing * envelope * math.sin(2 * math.pi * s / spec.period), false, envelope
+end
+
+-- Палуба корабля относительно оси: качается вокруг Z оси, висит на плечах arm.
+function Rides.shipFrame(angle: number): CFrame
+	return CFrame.Angles(0, 0, angle) * CFrame.new(0, -Rides.SHIP.arm, 0)
+end
+
 -- Сколько объектов шевелится в кадре (для бюджета Config/LiveWorld):
--- поезд, колесо, карусель, воздушный шар и лебеди (плывут одним кругом).
--- Горка стоит, едет только ребёнок.
-Rides.MOVING = 5
+-- поезд, колесо, карусель, воздушный шар, лебеди (плывут одним кругом)
+-- и корабль-качели. Горка стоит, едет только ребёнок.
+Rides.MOVING = 6
 
 -- Эстакада лежит в свободной полосе между парком и участками.
 Rides.PLOT_INNER = Base.RING_RADIUS - Base.PLOT_SIZE / 2

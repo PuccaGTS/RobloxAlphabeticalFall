@@ -1188,4 +1188,239 @@ function RidesBuilder.buildBalloon(model: Model, origin: CFrame)
 	CollectionService:AddTag(model, "AF_Balloon")
 end
 
+-- ===== Корабль-качели =====
+
+local HULL = Color3.fromRGB(175, 95, 55)
+local GOLD = Color3.fromRGB(255, 200, 70)
+local SEA = Color3.fromRGB(70, 165, 225)
+local SAIL = Color3.fromRGB(252, 248, 236)
+
+--[[
+	Кораблик в кадре deck (середина палубы, нос — к −X): пузатый корпус,
+	жёлтая полоса с иллюминаторами, корма и нос приподняты, четыре синие
+	скамейки поперёк, мачта с парусом «⚓» и флажком, бушприт. Всё без
+	столкновений: ребёнка на скамейку сажает клиент, а под качающимся
+	корпусом не должно ничего застревать.
+]]
+local function ship(parent: Model, deck: CFrame)
+	local spec = Rides.SHIP
+	local half = spec.length / 2
+	ellipsoid(
+		parent,
+		"Keel",
+		Vector3.new(spec.length + 1, 4.2, spec.width + 0.6),
+		deck * CFrame.new(0, -1.6, 0),
+		HULL
+	)
+	local body = part(
+		parent,
+		"Hull",
+		Vector3.new(spec.length - 2, 2.2, spec.width),
+		deck * CFrame.new(0, -0.9, 0),
+		HULL
+	)
+	body.Material = Enum.Material.WoodPlanks
+	part(
+		parent,
+		"Deck",
+		Vector3.new(spec.length - 2.4, 0.3, spec.width - 0.6),
+		deck * CFrame.new(0, 0.1, 0),
+		WOOD
+	).Material =
+		Enum.Material.WoodPlanks
+	-- Корма и нос повыше: силуэт корабля узнаётся издалека.
+	for _, side in { -1, 1 } do
+		local castle = part(
+			parent,
+			"Castle",
+			Vector3.new(2.6, 2.4, spec.width),
+			deck * CFrame.new(side * (half - 1.6), 0.4, 0) * CFrame.Angles(0, 0, side * math.rad(-12)),
+			HULL
+		)
+		castle.Material = Enum.Material.WoodPlanks
+	end
+	for _, z in { -1, 1 } do
+		local zSide = z * (spec.width / 2 + 0.05)
+		part(
+			parent,
+			"Stripe",
+			Vector3.new(spec.length - 2.5, 0.55, 0.1),
+			deck * CFrame.new(0, -0.5, zSide),
+			GOLD
+		)
+		for hole = 1, 4 do
+			local porthole = cylinder(
+				parent,
+				"Porthole",
+				0.12,
+				0.8,
+				deck * CFrame.new(-4.5 + (hole - 1) * 3, -1.4, zSide) * CFrame.Angles(0, math.rad(90), 0),
+				Color3.fromRGB(160, 215, 250)
+			)
+			porthole.Material = Enum.Material.Glass
+		end
+		-- Перила вдоль борта: золотой брус на столбиках.
+		part(
+			parent,
+			"Rail",
+			Vector3.new(spec.length - 3, 0.25, 0.25),
+			deck * CFrame.new(0, 1.3, z * (spec.width / 2 - 0.2)),
+			GOLD
+		)
+		for post = -2, 2 do
+			part(
+				parent,
+				"RailPost",
+				Vector3.new(0.2, 1.2, 0.2),
+				deck * CFrame.new(post * 3, 0.7, z * (spec.width / 2 - 0.2)),
+				GOLD
+			)
+		end
+	end
+	for index, x in spec.benches do
+		part(parent, "Bench", Vector3.new(1.1, 0.5, spec.width - 1), deck * CFrame.new(x, 0.6, 0), BLUE)
+		-- Спинка со стороны ближнего края: сидят лицом к середине корабля.
+		local back = if x < 0 then -1 else 1
+		part(
+			parent,
+			"BenchBack",
+			Vector3.new(0.3, 1.3, spec.width - 1),
+			deck * CFrame.new(x + back * 0.5, 1.2, 0),
+			if index % 2 == 0 then RED else BLUE
+		)
+	end
+	-- Мачта, рея, парус с якорем и флажок на макушке.
+	column(parent, "Mast", 9, 0.55, deck * CFrame.new(0, 4.6, 0), WOOD_DARK)
+	cylinder(
+		parent,
+		"Yard",
+		spec.width + 0.6,
+		0.3,
+		deck * CFrame.new(0.3, 7.4, 0) * CFrame.Angles(0, math.rad(90), 0),
+		WOOD_DARK
+	)
+	local sail =
+		part(parent, "Sail", Vector3.new(0.15, 4.2, spec.width), deck * CFrame.new(0.35, 5.2, 0), SAIL)
+	sail.Material = Enum.Material.Fabric
+	letterFace(sail, Enum.NormalId.Right, "⚓", Color3.fromRGB(60, 90, 160))
+	letterFace(sail, Enum.NormalId.Left, "⚓", Color3.fromRGB(60, 90, 160))
+	local flag = part(parent, "Flag", Vector3.new(1.8, 1.1, 0.1), deck * CFrame.new(-0.9, 8.7, 0), RED)
+	letterFace(flag, Enum.NormalId.Front, "⭐", YELLOW)
+	letterFace(flag, Enum.NormalId.Back, "⭐", YELLOW)
+	ball(parent, "MastTop", 0.7, deck * CFrame.new(0, 9.2, 0), GOLD)
+	-- Бушприт и золотой шарик на носу.
+	cylinder(
+		parent,
+		"Bowsprit",
+		3.2,
+		0.3,
+		deck * CFrame.new(-half - 0.6, 1.4, 0) * CFrame.Angles(0, 0, math.rad(-20)),
+		WOOD_DARK
+	)
+	ball(parent, "BowBall", 0.8, deck * CFrame.new(-half - 2.1, 1.95, 0), GOLD)
+	for _, descendant in parent:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.CanCollide = false
+		end
+	end
+end
+
+--[[
+	Корабль-качели в месте парка origin (−Z — к площади). Неподвижное: синее
+	«море» с барашками, две опоры-«А» в синюю и белую полоску, ось. Качается
+	модель Ship вместе с плечами — её опорная точка — ось (атрибут Pivot),
+	двигает её RideController по Rides.shipAt.
+]]
+function RidesBuilder.buildShip(model: Model, origin: CFrame)
+	local spec = Rides.SHIP
+	local pivot = origin * CFrame.new(0, spec.pivot, 0)
+	model:SetAttribute("Pivot", pivot)
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+
+	local sea = column(model, "Sea", 0.25, 30, origin * CFrame.new(0, 0.12, 0), SEA)
+	sea.Material = Enum.Material.Glass
+	sea.Transparency = 0.1
+	sea.Reflectance = 0.2
+	local shore =
+		column(model, "SeaShore", 0.2, 32, origin * CFrame.new(0, 0.08, 0), Color3.fromRGB(235, 215, 160))
+	shore.Material = Enum.Material.Sand
+	local random = Random.new(30)
+	for index = 1, 14 do
+		local a = index / 14 * math.pi * 2 + random:NextNumber(0, 0.3)
+		local r = random:NextNumber(4, 13.5)
+		local cap = ball(
+			model,
+			"WaveCap",
+			random:NextNumber(0.6, 1.1),
+			origin * CFrame.new(math.cos(a) * r, 0.25, math.sin(a) * r),
+			Color3.fromRGB(245, 250, 255)
+		)
+		cap.Size = Vector3.new(cap.Size.X * 2.2, cap.Size.Y * 0.4, cap.Size.Z)
+		cap.CanCollide = false
+	end
+
+	-- Опоры: две «А» по бокам, ноги в синюю и белую полоску, ось между ними.
+	local spread = spec.pivot * 0.62
+	for _, z in { -1, 1 } do
+		local zSide = z * (spec.width / 2 + 2)
+		for _, x in { -1, 1 } do
+			local from = (origin * CFrame.new(x * spread, 0, zSide)).Position
+			local to = (pivot * CFrame.new(0, 0, zSide)).Position
+			local leg = beam(model, "Leg", from, to, 1, BLUE)
+			for band = 1, 3 do
+				local at = from:Lerp(to, band / 4)
+				part(model, "LegBand", Vector3.new(1.08, 1.08, 1.2), CFrame.lookAt(at, to), CREAM)
+			end
+			leg.CanCollide = true
+		end
+		part(
+			model,
+			"Brace",
+			Vector3.new(spread * 1.1, 0.6, 0.6),
+			origin * CFrame.new(0, spec.pivot * 0.45, zSide),
+			BLUE
+		)
+		ball(model, "Hub", 1.8, pivot * CFrame.new(0, 0, zSide), GOLD)
+	end
+	cylinder(
+		model,
+		"Axle",
+		spec.width + 4.4,
+		0.7,
+		pivot * CFrame.Angles(0, math.rad(90), 0),
+		Color3.fromRGB(200, 205, 215)
+	).Material =
+		Enum.Material.Metal
+
+	local swing = Instance.new("Model")
+	swing.Name = "Ship"
+	swing.Parent = model
+	-- Плечи: от оси к палубе по два с каждого борта, качаются с кораблём.
+	local deck = pivot * Rides.shipFrame(0)
+	for _, z in { -1, 1 } do
+		for _, x in { -1, 1 } do
+			local arm = beam(
+				swing,
+				"Arm",
+				(pivot * CFrame.new(0, 0, z * (spec.width / 2 + 0.9))).Position,
+				(deck * CFrame.new(x * 3.2, 0.6, z * (spec.width / 2 + 0.2))).Position,
+				0.5,
+				GOLD
+			)
+			arm.Material = Enum.Material.Metal
+			arm.CanCollide = false
+		end
+	end
+	ship(swing, deck)
+	local creak = Instance.new("Sound")
+	creak.Name = "Creak"
+	creak.Looped = true
+	creak.RollOffMinDistance = 12
+	creak.RollOffMaxDistance = 70
+	creak.Parent = swing:FindFirstChild("Hull")
+
+	boardPad(model, origin * CFrame.new(0, 0.3, -(spec.width / 2 + 5)), "AF_ShipBoard")
+	CollectionService:AddTag(model, "AF_Ship")
+end
+
 return RidesBuilder

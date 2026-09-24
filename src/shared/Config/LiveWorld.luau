@@ -35,7 +35,7 @@ LiveWorld.MAX_BUTTERFLY_BEDS = 5 -- было 14: часть бюджета от�
 LiveWorld.BUTTERFLY_RADIUS = 7 -- как далеко от клумбы улетает бабочка
 LiveWorld.BUTTERFLY_HEIGHT = { 2, 5 } -- над землёй, в студах
 
-LiveWorld.LEAVES_AT_ONCE = 5 -- было 12: места отданы карпам, брызгам, змеям и лебедям
+LiveWorld.LEAVES_AT_ONCE = 4 -- было 12: места отданы карпам, брызгам, змеям, лебедям и кораблю
 LiveWorld.LEAF_INTERVAL = 0.9 -- секунд между листьями
 LiveWorld.LEAF_FALL_SECONDS = { 4, 6.5 }
 

@@ -247,4 +247,42 @@ return function()
 			expect(before.LookVector:Dot(heading) > 0.9).to.equal(true)
 		end)
 	end)
+
+	describe("Rides: корабль-качели", function()
+		it(
+			"стоит у посадки, потом раскачивается плавно и затихает",
+			function()
+				local spec = Rides.SHIP
+				local base = Rides.shipCycle() * 100
+				local angle, standing = Rides.shipAt(base + 1)
+				expect(standing).to.equal(true)
+				expect(angle).to.equal(0)
+				-- Первые полсекунды после стоянки и последние перед ней — почти на месте.
+				expect(math.abs((Rides.shipAt(base + spec.dwell + 0.5))) < math.rad(3)).to.equal(true)
+				expect(math.abs((Rides.shipAt(base + Rides.shipCycle() - 0.3))) < math.rad(3)).to.equal(true)
+				local widest = 0
+				for t = spec.dwell, Rides.shipCycle() - 0.05, 0.05 do
+					local a, still = Rides.shipAt(base + t)
+					expect(still).to.equal(false)
+					widest = math.max(widest, math.abs(a))
+				end
+				expect(widest <= spec.swing + 1e-6).to.equal(true)
+				expect(widest > spec.swing * 0.95).to.equal(true)
+			end
+		)
+
+		it("на самом высоком взмахе киль не задевает землю", function()
+			local spec = Rides.SHIP
+			-- Киль — эллипсоид (length + 1) × 4,2 под палубой, центр на 1,6 ниже неё.
+			local a, b = (spec.length + 1) / 2, 2.1
+			local depth = spec.arm + 1.6
+			local lowest = depth * math.cos(spec.swing)
+				+ math.sqrt((a * math.sin(spec.swing)) ^ 2 + (b * math.cos(spec.swing)) ^ 2)
+			expect(spec.pivot - lowest > 0.8).to.equal(true)
+			-- А ребёнок на скамейке взлетает выше, чем стоит на стоянке.
+			local x = spec.benches[spec.riderBench]
+			local high = Rides.shipFrame(spec.swing * math.sign(x)) * CFrame.new(x, 0, 0)
+			expect(high.Position.Y > -spec.arm + 3).to.equal(true)
+		end)
+	end)
 end

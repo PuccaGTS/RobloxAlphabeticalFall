@@ -136,6 +136,8 @@ function AmbientController.init()
 	local lakeAt = Vector3.new(lake.X, Decor.groundY(lake.X, lake.Z) + 3, lake.Z)
 	placeSpot(sounds, lakeAt, Ambient.SWANS)
 	placeSpot(sounds, lakeAt, Ambient.LAKE)
+	local ship = Playground.position(Playground.expect(Rides.SHIP.spot))
+	placeSpot(sounds, Vector3.new(ship.X, Decor.groundY(ship.X, ship.Z) + 6, ship.Z), Ambient.SHIP)
 	animateFallStripes()
 
 	--[[
