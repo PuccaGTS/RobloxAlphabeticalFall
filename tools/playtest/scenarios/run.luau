@@ -74,6 +74,9 @@ return function(player, note)
 		if kind == "slide" then
 			local x = (p:GetAttribute("Travel") or 0) * math.sin(2 * math.pi * (now + phase) / period)
 			return (base * CFrame.new(x, 0, 0)).Position
+		elseif kind == "lift" then
+			local y = (p:GetAttribute("Travel") or 0) * math.sin(2 * math.pi * (now + phase) / period)
+			return (base * CFrame.new(0, y, 0)).Position
 		elseif kind == "pendulum" then
 			local angle = (p:GetAttribute("Amplitude") or 0) * math.sin(2 * math.pi * (now + phase) / period)
 			return (base * CFrame.Angles(angle, 0, 0) * CFrame.new(0, -(p:GetAttribute("Hang") or 0), 0)).Position
@@ -322,6 +325,68 @@ return function(player, note)
 					local rel = deck.CFrame:PointToObjectSpace(shelter.Position)
 					trial("shelter", CFrame.new(rel.X - math.sign(rel.X) * 1.8, 0, rel.Z))
 				end
+			end
+		end
+
+		-- Подъёмник должен везти стоящего вверх и вниз, а горка — спускать к полу выхода.
+		if id == "lifts" then
+			local deck = child:FindFirstChild(`LiftDeck_{index}_1`)
+			local balcony = child:FindFirstChild(`LiftBalcony_{index}`)
+			if deck and balcony then
+				local r = standOn(deck)
+				local low, high, worst = math.huge, -math.huge, 0
+				local deadline = os.clock() + (deck:GetAttribute("Period") or 5) + 0.3
+				while os.clock() < deadline do
+					task.wait(0.1)
+					local live = livePosition(deck)
+					low = math.min(low, r.Position.Y)
+					high = math.max(high, r.Position.Y)
+					worst = math.max(worst, math.abs(r.Position.Y - (live.Y + deck.Size.X / 2 + 3)))
+				end
+				note(
+					string.format(
+						"   lifts: rode %.1f..%.1f (travel %.1f), worst off-deck %.1f",
+						low,
+						high,
+						deck:GetAttribute("Travel") or 0,
+						worst
+					)
+				)
+				local view = CFrame.lookAt(
+					r.Position
+						+ (balcony.Position - r.Position) * Vector3.new(0.3, 0, 0.3)
+						+ Vector3.new(16, 8, 0),
+					balcony.Position:Lerp(r.Position, 0.5)
+				)
+				_G.ZZ_Shot(player, `run_{index}_lifts_ride`, view, 70)
+				task.wait(4.5)
+				-- На балкон и вперёд, на горку: съехать должен к полу выхода.
+				Teleport.to(player, balcony.CFrame * CFrame.new(0, 4, 0))
+				for _ = 1, 40 do
+					if not r.Anchored then
+						break
+					end
+					task.wait(0.1)
+				end
+				local startY = r.Position.Y
+				local ahead = balcony.CFrame.LookVector
+				-- То же значение второй раз сигнала не даёт: сначала сбросить.
+				workspace:SetAttribute("ZZ_Walk", nil)
+				task.wait(0.3)
+				workspace:SetAttribute("ZZ_Walk", string.format("%.2f,%.2f,6", ahead.X, ahead.Z))
+				local lowest = startY
+				for _ = 1, 60 do
+					task.wait(0.1)
+					lowest = math.min(lowest, r.Position.Y)
+				end
+				note(
+					string.format(
+						"   lifts slide: from %.1f down to %.1f (floor ~%.1f)",
+						startY,
+						lowest,
+						pole.Position.Y
+					)
+				)
 			end
 		end
 

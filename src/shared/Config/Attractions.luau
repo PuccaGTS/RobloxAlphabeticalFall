@@ -68,6 +68,8 @@ local CATALOG: { Attraction } = {
 		так далеко, встречал только знакомое. Теперь десятый открывает ветер.
 	]]
 	{ id = "wind", title = "Ветродуи", fromLevel = 10, seconds = 9, floor = false },
+	-- Последний, одиннадцатый уровень тоже встречает новым: подъёмники на шариках.
+	{ id = "lifts", title = "Подъёмники", fromLevel = 11, seconds = 10, floor = false },
 }
 
 Attractions.CATALOG = CATALOG
@@ -230,6 +232,20 @@ Attractions.HEAT = {
 		gust = { 1.4, 1.6, 1.8, 2, 2.2 }, -- сколько дует порыв
 		period = { 5.2, 5, 4.8, 4.6, 4.4 }, -- полный цикл тучки: тихо, щёки, порыв
 	},
+	--[[
+		Подъёмники: над пропастью платформы на воздушных шариках ездят вверх-вниз,
+		и каждая следующая висит выше прошлой. Прыгать, когда соседняя опустилась
+		к тебе: подождёшь — уедет вверх, не допрыгнешь. С последней — на балкон
+		высоко над трассой, а с балкона вниз по радужной горке.
+	]]
+	lifts = {
+		count = { 3, 3, 4, 4, 5 },
+		size = { 8, 7.5, 7, 6.5, 6 }, -- поперечник платформы
+		gap = { 2.5, 3, 3.5, 4, 4.5 }, -- от края до края соседних платформ
+		rise = { 2, 2.5, 3, 3, 3.5 }, -- на сколько середина хода следующей выше прошлой
+		travel = { 3, 3.5, 4, 4.5, 5 }, -- на сколько платформа уходит вверх и вниз от середины
+		period = { 6, 5.6, 5.2, 4.8, 4.4 }, -- полный ход вверх и обратно
+	},
 }
 
 function Attractions.param(id: string, name: string, heat: number): number
@@ -346,6 +362,22 @@ function Attractions.windWarning(s: number, period: number, gust: number): boole
 	s = s % period
 	local startAt = period - gust
 	return s >= startAt - Attractions.WIND_WARN and s < startAt
+end
+
+Attractions.LIFT_SHIFT = 0.3 -- на какую долю хода соседняя платформа отстаёт от прошлой
+Attractions.LIFT_BALCONY = 8 -- глубина балкона вдоль бега
+Attractions.LIFT_SLOPE = 0.55 -- крутизна горки с балкона: подъём на студ длины
+Attractions.LIFT_BALLOON = 11 -- на какой высоте над платформой висят шарики
+
+-- Высота верха платформы над полом трассы в момент now.
+function Attractions.liftHeight(
+	mid: number,
+	travel: number,
+	period: number,
+	phase: number,
+	now: number
+): number
+	return mid + travel * math.sin(2 * math.pi * (now + phase) / period)
 end
 
 return Attractions

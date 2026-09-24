@@ -1482,6 +1482,239 @@ function BUILDERS.wind(model: Model, path, ride)
 	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 14, 0), "🌬️")
 end
 
+--[[
+	Подъёмники: круглые платформы, каждую держит гроздь воздушных шариков на
+	нитях. Ездят вверх-вниз (Mover = lift) и везут стоящего (Carry): клиент
+	задаёт платформе скорость того же движения, и ребёнок едет, а не
+	подпрыгивает на ней. На развороте — скрип. Балкон на сваях с перилами,
+	с него радужная горка с бортиками вниз, к полу выхода.
+]]
+local LIFT_DECK = Color3.fromRGB(255, 244, 222)
+local LIFT_RIMS = {
+	Color3.fromRGB(255, 120, 150),
+	Color3.fromRGB(110, 200, 255),
+	Color3.fromRGB(255, 200, 70),
+	Color3.fromRGB(140, 220, 120),
+	Color3.fromRGB(190, 150, 255),
+}
+local BALLOONS = {
+	Color3.fromRGB(255, 90, 90),
+	Color3.fromRGB(255, 170, 60),
+	Color3.fromRGB(255, 230, 80),
+	Color3.fromRGB(110, 210, 120),
+	Color3.fromRGB(90, 170, 255),
+	Color3.fromRGB(180, 120, 255),
+}
+local RAINBOW = {
+	Color3.fromRGB(240, 80, 80),
+	Color3.fromRGB(255, 160, 60),
+	Color3.fromRGB(255, 225, 80),
+	Color3.fromRGB(100, 205, 110),
+	Color3.fromRGB(80, 160, 250),
+	Color3.fromRGB(165, 110, 240),
+}
+local BALCONY_WOOD = Color3.fromRGB(200, 150, 100)
+
+function BUILDERS.lifts(model: Model, path, ride)
+	local size = ride.size
+	local lying = CFrame.Angles(0, 0, math.pi / 2)
+	for _, lift in ride.lifts do
+		local name = `{ride.index}_{lift.index}`
+		local center = at(path, ride, lift.x, lift.mid - 0.6, lift.z)
+		local motion = { Period = ride.period, Phase = lift.phase, Travel = ride.travel }
+		local function moving(p: BasePart, offset: CFrame)
+			local attributes = table.clone(motion)
+			attributes.Offset = offset
+			mover(p, "lift", attributes)
+			p:SetAttribute("Base", center)
+		end
+
+		local deck = part(model, `LiftDeck_{name}`, Vector3.new(1.2, size, size), center * lying, LIFT_DECK)
+		deck.Shape = Enum.PartType.Cylinder
+		deck.Material = Enum.Material.WoodPlanks
+		moving(deck, lying)
+		deck:SetAttribute("Carry", true)
+		deck:SetAttribute("Sound", "creak")
+
+		local rimColor = LIFT_RIMS[(lift.index - 1) % #LIFT_RIMS + 1]
+		local rimOffset = CFrame.new(0, -0.15, 0) * lying
+		local rim = ghost(
+			part(
+				model,
+				`LiftRim_{name}`,
+				Vector3.new(1, size + 0.8, size + 0.8),
+				center * rimOffset,
+				rimColor
+			)
+		)
+		rim.Shape = Enum.PartType.Cylinder
+		moving(rim, rimOffset)
+		-- Снизу луковка-корзинка: платформа читается гондолой, а не блином.
+		local bulbOffset = CFrame.new(0, -1.4, 0)
+		local bulb = ghost(
+			part(
+				model,
+				`LiftBulb_{name}`,
+				Vector3.new(size * 0.45, size * 0.45, size * 0.45),
+				center * bulbOffset,
+				rimColor
+			)
+		)
+		bulb.Shape = Enum.PartType.Ball
+		moving(bulb, bulbOffset)
+
+		-- Гроздь шариков над платформой и нити от края к ним.
+		local top = Attractions.LIFT_BALLOON
+		for balloon = 1, 3 do
+			local angle = balloon / 3 * math.pi * 2 + lift.index
+			local spot = Vector3.new(math.cos(angle) * 1.6, top + (balloon % 2) * 0.9, math.sin(angle) * 1.6)
+			local ballOffset = CFrame.new(spot)
+			local diameter = 3.4 + (balloon % 2) * 0.4
+			local ball = ghost(
+				part(
+					model,
+					`LiftBalloon_{name}_{balloon}`,
+					Vector3.new(diameter * 0.92, diameter, diameter * 0.92),
+					center * ballOffset,
+					BALLOONS[(lift.index + balloon) % #BALLOONS + 1]
+				)
+			)
+			ball.Shape = Enum.PartType.Ball
+			ball.Material = Enum.Material.Glass
+			ball.Transparency = 0.08
+			ball.Reflectance = 0.15
+			moving(ball, ballOffset)
+
+			local foot = Vector3.new(math.cos(angle) * size * 0.45, 0.6, math.sin(angle) * size * 0.45)
+			local knot = spot - Vector3.new(0, diameter / 2, 0)
+			local ropeOffset = CFrame.lookAt((foot + knot) / 2, knot) * CFrame.Angles(math.pi / 2, 0, 0)
+			local rope = ghost(
+				part(
+					model,
+					`LiftRope_{name}_{balloon}`,
+					Vector3.new(0.12, (knot - foot).Magnitude, 0.12),
+					center * ropeOffset,
+					Color3.fromRGB(250, 250, 250)
+				)
+			)
+			moving(rope, ropeOffset)
+		end
+	end
+
+	-- Балкон на сваях во всю трассу: сюда допрыгивают с последней платформы.
+	local balcony = ride.balcony
+	local depth = balcony.to - balcony.from
+	local floorZ = balcony.from + depth / 2
+	local board = part(
+		model,
+		`LiftBalcony_{ride.index}`,
+		Vector3.new(Tunnel.WIDTH, 1.2, depth),
+		at(path, ride, 0, balcony.y - 0.6, floorZ),
+		BALCONY_WOOD
+	)
+	board.Material = Enum.Material.WoodPlanks
+	for _, side in { -1, 1 } do
+		-- Перила по бокам: с балкона падают только вперёд, на горку.
+		part(
+			model,
+			`LiftRail_{ride.index}_{side}`,
+			Vector3.new(0.6, 3, depth),
+			at(path, ride, side * (Tunnel.WIDTH / 2 - 0.3), balcony.y + 1.5, floorZ),
+			Color3.fromRGB(255, 255, 255)
+		)
+		for pile = 0, 1 do
+			local stilt = ghost(
+				part(
+					model,
+					`LiftStilt_{ride.index}_{side}_{pile}`,
+					Vector3.new(1.4, balcony.y + 24, 1.4),
+					at(
+						path,
+						ride,
+						side * (Tunnel.WIDTH / 2 - 1.5),
+						balcony.y - 1.2 - (balcony.y + 24) / 2,
+						balcony.from + 1 + pile * (depth - 2)
+					),
+					Color3.fromRGB(150, 105, 70)
+				)
+			)
+			stilt.Material = Enum.Material.Wood
+		end
+		-- Кадки с цветами по углам: балкон нарядный, до него хочется добраться.
+		local pot = ghost(
+			part(
+				model,
+				`LiftPot_{ride.index}_{side}`,
+				Vector3.new(2, 1.6, 2),
+				at(path, ride, side * (Tunnel.WIDTH / 2 - 2), balcony.y + 0.8, balcony.from + 1.4),
+				Color3.fromRGB(215, 110, 80)
+			)
+		)
+		pot.Material = Enum.Material.Brick
+		for flower = 1, 3 do
+			local bloom = ghost(
+				part(
+					model,
+					`LiftFlower_{ride.index}_{side}_{flower}`,
+					Vector3.new(0.9, 0.9, 0.9),
+					at(
+						path,
+						ride,
+						side * (Tunnel.WIDTH / 2 - 2) + (flower - 2) * 0.55,
+						balcony.y + 2 + (flower % 2) * 0.35,
+						balcony.from + 1.4
+					),
+					BALLOONS[(flower * 2 + side) % #BALLOONS + 1]
+				)
+			)
+			bloom.Shape = Enum.PartType.Ball
+		end
+	end
+
+	--[[
+		Горка: наклонный жёлоб от края балкона до пола выхода. Сверху шесть
+		полос радуги вдоль спуска, по бокам бортики, чтобы не слететь вбок.
+	]]
+	local width = 14
+	local height = balcony.y
+	local run = ride.slide
+	local length = math.sqrt(run * run + height * height)
+	local tilt = math.atan2(height, run)
+	local slope = at(path, ride, 0, height / 2, balcony.to + run / 2) * CFrame.Angles(-tilt, 0, 0) -- вниз по ходу бега
+	local chute = part(
+		model,
+		`LiftSlide_{ride.index}`,
+		Vector3.new(width, 1, length + 0.6),
+		slope * CFrame.new(0, -0.5, 0),
+		Color3.fromRGB(250, 250, 250)
+	)
+	chute.Material = Enum.Material.SmoothPlastic
+	local stripe = width / #RAINBOW
+	for index, color in RAINBOW do
+		local band = ghost(
+			part(
+				model,
+				`LiftSlideStripe_{ride.index}_{index}`,
+				Vector3.new(stripe, 0.1, length),
+				slope * CFrame.new(-width / 2 + stripe * (index - 0.5), 0.03, 0),
+				color
+			)
+		)
+		band.Material = Enum.Material.Neon
+		band.Transparency = 0.15
+	end
+	for _, side in { -1, 1 } do
+		part(
+			model,
+			`LiftSlideWall_{ride.index}_{side}`,
+			Vector3.new(0.8, 2.4, length),
+			slope * CFrame.new(side * (width / 2 + 0.4), 0.7, 0),
+			Color3.fromRGB(255, 255, 255)
+		)
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 14, 0), "🎈")
+end
+
 function RunAttractions.buildAttraction(model: Model, path, ride)
 	local builder = BUILDERS[ride.id]
 	if not builder then

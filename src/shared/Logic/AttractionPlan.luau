@@ -425,7 +425,59 @@ local function wind(heat: number, random: Random)
 	}
 end
 
+--[[
+	Подъёмники: платформы на шариках петляют по дорожкам и ездят вверх-вниз,
+	середина хода каждой следующей на rise выше прошлой. Соседняя отстаёт на
+	LIFT_SHIFT хода: пока ты едешь вверх, она ещё внизу, — и дважды за ход
+	есть окно, когда до неё допрыгнешь (это держит тест). После последней —
+	балкон ещё на rise выше, с балкона горка вниз, к полу выхода.
+]]
+local function lifts(heat: number, random: Random)
+	local count = Attractions.param("lifts", "count", heat)
+	local size = Attractions.param("lifts", "size", heat)
+	local gap = Attractions.param("lifts", "gap", heat)
+	local rise = Attractions.param("lifts", "rise", heat)
+	local period = Attractions.param("lifts", "period", heat)
+	local shift = random:NextNumber(0, period)
+	local list = {}
+	local z = gap + size / 2
+	local x = laneNear(random, nil)
+	for index = 1, count do
+		if index > 1 then
+			local previous = list[index - 1]
+			x = laneNear(random, previous.x)
+			-- Край до края — ровно gap, и по диагонали, когда тропа сворачивает.
+			local reach = size + gap
+			local dx = x - previous.x
+			z = previous.z + math.sqrt(reach * reach - dx * dx)
+		end
+		table.insert(list, {
+			index = index,
+			x = x,
+			z = z,
+			mid = index * rise,
+			phase = (shift - (index - 1) * period * Attractions.LIFT_SHIFT) % period,
+		})
+	end
+	local last = list[#list]
+	local balconyFrom = last.z + size / 2 + gap
+	local balconyY = (count + 1) * rise
+	local slide = balconyY / Attractions.LIFT_SLOPE
+	return {
+		lifts = list,
+		size = size,
+		gap = gap,
+		rise = rise,
+		travel = Attractions.param("lifts", "travel", heat),
+		period = period,
+		balcony = { from = balconyFrom, to = balconyFrom + Attractions.LIFT_BALCONY, y = balconyY },
+		slide = slide,
+		length = balconyFrom + Attractions.LIFT_BALCONY + slide,
+	}
+end
+
 local MAKERS = {
+	lifts = lifts,
 	wind = wind,
 	bounce = bounce,
 	cookies = cookies,

@@ -467,6 +467,66 @@ return function()
 			end
 		)
 
+		it(
+			"подъёмники: до каждой следующей платформы есть когда допрыгнуть",
+			function()
+				for _, plan in plans("lifts") do
+					local function height(stop, t)
+						if stop.mid then
+							return Attractions.liftHeight(stop.mid, plan.travel, plan.period, stop.phase, t)
+						end
+						return stop.y
+					end
+					-- Остановки по порядку: пол у флажка, платформы, балкон.
+					local stops = { { x = 0, z = -1e9, y = 0 } }
+					for _, lift in plan.lifts do
+						table.insert(stops, lift)
+					end
+					table.insert(stops, { x = 0, z = math.huge, y = plan.balcony.y, balcony = true })
+					for index = 2, #stops do
+						local from, to = stops[index - 1], stops[index]
+						local gap
+						if from.z == -1e9 then
+							gap = to.z - plan.size / 2
+						elseif to.balcony then
+							gap = plan.balcony.from - (from.z + plan.size / 2)
+						else
+							gap = Vector2.new(to.x - from.x, to.z - from.z).Magnitude - plan.size
+						end
+						expect(gap > 1).to.equal(true)
+						expect(gap <= Attractions.MAX_GAP + 0.01).to.equal(true)
+						-- Окно, когда цель не выше MAX_RISE над тобой, — не меньше 0,6 с подряд.
+						local best, run = 0, 0
+						for t = 0, plan.period * 2, 0.02 do
+							if height(to, t) - height(from, t) <= Attractions.MAX_RISE then
+								run += 0.02
+								best = math.max(best, run)
+							else
+								run = 0
+							end
+						end
+						expect(best >= 0.6).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it(
+			"подъёмники: платформы в трассе, горка не круче, балкон выше всех",
+			function()
+				for _, plan in plans("lifts") do
+					for _, lift in plan.lifts do
+						expect(math.abs(lift.x) + plan.size / 2 <= Tunnel.WIDTH / 2).to.equal(true)
+					end
+					-- Балкон — самое высокое место: подниматься приходится по платформам.
+					local first = plan.lifts[1]
+					expect(plan.balcony.y > first.mid + plan.travel).to.equal(true)
+					expect(plan.balcony.y / plan.slide <= 0.6).to.equal(true)
+					expect(plan.length).to.equal(plan.balcony.to + plan.slide)
+				end
+			end
+		)
+
 		it("по тому же генератору — тот же план", function()
 			for _, id in Attractions.ids() do
 				local a = AttractionPlan.make(id, 4, Random.new(99))

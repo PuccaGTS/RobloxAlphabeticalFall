@@ -160,6 +160,11 @@ local function positionFor(part: BasePart, now: number): CFrame?
 		local travel = part:GetAttribute("Travel") or 0
 		local x = travel * math.sin(2 * math.pi * (now + phase) / period)
 		return base * CFrame.new(x, 0, 0) * offset
+	elseif kind == "lift" then
+		-- Подъёмник на шариках: вверх-вниз от середины своего хода.
+		local travel = part:GetAttribute("Travel") or 0
+		local y = travel * math.sin(2 * math.pi * (now + phase) / period)
+		return base * CFrame.new(0, y, 0) * offset
 	elseif kind == "scroll" then
 		-- Полоска ленты транспортёра: едет вдоль оси и с конца возвращается к началу.
 		local travel = part:GetAttribute("Travel") or 1
