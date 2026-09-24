@@ -13,6 +13,7 @@ local Base = require(script.Parent.Base)
 local Levels = require(script.Parent.Levels)
 local Tutorial = require(script.Parent.Parent.Logic.Tutorial)
 local DailyLetter = require(script.Parent.Parent.Logic.DailyLetter)
+local Mail = require(script.Parent.Parent.Logic.Mail)
 
 local ProfileTemplate = {}
 
@@ -53,8 +54,11 @@ local ProfileTemplate = {}
 	Версия 10: буква дня и её серия — поле `daily` (Logic/DailyLetter).
 
 	Версия 11: мир математики стал путём из уровней — `levels.math` (Config/MathLevels).
+
+	Версия 12: почта от буквят — поле `mail` с открытыми открытками (Logic/Mail).
+	Кто уже осваивал буквы, найдёт в ящике открытки от всех своих буквят сразу.
 ]]
-ProfileTemplate.VERSION = 11
+ProfileTemplate.VERSION = 12
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
@@ -92,6 +96,7 @@ function ProfileTemplate.new(now: number): Types.Profile
 		lastLoginDay = 0,
 		playLog = {},
 		daily = DailyLetter.new(),
+		mail = Mail.new(),
 		settings = ProfileTemplate.defaultSettings(),
 		parent = { pinHash = nil, dailyLimitMin = nil, restReminder = true },
 		stats = { totalPlayMin = 0, sessionsCount = 0, firstJoin = now },

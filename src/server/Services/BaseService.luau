@@ -38,6 +38,7 @@ local RateLimiter = require(script.Parent.RateLimiter)
 local DecorService = require(script.Parent.DecorService)
 local Teleport = require(script.Parent.Parent.World.Teleport)
 local Letter3D = require(script.Parent.Parent.World.Letter3D)
+local Mailbox = require(script.Parent.Parent.World.Mailbox)
 
 local BaseService = {}
 
@@ -3961,6 +3962,8 @@ local function renderPlot(plot: Plot, player: Player?, profile: any?)
 	buildRoofFlags(plot.model, plot.cframe, earned, base.house, base.roof)
 	renderSign(plot, `Дом: {player.DisplayName}`)
 	renderYardPets(plot, player, earned)
+	-- Почтовый ящик у калитки: открытки от буквят (Logic/Mail, MailService).
+	Mailbox.build(plot.model, plot.cframe, player)
 
 	for index, categoryId in Base.rowIds() do
 		buildUpgradePad(

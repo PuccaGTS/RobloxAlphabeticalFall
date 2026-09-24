@@ -305,6 +305,8 @@ export type Profile = {
 	lastLoginDay: number,
 	playLog: { PlayDay }, -- посуточная история занятий, см. Logic/PlayLog
 	daily: DailyLetter,
+	-- Почта от буквят: какие открытки уже открыты (Logic/Mail).
+	mail: { seen: { string } },
 	settings: Settings,
 	parent: ParentData,
 	stats: {

@@ -20,6 +20,7 @@ local PlayLog = require(script.Parent.PlayLog)
 local Tutorial = require(script.Parent.Tutorial)
 local PlayLimit = require(script.Parent.PlayLimit)
 local DailyLetter = require(script.Parent.DailyLetter)
+local Mail = require(script.Parent.Mail)
 local MathLevels = require(script.Parent.Parent.Config.MathLevels)
 
 export type Step = (profile: any) -> ()
@@ -182,6 +183,15 @@ local STEPS: { [number]: Step } = {
 				else 0
 		end)
 		profile.levels = levels
+	end,
+
+	--[[
+		[11] Почта от буквят (Logic/Mail): поле `mail`, открытых открыток пока нет.
+		     Кто уже освоил буквы, получит открытки от всех своих буквят разом —
+		     ящик у калитки встретит его поднятым флажком.
+	]]
+	[11] = function(profile)
+		profile.mail = Mail.sanitize(profile.mail)
 	end,
 }
 

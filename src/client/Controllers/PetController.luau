@@ -28,6 +28,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Base = require(Shared.Config.Base)
 local Letters = require(Shared.Config.Letters)
 local Shop = require(Shared.Config.Shop)
+local Pets = require(Shared.Logic.Pets)
 
 local AudioController = require(script.Parent.AudioController)
 local Glyph = require(script.Parent.Parent.UI.Glyph)
@@ -99,12 +100,7 @@ end
 	по порядку в алфавите, чтобы у соседних букв зверьки были разные:
 	котик, зайчик, мишка, птенчик, лягушонок. Буква над головой остаётся главной.
 ]]
-local SPECIES = { "cat", "bunny", "bear", "bird", "frog" }
-
-local function speciesOf(letterId: string): string
-	local letter = Letters.expect(letterId)
-	return SPECIES[(letter.order - 1) % #SPECIES + 1]
-end
+local speciesOf = Pets.speciesOf
 
 local function lighter(color: Color3, amount: number): Color3
 	return color:Lerp(Color3.new(1, 1, 1), amount)

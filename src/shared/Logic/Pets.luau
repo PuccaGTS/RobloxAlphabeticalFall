@@ -43,6 +43,19 @@ local function masteryOf(letters: any, letterId: string): number
 	return progress.mastery
 end
 
+--[[
+	Какой зверёк у буквы: по порядку в алфавите, чтобы у соседних букв зверьки
+	были разные, — котик, зайчик, мишка, птенчик, лягушонок. Его рисует
+	PetController, а открытка буквёнка (Logic/Mail) показывает его эмодзи.
+]]
+Pets.SPECIES = { "cat", "bunny", "bear", "bird", "frog" }
+Pets.SPECIES_ICONS = { cat = "🐱", bunny = "🐰", bear = "🐻", bird = "🐥", frog = "🐸" }
+
+function Pets.speciesOf(letterId: string): string
+	local letter = Letters.expect(letterId)
+	return Pets.SPECIES[(letter.order - 1) % #Pets.SPECIES + 1]
+end
+
 function Pets.isOwned(letters: any, letterId: any): boolean
 	if typeof(letterId) ~= "string" or Letters.get(letterId) == nil then
 		return false

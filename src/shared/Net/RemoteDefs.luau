@@ -57,6 +57,8 @@ local EVENTS: { string } = {
 	"ChestOpened",
 	-- C→S  забег: валун, молот или лава задели ребёнка — вернуть к флажку (World/RunAttractions)
 	"RunHazard",
+	-- S→C  почта от буквят: { fresh = новые открытки (id букв), all = весь альбом } (Services/MailService)
+	"MailOpened",
 	-- C→S  прокат в парке: слезть с самоката, велосипеда или лошадки (Services/RentalService)
 	"RentalOff",
 	-- C→S  инструменты разработчика: { kind = "stars" | "teleport", ... }. Только Studio и владелец места.

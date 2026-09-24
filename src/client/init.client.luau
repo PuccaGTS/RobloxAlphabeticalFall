@@ -35,6 +35,7 @@ local SkateController = require(Controllers.SkateController)
 local SplashController = require(Controllers.SplashController)
 local EveningController = require(Controllers.EveningController)
 local RentalController = require(Controllers.RentalController)
+local MailController = require(Controllers.MailController)
 local UI = script:WaitForChild("UI")
 local HUD = require(UI.HUD)
 local ShopUI = require(UI.ShopUI)
@@ -77,6 +78,7 @@ SkateController.init()
 SplashController.init()
 EveningController.init()
 RentalController.init()
+MailController.init()
 DevController.init() -- панель появится только в Studio и у владельца места
 
 ShopUI.build({
