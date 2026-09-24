@@ -96,6 +96,11 @@ Playground.spots = {
 		Посреди поля пугало в соломенной шляпе.
 	]]
 	{ id = "sunflowers", title = "🌻 Подсолнухи", angle = 354, distance = 232, radius = 14 },
+	--[[
+		Прокат (Config/Rental): ларёк, самокат, велосипед и лошадка-единорог.
+		Встал на круг перед вещью — едешь на ней по всему парку.
+	]]
+	{ id = "rental", title = "🛴 Прокат", angle = 76, distance = 108, radius = 13 },
 }
 
 Playground.WINTER_RADIUS = 20 -- снежный круг

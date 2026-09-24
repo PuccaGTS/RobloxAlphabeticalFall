@@ -17,7 +17,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Playground = require(Shared.Config.Playground)
 local Decor = require(Shared.Config.Decor)
+local Rental = require(Shared.Config.Rental)
 local RidesBuilder = require(script.Parent.Parent.World.Rides)
+local RentalVehicles = require(script.Parent.Parent.World.RentalVehicles)
 local Letter3D = require(script.Parent.Parent.World.Letter3D)
 
 local PlaygroundService = {}
@@ -1602,6 +1604,105 @@ local function watchBalls(model: Model, origin: CFrame)
 			end
 		end
 	end)
+end
+
+--[[
+	Прокат: ларёк с полосатым навесом, перед ним три вещи на подставках —
+	самокат, велосипед, лошадка-единорог. Перед каждой круг её цвета: встал —
+	поехал (Services/RentalService). Над вещью её эмодзи — ребёнок не читает.
+]]
+local WHITE = Color3.fromRGB(252, 252, 252)
+
+function BUILDERS.rental(model: Model, origin: CFrame)
+	local booth = origin * CFrame.new(0, 0, 8)
+	local wood = Color3.fromRGB(250, 225, 170)
+	part(model, "Booth", Vector3.new(12, 6, 4), booth * CFrame.new(0, 3, 0), wood).Material =
+		Enum.Material.WoodPlanks
+	part(
+		model,
+		"Counter",
+		Vector3.new(12.6, 0.5, 1.6),
+		booth * CFrame.new(0, 3.2, -2.6),
+		Color3.fromRGB(190, 130, 85)
+	)
+	part(
+		model,
+		"BoothRoof",
+		Vector3.new(13, 0.6, 5),
+		booth * CFrame.new(0, 8.6, 0),
+		Color3.fromRGB(245, 110, 110)
+	)
+	-- Стойки навеса и полосатый навес над прилавком: красное с белым.
+	for _, x in { -1, 1 } do
+		part(model, "AwningPost", Vector3.new(0.4, 8.3, 0.4), booth * CFrame.new(x * 6, 4.15, -3.3), WHITE)
+	end
+	for stripe = 0, 11 do
+		local awning = part(
+			model,
+			`Awning{stripe}`,
+			Vector3.new(1, 0.2, 3.6),
+			booth * CFrame.new(-5.5 + stripe, 7.7, -2.2) * CFrame.Angles(math.rad(-18), 0, 0),
+			if stripe % 2 == 0 then Color3.fromRGB(240, 80, 90) else WHITE
+		)
+		awning.CanCollide = false
+	end
+	sign(model, booth * CFrame.new(0, 3.9, -2.1), "🛴 Прокат")
+
+	for index, vehicle in Rental.list do
+		local x = (index - (#Rental.list + 1) / 2) * Rental.PAD_SPACING
+		-- Подставка и вещь на ней, лицом к площади.
+		local stand = origin * CFrame.new(x, 0, 2.5)
+		part(
+			model,
+			`RentalStand_{vehicle.id}`,
+			Vector3.new(4.4, 0.3, 5.6),
+			stand * CFrame.new(0, 0.15, 0),
+			wood
+		)
+		local shown = RentalVehicles.build(vehicle.id, stand * CFrame.new(0, 0.3, 0), vehicle.color)
+		shown.Name = `RentalShow_{vehicle.id}`
+		shown.Parent = model
+
+		-- Круг перед вещью: встал — поехал.
+		local ring = cylinder(
+			model,
+			`RentalRing_{vehicle.id}`,
+			0.2,
+			Rental.PAD_RADIUS * 2 + 0.6,
+			origin * CFrame.new(x, 0.1, -2.5),
+			WHITE
+		)
+		ring.CanCollide = false
+		local pad = cylinder(
+			model,
+			`RentalPad_{vehicle.id}`,
+			0.3,
+			Rental.PAD_RADIUS * 2,
+			origin * CFrame.new(x, 0.15, -2.5),
+			vehicle.color
+		)
+		pad.CanCollide = false
+		pad.Material = Enum.Material.Neon
+		pad:SetAttribute("Vehicle", vehicle.id)
+		CollectionService:AddTag(pad, "RentalPad")
+
+		local anchor =
+			part(model, `RentalIcon_{vehicle.id}`, Vector3.one, stand * CFrame.new(0, 6.5, 0), WHITE)
+		anchor.Transparency = 1
+		anchor.CanCollide = false
+		anchor.CanQuery = false
+		local billboard = Instance.new("BillboardGui")
+		billboard.Size = UDim2.fromScale(3.2, 3.2)
+		billboard.LightInfluence = 0
+		billboard.MaxDistance = 120
+		billboard.Parent = anchor
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Text = vehicle.icon
+		label.TextScaled = true
+		label.Parent = billboard
+	end
 end
 
 function PlaygroundService.build(parent: Instance): number

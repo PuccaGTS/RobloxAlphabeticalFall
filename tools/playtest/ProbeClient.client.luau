@@ -336,6 +336,64 @@ workspace:GetAttributeChangedSignal("ZZ_SoundCheck"):Connect(function()
 	report:FireServer("SOUNDS " .. table.concat(lines, " | "))
 end)
 
+--[[
+	Пройтись по просьбе сценария (метка ZZ_Walk = "x,z,секунды"): с сервера клиентского
+	персонажа не сдвинуть, а тут он идёт как от джойстика. Докладывает путь, скорость
+	и какие анимации играли — так проверяется прокат и всё, что меняет походку.
+]]
+workspace:GetAttributeChangedSignal("ZZ_Walk"):Connect(function()
+	local spec = workspace:GetAttribute("ZZ_Walk")
+	if typeof(spec) ~= "string" then
+		return
+	end
+	local x, z, seconds = string.match(spec, "([%-%d%.]+),([%-%d%.]+),([%d%.]+)")
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not root or not x then
+		report:FireServer("WALK: нет персонажа или метка без чисел")
+		return
+	end
+	local direction = Vector3.new(tonumber(x), 0, tonumber(z)).Unit
+	-- Стандартное управление каждый кадр зовёт Move с нулём — на время прогулки его выключаем.
+	local controls = nil
+	pcall(function()
+		controls = require(player.PlayerScripts:WaitForChild("PlayerModule")):GetControls()
+		controls:Disable()
+	end)
+	local start = root.Position
+	local deadline = os.clock() + tonumber(seconds)
+	local fastest = 0
+	while os.clock() < deadline do
+		humanoid:Move(direction, false)
+		local v = root.AssemblyLinearVelocity
+		fastest = math.max(fastest, Vector3.new(v.X, 0, v.Z).Magnitude)
+		task.wait()
+	end
+	humanoid:Move(Vector3.zero, false)
+	if controls then
+		controls:Enable()
+	end
+	local tracks = {}
+	for _, t in humanoid:FindFirstChildOfClass("Animator"):GetPlayingAnimationTracks() do
+		table.insert(
+			tracks,
+			`{t.Animation and t.Animation.AnimationId:match("%d+") or "?"}:{t.Priority.Name}`
+		)
+	end
+	report:FireServer(
+		string.format(
+			"WALK %.1f studs in %ss, top speed %.1f, walkspeed %.0f hip %.2f, tracks %s",
+			((root.Position - start) * Vector3.new(1, 0, 1)).Magnitude,
+			seconds,
+			fastest,
+			humanoid.WalkSpeed,
+			humanoid.HipHeight,
+			table.concat(tracks, " ")
+		)
+	)
+end)
+
 -- Танец по просьбе сценария (метка ZZ_Emote): открыть ряд жестов, станцевать, доложить дорожки.
 workspace:GetAttributeChangedSignal("ZZ_Emote"):Connect(function()
 	local id = workspace:GetAttribute("ZZ_Emote")
