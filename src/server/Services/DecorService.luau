@@ -21,6 +21,7 @@
 	пройти. На него можно залезть, его можно обойти — и всё.
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local InsertService = game:GetService("InsertService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -367,6 +368,10 @@ function DecorService.build(parent: Instance): number
 
 			model.Name = `{item.id}_{placed + 1}`
 			model.Parent = container
+			-- Вечером у ближайших фонарей загорается настоящий свет (EveningController).
+			if item.kind == "lamp" then
+				CollectionService:AddTag(model, "Lamp")
+			end
 
 			local size = placeOnGround(model, placement)
 			if fromAsset then

@@ -2,6 +2,8 @@
 --[[
 	Фоновая музыка по местам: площадь, забег мира букв, тропа цифр (Config/Music).
 
+	В сумерки (Config/Evening) место площади — «evening», со своей колыбельной.
+
 	Место определяется по тому, где стоит персонаж: забег ребёнка — модель
 	`Tunnel_<UserId>` с меткой `Challenge`, и если персонаж рядом с ней, играет
 	плейлист забега. Иначе — площадь. Сервер о музыке ничего не знает и знать
@@ -20,6 +22,7 @@ local AudioRegistry = require(Shared.Config.AudioRegistry)
 local Music = require(Shared.Config.Music)
 local Tunnel = require(Shared.Config.Tunnel)
 local AudioController = require(script.Parent.AudioController)
+local EveningController = require(script.Parent.EveningController)
 
 local MusicController = {}
 
@@ -108,6 +111,10 @@ local function whereAmI(): string
 		if runPlace and root.Position.X > RUN_FROM_X then
 			return runPlace
 		end
+	end
+	-- В сумерки парк засыпает: вместо дневной музыки — колыбельная.
+	if EveningController.isNight() then
+		return "evening"
 	end
 	return "hub"
 end

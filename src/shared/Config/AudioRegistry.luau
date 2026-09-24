@@ -115,9 +115,12 @@ local LIBRARY: { [string]: number } = {
 	mus_lib_exploration = 9043326195,
 	mus_lib_playful = 9042269449,
 	mus_lib_crafts = 9040171127,
+	mus_lib_lullaby = 9047785119, -- Music Box Lullaby, 138 с: сумерки в парке
+	mus_lib_twinkle = 1842317591, -- Twinkle Twinkle Little Star (a), челеста и колокольчики
 	mus_lib_shiny = 9046274992,
 	-- Pro Sound Effects: природа и парк
 	amb_birds = 9119383684, -- Sonoma Morning Birds, 128 с
+	amb_crickets = 9112765304, -- Crickets Night 1, 56 с: сверчки в сумерках вместо птиц
 	amb_fountain = 9120557577, -- Water Fountain, Huntington Park, 37 с
 	amb_stream = 9120606523, -- Water Stream into Pool, 56 с
 	amb_train_whistle = 9120223157, -- Toy Train Whistle, деревянный трёхтонный свисток

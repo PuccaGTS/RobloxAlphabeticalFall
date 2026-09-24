@@ -256,6 +256,8 @@ end
 local function windowGlass(glass: BasePart)
 	glass.Material = Enum.Material.Glass
 	glass.Reflectance = 0.15
+	-- Вечером в окнах зажигается тёплый свет (Controllers/EveningController).
+	CollectionService:AddTag(glass, "HouseWindow")
 end
 
 --[[

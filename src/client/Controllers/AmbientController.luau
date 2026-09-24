@@ -138,24 +138,35 @@ function AmbientController.init()
 	placeSpot(sounds, lakeAt, Ambient.LAKE)
 	animateFallStripes()
 
-	local bed = makeSound(Ambient.BED.key, 0, SoundService)
-	if not bed then
-		return
-	end
-	bed:Play()
-	task.spawn(function()
-		local audible: boolean? = nil
-		while true do
-			local place = MusicController.current()
-			local wanted = place == "hub"
-			if wanted ~= audible then
-				audible = wanted
-				local volume = if wanted then Ambient.BED.volume else 0
-				TweenService:Create(bed, TweenInfo.new(Ambient.FADE_SECONDS), { Volume = volume }):Play()
-			end
-			task.wait(1)
+	--[[
+		Фон площади: днём птицы, в сумерки сверчки. Место берём у музыки:
+		в сумерки она сама переключается на «evening» (EveningController).
+	]]
+	local beds = {
+		{ spec = Ambient.BED, place = "hub" },
+		{ spec = Ambient.EVENING_BED, place = "evening" },
+	}
+	for _, bed in beds do
+		local sound = makeSound(bed.spec.key, 0, SoundService)
+		if not sound then
+			continue
 		end
-	end)
+		sound:Play()
+		task.spawn(function()
+			local audible: boolean? = nil
+			while true do
+				local place = MusicController.current()
+				local wanted = place == bed.place
+				if wanted ~= audible then
+					audible = wanted
+					local volume = if wanted then bed.spec.volume else 0
+					TweenService:Create(sound, TweenInfo.new(Ambient.FADE_SECONDS), { Volume = volume })
+						:Play()
+				end
+				task.wait(1)
+			end
+		end)
+	end
 end
 
 -- Звучащая точка, которой нет в каталоге декора: водопад, паровозик. Только после init.

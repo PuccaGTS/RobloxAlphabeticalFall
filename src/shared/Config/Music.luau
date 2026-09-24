@@ -31,6 +31,8 @@ local LIBRARY: { Track } = {
 	{ key = "mus_lib_playful", title = "Playful (Underscore)", source = "APM Music" },
 	{ key = "mus_lib_crafts", title = "Tiny Crafts (b)", source = "APM Music" },
 	{ key = "mus_lib_shiny", title = "Shiny Life A", source = "APM Music" },
+	{ key = "mus_lib_lullaby", title = "Music Box Lullaby", source = "APM Music" },
+	{ key = "mus_lib_twinkle", title = "Twinkle Twinkle Little Star (a)", source = "APM Music" },
 }
 Music.LIBRARY = LIBRARY
 
@@ -44,6 +46,8 @@ Music.PLAYLISTS = {
 	hub = { "mus_theme_1", "mus_lib_woodland", "mus_lib_playground", "mus_lib_garden" },
 	letters = { "mus_theme_2", "mus_lib_exploration", "mus_lib_playful" },
 	math = { "mus_theme_3", "mus_lib_crafts", "mus_lib_shiny" },
+	-- Сумерки в парке (Config/Evening): музыкальная шкатулка и колокольчики.
+	evening = { "mus_lib_lullaby", "mus_lib_twinkle" },
 }
 
 Music.FADE_SECONDS = 2 -- смена трека и смена места

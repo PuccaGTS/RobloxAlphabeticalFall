@@ -23,6 +23,7 @@ local Venues = require(Shared.Config.Venues)
 
 local LiveWorldController = require(script.Parent.LiveWorldController)
 local FireworksController = require(script.Parent.FireworksController)
+local EveningController = require(script.Parent.EveningController)
 
 local DevController = {}
 
@@ -294,6 +295,11 @@ local function build()
 	-- Салют бывает только за пройденный уровень — проверять его так дольше всего.
 	button(panel, "🎆 Салют", 13, function()
 		FireworksController.show()
+	end)
+	-- Закат бывает раз в двенадцать минут. Днём кнопка зовёт золотой час, вечером — утро.
+	button(panel, "🌅 Закат", 14, function()
+		local at = EveningController.now()
+		EveningController.skipTo(if at >= 470 and at < 700 then 700 else 500)
 	end)
 
 	button(panel, "➜ Площадь", 20, function()

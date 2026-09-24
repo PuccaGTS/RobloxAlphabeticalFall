@@ -15,6 +15,8 @@ local Ambient = {}
 
 -- Фон площади: не громче тихого разговора, музыка остаётся главной.
 Ambient.BED = { key = "amb_birds", volume = 0.35 }
+-- В сумерки (Config/Evening) птицы засыпают и поют сверчки.
+Ambient.EVENING_BED = { key = "amb_crickets", volume = 0.3 }
 
 export type Spot = {
 	key: string,
