@@ -1705,6 +1705,417 @@ function BUILDERS.rental(model: Model, origin: CFrame)
 	end
 end
 
+--[[
+	Бобовый стебель (Config/Playground, beanstalk): толстый зелёный стебель
+	с вьющейся лозой до облаков, листья-ступени спиралью, гнездо с яйцами
+	на середине (сохранка: упал выше гнезда — вернёт к нему, PlaygroundController),
+	стручок-батут к листу, до которого не допрыгнуть, и облачный остров
+	с замком великана и золотой гусыней. Сундук на острове ставит ChestService.
+]]
+local STALK = Color3.fromRGB(95, 185, 75)
+local STALK_DARK = Color3.fromRGB(65, 145, 60)
+local LEAF = Color3.fromRGB(130, 215, 95)
+local LEAF_VEIN = Color3.fromRGB(200, 245, 160)
+local CLOUD = Color3.fromRGB(255, 255, 255)
+local CLOUD_SHADE = Color3.fromRGB(232, 238, 252)
+
+-- Цилиндр между двумя точками: у Roblox ось цилиндра — X.
+local function rodBetween(
+	parent: Instance,
+	name: string,
+	a: Vector3,
+	b: Vector3,
+	diameter: number,
+	color: Color3
+)
+	local p = part(
+		parent,
+		name,
+		Vector3.new((b - a).Magnitude, diameter, diameter),
+		CFrame.lookAt((a + b) / 2, b) * CFrame.Angles(0, math.pi / 2, 0),
+		color
+	)
+	p.Shape = Enum.PartType.Cylinder
+	return p
+end
+
+local function puff(parent: Instance, name: string, diameter: number, at: CFrame, color: Color3): BasePart
+	local p = part(parent, name, Vector3.one * diameter, at, color)
+	p.Shape = Enum.PartType.Ball
+	p.CanCollide = false
+	p.CastShadow = false
+	return p
+end
+
+-- Лист-ступень: круглая пластина, острый кончик наружу, светлая жилка и черешок к стеблю.
+local function beanLeaf(parent: Instance, origin: CFrame, leaf: Playground.BeanLeaf, color: Color3): BasePart
+	local dir = Vector3.new(math.cos(leaf.angle), 0, math.sin(leaf.angle))
+	local centerLocal = dir * leaf.radius + Vector3.new(0, leaf.y - 0.3, 0)
+	local center = origin * CFrame.new(centerLocal)
+	local disc = cylinder(parent, `BeanLeaf_{leaf.index}`, 0.6, leaf.size, center, color)
+	local outward = origin:VectorToWorldSpace(dir)
+	local tipAt = center.Position + outward * (leaf.size / 2)
+	local tip = part(
+		parent,
+		`BeanLeafTip_{leaf.index}`,
+		Vector3.new(leaf.size * 0.4, 0.55, leaf.size * 0.4),
+		CFrame.lookAt(tipAt, tipAt + outward) * CFrame.Angles(0, math.pi / 4, 0),
+		color
+	)
+	tip.CanCollide = false
+	local vein = part(
+		parent,
+		`BeanVein_{leaf.index}`,
+		Vector3.new(0.25, 0.08, leaf.size * 0.95),
+		CFrame.lookAt(
+			center.Position + Vector3.new(0, 0.32, 0),
+			center.Position + Vector3.new(0, 0.32, 0) + outward
+		),
+		LEAF_VEIN
+	)
+	vein.CanCollide = false
+	local stemFrom = (origin * CFrame.new(dir * 1.6 + Vector3.new(0, leaf.y - 1.2, 0))).Position
+	local stemTo = center.Position - outward * (leaf.size / 2 - 0.3)
+	rodBetween(parent, `BeanStem_{leaf.index}`, stemFrom, stemTo, 0.5, STALK_DARK).CanCollide = false
+	return disc
+end
+
+-- Башенка замка: круглая стена, конусная крыша из трёх ярусов и золотой шарик.
+local function castleTower(
+	parent: Instance,
+	at: CFrame,
+	height: number,
+	wall: Color3,
+	roof: Color3,
+	flag: Color3?
+)
+	cylinder(parent, "CastleTower", height, 2.8, at * CFrame.new(0, height / 2, 0), wall)
+	for tier, diameter in { 3.6, 2.5, 1.4 } do
+		cylinder(
+			parent,
+			"CastleRoof",
+			1.1,
+			diameter,
+			at * CFrame.new(0, height + 0.55 + (tier - 1) * 1, 0),
+			roof
+		)
+	end
+	puff(parent, "CastleKnob", 0.6, at * CFrame.new(0, height + 3.3, 0), GOLD)
+	if flag then
+		part(parent, "CastleFlagPole", Vector3.new(0.15, 2, 0.15), at * CFrame.new(0, height + 4.4, 0), WHITE).CanCollide =
+			false
+		part(parent, "CastleFlag", Vector3.new(1.4, 0.8, 0.08), at * CFrame.new(0.7, height + 5, 0), flag).CanCollide =
+			false
+	end
+end
+
+function BUILDERS.beanstalk(model: Model, origin: CFrame)
+	local top = Playground.BEAN_TOP
+	local island = Playground.BEAN_ISLAND
+	local thick = Playground.BEAN_ISLAND_THICK
+
+	-- Корень: холмик земли, три больших листа на траве, лейка и табличка.
+	local mound = part(
+		model,
+		"BeanMound",
+		Vector3.new(9, 2.4, 9),
+		origin * CFrame.new(0, 0.2, 0),
+		Color3.fromRGB(125, 85, 55)
+	)
+	mound.Material = Enum.Material.Ground
+	mound.CanCollide = false -- холмик для вида: запнуться о него у корня незачем
+	local moundMesh = Instance.new("SpecialMesh")
+	moundMesh.MeshType = Enum.MeshType.Sphere
+	moundMesh.Parent = mound
+	for index = 1, 3 do
+		local angle = index * 2.1
+		local at = origin * CFrame.new(math.cos(angle) * 4.5, 0.25, math.sin(angle) * 4.5)
+		local ground = cylinder(model, "BeanGroundLeaf", 0.3, 4.5, at, LEAF)
+		ground.CanCollide = false
+	end
+	local can = origin * CFrame.new(-5.5, 0, -6)
+	cylinder(model, "WateringCan", 2, 1.8, can * CFrame.new(0, 1, 0), Color3.fromRGB(90, 170, 235)).CanCollide =
+		false
+	rodBetween(
+		model,
+		"WateringSpout",
+		(can * CFrame.new(0.6, 1.2, 0)).Position,
+		(can * CFrame.new(2, 2.4, 0)).Position,
+		0.3,
+		Color3.fromRGB(90, 170, 235)
+	).CanCollide =
+		false
+	sign(model, origin * CFrame.new(5, 0, -8), "🌱 Бобовый стебель")
+
+	-- Стебель: сегменты с лёгким изгибом, сужается кверху. Сквозь него не пройти.
+	local function axis(y: number): Vector3
+		return (origin * CFrame.new(math.sin(y / 11) * 0.5, y, math.cos(y / 15) * 0.5 - 0.5)).Position
+	end
+	local step = 5
+	local y = -1
+	while y < top - thick do
+		local diameter = 4.6 - 1.6 * y / top
+		rodBetween(model, "BeanStalk", axis(y), axis(y + step + 0.2), diameter, STALK)
+		puff(model, "BeanKnot", diameter + 0.15, CFrame.new(axis(y + step)), STALK).CanCollide = true
+		y += step
+	end
+	-- Лоза вьётся вокруг стебля: тонкая, темнее, для вида.
+	local previous = nil
+	for turn = 0, (top - thick - 2) / 1.2 do
+		local height = turn * 1.2
+		local angle = turn * math.rad(20)
+		local radius = (4.6 - 1.6 * height / top) / 2 + 0.25
+		local point = axis(height)
+			+ origin:VectorToWorldSpace(Vector3.new(math.cos(angle), 0, math.sin(angle)) * radius)
+		if previous then
+			rodBetween(model, "BeanVine", previous, point, 0.45, STALK_DARK).CanCollide = false
+		end
+		previous = point
+	end
+
+	for _, leaf in Playground.beanLeaves() do
+		if leaf.kind == "float" then
+			-- Качающийся лист — своя модель: клиент двигает её целиком (AF_Float).
+			local group = Instance.new("Model")
+			group.Name = `BeanFloat_{leaf.index}`
+			group.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+			group.Parent = model
+			local disc = beanLeaf(group, origin, leaf, Color3.fromRGB(165, 225, 90))
+			local anchor = part(group, "FloatAnchor", Vector3.one * 0.4, disc.CFrame, WHITE)
+			anchor.Transparency = 1
+			anchor.CanCollide = false
+			anchor:SetAttribute("Amplitude", Playground.BEAN_FLOAT)
+			anchor:SetAttribute("Period", 3.2)
+			CollectionService:AddTag(anchor, "AF_Float")
+		elseif leaf.kind == "nest" then
+			-- Гнездо: соломенная площадка, кольцо веточек, три голубых яйца и флажок-сохранка.
+			local disc = beanLeaf(model, origin, leaf, LEAF)
+			local nest = cylinder(
+				model,
+				"BeanNest",
+				0.5,
+				leaf.size - 1.4,
+				disc.CFrame * CFrame.new(0, 0.5, 0),
+				Color3.fromRGB(215, 175, 105)
+			)
+			nest.Material = Enum.Material.Fabric
+			nest:SetAttribute("Ground", origin.Position.Y)
+			nest:SetAttribute("Axis", origin.Position)
+			CollectionService:AddTag(nest, "AF_BeanNest")
+			local rim = (leaf.size - 1.4) / 2
+			for twig = 1, 12 do
+				local a = twig / 12 * math.pi * 2
+				local b = a + 0.62
+				rodBetween(
+					model,
+					"NestTwig",
+					(nest.CFrame * CFrame.new(math.cos(a) * rim, 0.45, math.sin(a) * rim)).Position,
+					(nest.CFrame * CFrame.new(math.cos(b) * rim, 0.6, math.sin(b) * rim)).Position,
+					0.5,
+					Color3.fromRGB(150, 105, 60)
+				).CanCollide =
+					false
+			end
+			for egg = 1, 3 do
+				local a = egg * 2.1
+				puff(
+					model,
+					"NestEgg",
+					0.9,
+					nest.CFrame * CFrame.new(math.cos(a) * 0.9, 0.7, math.sin(a) * 0.9),
+					Color3.fromRGB(175, 225, 245)
+				)
+			end
+			part(
+				model,
+				"NestFlagPole",
+				Vector3.new(0.18, 3, 0.18),
+				nest.CFrame * CFrame.new(0, 1.7, (leaf.size - 1.4) / 2),
+				WHITE
+			).CanCollide =
+				false
+			local flag = part(
+				model,
+				"NestFlag",
+				Vector3.new(1.5, 0.9, 0.08),
+				nest.CFrame * CFrame.new(0.75, 2.75, (leaf.size - 1.4) / 2),
+				Color3.fromRGB(240, 90, 100)
+			)
+			flag.CanCollide = false
+		elseif leaf.kind == "pod" then
+			-- Стручок-батут: толстый боб на листе, прыгнул на него — к листу выше прыжка.
+			local disc = beanLeaf(model, origin, leaf, LEAF)
+			local pod = part(
+				model,
+				"BeanPod",
+				Vector3.new(1.6, 1, 4),
+				disc.CFrame * CFrame.new(0, 0.6, 0),
+				Color3.fromRGB(110, 200, 70)
+			)
+			pod.CanCollide = false
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = pod
+			local bounce = cylinder(
+				model,
+				"BeanPodTop",
+				0.35,
+				3.4,
+				disc.CFrame * CFrame.new(0, 0.45, 0),
+				Color3.fromRGB(255, 225, 90)
+			)
+			bounce.Material = Enum.Material.Neon
+			bounce:SetAttribute("Power", Playground.BEAN_POD_POWER)
+			CollectionService:AddTag(bounce, "AF_BeanPod")
+		else
+			beanLeaf(model, origin, leaf, LEAF)
+		end
+	end
+
+	--[[
+		Облачный остров: по нему ходят (плоский круг), края и низ — пушистые клубы.
+		Коснулся острова — долез: PlaygroundController радуется и снимает сохранку.
+	]]
+	local ground =
+		cylinder(model, "BeanIsland", thick, island * 2, origin * CFrame.new(0, top - thick / 2, 0), CLOUD)
+	CollectionService:AddTag(ground, "AF_BeanTop")
+	for index = 1, 16 do
+		local a = index / 16 * math.pi * 2
+		puff(
+			model,
+			"IslandRim",
+			6.5 + (index % 3),
+			origin * CFrame.new(math.cos(a) * (island - 1.2), top - 3.4, math.sin(a) * (island - 1.2)),
+			if index % 4 == 0 then CLOUD_SHADE else CLOUD
+		)
+	end
+	for index = 1, 7 do
+		local a = index / 7 * math.pi * 2 + 0.4
+		puff(
+			model,
+			"IslandBelly",
+			9,
+			origin * CFrame.new(math.cos(a) * island * 0.55, top - thick - 2.5, math.sin(a) * island * 0.55),
+			CLOUD_SHADE
+		)
+	end
+	puff(model, "IslandBelly", 13, origin * CFrame.new(0, top - thick - 4.5, 0), CLOUD_SHADE)
+
+	-- Замок великана за сундуком: розовая крепость, четыре башенки, дверь и окошки.
+	local keep = origin * CFrame.new(0, top, 7)
+	local pink = Color3.fromRGB(250, 185, 205)
+	local blue = Color3.fromRGB(120, 150, 240)
+	part(model, "CastleKeep", Vector3.new(8, 6, 5), keep * CFrame.new(0, 3, 0), pink)
+	for index = -2, 2 do
+		part(model, "CastleCrenel", Vector3.new(1, 1, 1), keep * CFrame.new(index * 1.7, 6.5, -2), pink)
+	end
+	part(
+		model,
+		"CastleDoor",
+		Vector3.new(2.2, 3, 0.3),
+		keep * CFrame.new(0, 1.5, -2.55),
+		Color3.fromRGB(150, 95, 60)
+	)
+	-- Полукруглый верх двери: диск осью наружу, нижняя половина прячется в двери.
+	local arch = part(
+		model,
+		"CastleArch",
+		Vector3.new(0.3, 2.2, 2.2),
+		keep * CFrame.new(0, 3, -2.55) * CFrame.Angles(0, math.pi / 2, 0),
+		Color3.fromRGB(150, 95, 60)
+	)
+	arch.Shape = Enum.PartType.Cylinder
+	arch.CanCollide = false
+	for _, x in { -2.6, 2.6 } do
+		local window = part(
+			model,
+			"CastleWindow",
+			Vector3.new(1, 1.4, 0.2),
+			keep * CFrame.new(x, 3.8, -2.55),
+			Color3.fromRGB(255, 235, 150)
+		)
+		window.Material = Enum.Material.Neon
+	end
+	castleTower(model, keep * CFrame.new(-4.4, 0, -2), 9, pink, blue, Color3.fromRGB(255, 210, 80))
+	castleTower(model, keep * CFrame.new(4.4, 0, -2), 9, pink, blue, Color3.fromRGB(130, 220, 150))
+	castleTower(model, keep * CFrame.new(-3.4, 0, 2.4), 11, pink, blue, nil)
+	castleTower(model, keep * CFrame.new(3.4, 0, 2.4), 11, pink, blue, nil)
+
+	-- Золотая гусыня на золотых яйцах — из той же сказки.
+	local goose = origin * CFrame.new(-6.5, top, 1) * CFrame.Angles(0, math.rad(-35), 0)
+	local body = part(
+		model,
+		"GooseBody",
+		Vector3.new(2, 1.6, 2.8),
+		goose * CFrame.new(0, 1.3, 0),
+		Color3.fromRGB(255, 250, 240)
+	)
+	local bodyMesh = Instance.new("SpecialMesh")
+	bodyMesh.MeshType = Enum.MeshType.Sphere
+	bodyMesh.Parent = body
+	rodBetween(
+		model,
+		"GooseNeck",
+		(goose * CFrame.new(0, 1.7, -0.9)).Position,
+		(goose * CFrame.new(0, 3.1, -1.2)).Position,
+		0.6,
+		Color3.fromRGB(255, 250, 240)
+	)
+	puff(model, "GooseHead", 1, goose * CFrame.new(0, 3.3, -1.3), Color3.fromRGB(255, 250, 240))
+	part(
+		model,
+		"GooseBeak",
+		Vector3.new(0.35, 0.25, 0.7),
+		goose * CFrame.new(0, 3.2, -1.95),
+		Color3.fromRGB(255, 160, 60)
+	).CanCollide =
+		false
+	for _, side in { -1, 1 } do
+		puff(model, "GooseEye", 0.18, goose * CFrame.new(side * 0.35, 3.45, -1.7), Color3.fromRGB(40, 40, 50))
+		local wing = part(
+			model,
+			"GooseWing",
+			Vector3.new(0.3, 1, 1.8),
+			goose * CFrame.new(side * 1, 1.5, 0.2),
+			Color3.fromRGB(245, 240, 225)
+		)
+		wing.CanCollide = false
+	end
+	for egg = 1, 3 do
+		local at = goose * CFrame.new(-1.6 + egg * 0.7, 0.45, 1.9 + (egg % 2) * 0.4)
+		local shell = part(model, "GoldenEgg", Vector3.new(0.8, 1, 0.8), at, GOLD)
+		shell.Material = Enum.Material.Neon
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = shell
+	end
+
+	-- Искры над островом: издалека видно, что там что-то есть.
+	local air = part(
+		model,
+		"IslandSparkles",
+		Vector3.new(island * 1.6, 3, island * 1.6),
+		origin * CFrame.new(0, top + 3, 0),
+		WHITE
+	)
+	air.Transparency = 1
+	air.CanCollide = false
+	air.CanQuery = false
+	local glow = Instance.new("ParticleEmitter")
+	glow.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	glow.Color = ColorSequence.new(Color3.fromRGB(255, 240, 170), Color3.fromRGB(200, 180, 255))
+	glow.LightEmission = 1
+	glow.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.5, 0.6),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	glow.Lifetime = NumberRange.new(2, 3.5)
+	glow.Rate = 6
+	glow.Speed = NumberRange.new(0.5, 1.5)
+	glow.Parent = air
+end
+
 function PlaygroundService.build(parent: Instance): number
 	local folder = Instance.new("Folder")
 	folder.Name = "Playground"

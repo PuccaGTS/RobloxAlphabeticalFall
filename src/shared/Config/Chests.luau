@@ -16,6 +16,7 @@
 ]]
 
 local Base = require(script.Parent.Base)
+local Playground = require(script.Parent.Playground)
 
 local Chests = {}
 
@@ -27,6 +28,8 @@ export type Chest = {
 	rotation: number, -- куда смотрит крышка, в градусах
 	-- Сундук спрятан внутри игрового места (Config/Playground): его зона — свой дом, а не помеха.
 	insideSpot: string?,
+	-- На какой высоте над землёй стоит: сундук на облачном острове висит над парком.
+	height: number?,
 }
 
 --[[
@@ -49,6 +52,20 @@ local CHESTS: { Chest } = {
 		distance = 211, -- у дальней от входа стены сада, замком ко входу
 		rotation = 354,
 		insideSpot = "secret",
+	},
+	--[[
+		Пятый — на облачном острове над бобовым стеблем (Config/Playground,
+		beanstalk): у замка великана, рядом с золотой гусыней. Добраться — значит
+		долезть до облаков по листьям. Внутри «Облачко» — шапка-тучка с щёчками.
+	]]
+	{
+		id = "chest_sky",
+		itemId = "hat_cloud",
+		angle = 145,
+		distance = 204, -- на острове, ближе к площади, чем замок
+		rotation = 325,
+		insideSpot = "beanstalk",
+		height = Playground.BEAN_TOP,
 	},
 }
 

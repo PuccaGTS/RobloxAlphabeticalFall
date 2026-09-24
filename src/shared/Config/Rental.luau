@@ -57,7 +57,7 @@ local LIST: { Vehicle } = {
 		speed = 22,
 		jump = 3,
 		pose = "gallop",
-		sound = "sfx_unicorn",
+		sound = "sfx_magic",
 		color = Color3.fromRGB(190, 140, 250),
 	},
 }

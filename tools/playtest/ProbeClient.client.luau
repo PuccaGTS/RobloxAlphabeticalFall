@@ -394,6 +394,23 @@ workspace:GetAttributeChangedSignal("ZZ_Walk"):Connect(function()
 	)
 end)
 
+-- Высшая точка корня глазами клиента (метка ZZ_Peak = секунды): сервер её занижает.
+workspace:GetAttributeChangedSignal("ZZ_Peak"):Connect(function()
+	local seconds = workspace:GetAttribute("ZZ_Peak")
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if typeof(seconds) ~= "number" or not root then
+		return
+	end
+	local start = root.Position.Y
+	local peak = start
+	local deadline = os.clock() + seconds
+	while os.clock() < deadline do
+		peak = math.max(peak, root.Position.Y)
+		task.wait()
+	end
+	report:FireServer(string.format("PEAK start y %.1f, peak y %.1f (+%.1f)", start, peak, peak - start))
+end)
+
 -- Танец по просьбе сценария (метка ZZ_Emote): открыть ряд жестов, станцевать, доложить дорожки.
 workspace:GetAttributeChangedSignal("ZZ_Emote"):Connect(function()
 	local id = workspace:GetAttribute("ZZ_Emote")

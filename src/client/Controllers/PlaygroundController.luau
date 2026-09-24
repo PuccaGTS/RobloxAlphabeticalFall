@@ -471,6 +471,133 @@ function stepSunflowers(dt: number)
 	end
 end
 
+--[[
+	Бобовый стебель (Config/Playground, beanstalk). Гнездо на середине — сохранка:
+	коснулся — флажок позеленел; сорвался, забравшись выше гнезда, — вернулся
+	в гнездо, как к флажку в забеге. Спрыгнул с самого гнезда — значит, слезаешь:
+	сохранка снимается. Долез до острова — ура и искры, сохранка больше не нужна,
+	вниз — просто прыжком. У каждого ребёнка своя сохранка, сеть не нужна.
+]]
+local NEST_RED = Color3.fromRGB(240, 90, 100)
+local NEST_GREEN = Color3.fromRGB(110, 215, 125)
+local beanNest: BasePart? = nil
+local beanPeak = 0
+
+local function nestFlag(nest: BasePart, color: Color3)
+	local flag = nest.Parent and nest.Parent:FindFirstChild("NestFlag")
+	if flag and flag:IsA("BasePart") then
+		flag.Color = color
+	end
+end
+
+local function dropNest()
+	if beanNest then
+		nestFlag(beanNest, NEST_RED)
+	end
+	beanNest = nil
+end
+
+HANDLERS.AF_BeanNest = function(nest: BasePart)
+	nest.Touched:Connect(function(hit)
+		if not isMine(hit) then
+			return
+		end
+		if beanNest ~= nest then
+			beanNest = nest
+			nestFlag(nest, NEST_GREEN)
+			burst(nest, NEST_GREEN, 20)
+			playSound(NOTE_SOUND, 1.5, 0.5, nest)
+		end
+		local root = rootOf()
+		beanPeak = if root then root.Position.Y else nest.Position.Y
+	end)
+end
+
+local function watchBeanFall()
+	local nest = beanNest
+	if not nest then
+		return
+	end
+	local root = rootOf()
+	local axis = nest:GetAttribute("Axis")
+	local ground = nest:GetAttribute("Ground")
+	if not root or not nest.Parent or typeof(axis) ~= "Vector3" or typeof(ground) ~= "number" then
+		dropNest()
+		return
+	end
+	local position = root.Position
+	beanPeak = math.max(beanPeak, position.Y)
+	local flat = ((position - axis) * Vector3.new(1, 0, 1)).Magnitude
+	if flat > 60 then
+		dropNest()
+		return
+	end
+	if position.Y < ground + 5 and flat < 30 then
+		if beanPeak > nest.Position.Y + 3.5 then
+			root.AssemblyLinearVelocity = Vector3.zero
+			root.CFrame = CFrame.new(nest.Position + Vector3.new(0, 3.5, 0)) * root.CFrame.Rotation
+			beanPeak = nest.Position.Y
+			burst(nest, NEST_GREEN, 16)
+		else
+			dropNest()
+		end
+	end
+end
+
+--[[
+	Стручок-батут: подбрасывает к листу, до которого не допрыгнуть. Толчок как
+	у батутов забега (RunHazardController): простую скорость персонаж гасит за
+	кадр, поэтому — свободный полёт и десятая доля секунды LinearVelocity вверх.
+]]
+HANDLERS.AF_BeanPod = function(pod: BasePart)
+	local home = pod.CFrame
+	pod.Touched:Connect(function(hit)
+		if not isMine(hit) or not ready(pod, 0.5) then
+			return
+		end
+		local root = rootOf()
+		local humanoid = root and root.Parent and root.Parent:FindFirstChildOfClass("Humanoid")
+		if not root or not humanoid then
+			return
+		end
+		local power = pod:GetAttribute("Power") or Playground.BEAN_POD_POWER
+		humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+		local attachment = Instance.new("Attachment")
+		attachment.Parent = root
+		local push = Instance.new("LinearVelocity")
+		push.Attachment0 = attachment
+		push.RelativeTo = Enum.ActuatorRelativeTo.World
+		push.VelocityConstraintMode = Enum.VelocityConstraintMode.Line
+		push.LineDirection = Vector3.yAxis
+		push.LineVelocity = power
+		push.MaxForce = 1e6
+		push.Parent = root
+		task.delay(Playground.BEAN_POD_HOLD, function()
+			push:Destroy()
+			attachment:Destroy()
+		end)
+		playSound(BOUNCE_SOUND, 0.7, 0.6, pod)
+		burst(pod, Color3.fromRGB(255, 230, 110), 12)
+		pod.CFrame = home * CFrame.new(0, -0.3, 0)
+		TweenService:Create(pod, TweenInfo.new(0.4, Enum.EasingStyle.Elastic), { CFrame = home }):Play()
+	end)
+end
+
+HANDLERS.AF_BeanTop = function(island: BasePart)
+	island.Touched:Connect(function(hit)
+		if not isMine(hit) or not ready(island, 20) then
+			return
+		end
+		dropNest()
+		burst(island, Color3.fromRGB(255, 220, 110), 40)
+		local magic = AudioRegistry.ids.sfx_magic
+		if magic and magic ~= "" then
+			playSound(magic, 1, 0.7, island)
+		end
+		EmoteController.play("cheer")
+	end)
+end
+
 -- Воздушный шар на привязи: плавно вверх и вниз.
 HANDLERS.AF_Float = function(anchor: BasePart)
 	local amplitude = anchor:GetAttribute("Amplitude") or 0.5
@@ -487,6 +614,7 @@ function PlaygroundController.init()
 		addSunflower(instance)
 	end
 	RunService.Heartbeat:Connect(stepSunflowers)
+	RunService.Heartbeat:Connect(watchBeanFall)
 
 	for tag, handler in HANDLERS do
 		local function attach(instance: Instance)

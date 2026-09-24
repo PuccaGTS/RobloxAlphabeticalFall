@@ -158,4 +158,82 @@ return function()
 			end
 		)
 	end)
+
+	describe("Бобовый стебель", function()
+		local leaves = Playground.beanLeaves()
+
+		it(
+			"каждый лист в прыжке от прошлого, кроме того, куда только со стручка",
+			function()
+				for index = 2, #leaves do
+					local leaf = leaves[index]
+					local previous = leaves[index - 1]
+					-- Настоящий прыжок, но не дальше, чем берёт персонаж с разбега.
+					expect(leaf.gap >= 1 and leaf.gap <= 4.5).to.equal(true)
+					if leaf.kind == "high" then
+						expect(previous.kind).to.equal("pod")
+						-- Обычным прыжком не достать, стручок подбрасывает выше с запасом.
+						expect(leaf.rise > Playground.BEAN_JUMP).to.equal(true)
+						-- Но не выше, чем нужно: над стручком — небо, а не дно острова.
+						local podRise = Playground.beanPodRise()
+						expect(podRise > leaf.rise + 2).to.equal(true)
+						expect(podRise < leaf.rise + 6).to.equal(true)
+						expect(previous.radius - previous.size / 2 > Playground.BEAN_ISLAND - 0.5).to.equal(
+							true
+						)
+					else
+						local sway = if leaf.kind == "float" or previous.kind == "float"
+							then Playground.BEAN_FLOAT
+							else 0
+						expect(leaf.rise + sway <= Playground.BEAN_JUMP - 1.5).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it(
+			"под островом голова не стукается, последний лист — снаружи",
+			function()
+				local underside = Playground.BEAN_TOP - Playground.BEAN_ISLAND_THICK
+				for _, leaf in leaves do
+					if leaf.radius - leaf.size / 2 < Playground.BEAN_ISLAND + 0.5 then
+						expect(leaf.y + 6 < underside).to.equal(true)
+					end
+				end
+				local last = leaves[#leaves]
+				expect(last.radius - last.size / 2 > Playground.BEAN_ISLAND).to.equal(true)
+				expect(Playground.BEAN_TOP - last.y <= Playground.BEAN_JUMP - 1.5).to.equal(true)
+			end
+		)
+
+		it("гнездо одно и стоит на середине пути", function()
+			local nests = 0
+			for _, leaf in leaves do
+				if leaf.kind == "nest" then
+					nests += 1
+					expect(leaf.y > Playground.BEAN_TOP * 0.3 and leaf.y < Playground.BEAN_TOP * 0.6).to.equal(
+						true
+					)
+				end
+			end
+			expect(nests).to.equal(1)
+		end)
+
+		it(
+			"сундук на острове, остров не налезает на соседние места",
+			function()
+				local spot = Playground.expect("beanstalk")
+				local chest = Chests.get("chest_sky")
+				expect(chest.height).to.equal(Playground.BEAN_TOP)
+				local offset = (Chests.position(chest) - Playground.position(spot)).Magnitude
+				expect(offset + 2 < Playground.BEAN_ISLAND).to.equal(true)
+				for _, other in Playground.spots do
+					if other.id ~= spot.id then
+						local distance = (flat(other) - flat(spot)).Magnitude
+						expect(distance > Playground.BEAN_ISLAND + 4 + other.radius).to.equal(true)
+					end
+				end
+			end
+		)
+	end)
 end

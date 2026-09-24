@@ -87,7 +87,7 @@ end
 
 local function build(folder: Folder, chest: Chests.Chest)
 	local position = Chests.position(chest)
-	local ground = Decor.groundY(position.X, position.Z)
+	local ground = Decor.groundY(position.X, position.Z) + (chest.height or 0)
 	local at = CFrame.new(position.X, ground, position.Z) * CFrame.Angles(0, math.rad(chest.rotation), 0)
 
 	local model = Instance.new("Model")

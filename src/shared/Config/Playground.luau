@@ -101,6 +101,19 @@ Playground.spots = {
 		Встал на круг перед вещью — едешь на ней по всему парку.
 	]]
 	{ id = "rental", title = "🛴 Прокат", angle = 76, distance = 108, radius = 13 },
+	--[[
+		Бобовый стебель, как в сказке: до облаков по листьям спиралью, на середине
+		гнездо-сохранка, наверху облачный остров с замком великана, золотой гусыней
+		и пятым сундуком (Config/Chests, chest_sky). Остров видно с площади.
+		Место на земле — только корень стебля; остров висит над ним.
+	]]
+	{
+		id = "beanstalk",
+		title = "🌱 Бобовый стебель",
+		angle = 145,
+		distance = 210,
+		radius = 12,
+	},
 }
 
 Playground.WINTER_RADIUS = 20 -- снежный круг
@@ -199,6 +212,86 @@ Playground.MAZE = {
 	"###.###",
 }
 Playground.MAZE_CELL = 5
+
+--[[
+	Бобовый стебель. Высоты — от земли у корня. Прыжок в парке поднимает на
+	6,4 студа (JumpPower 50), поэтому обычная ступень не выше четырёх: пятилетке
+	трудно, но честно. Один лист выше прыжка — на него только со стручка-батута.
+]]
+Playground.BEAN_TOP = 60 -- верх облачного острова
+Playground.BEAN_ISLAND = 14 -- радиус острова
+Playground.BEAN_ISLAND_THICK = 3
+Playground.BEAN_JUMP = 50 * 50 / (2 * 196.2) -- на сколько поднимает обычный прыжок в парке
+Playground.BEAN_POD_POWER = 50 -- толчок стручка-батута: к листу, до которого не допрыгнуть
+Playground.BEAN_POD_HOLD = 0.1 -- столько секунд толчок держит скорость (PlaygroundController)
+Playground.BEAN_FLOAT = 1.2 -- на сколько качается плавающий лист вверх и вниз
+
+export type BeanLeaf = {
+	index: number,
+	y: number, -- верх листа над землёй
+	angle: number, -- вокруг стебля, в радианах
+	radius: number, -- от оси стебля до середины листа
+	size: number, -- поперечник
+	kind: "leaf" | "float" | "nest" | "pod" | "high",
+	rise: number, -- на сколько выше предыдущего
+	gap: number, -- от края до края с предыдущим, по горизонтали
+}
+
+--[[
+	Листья по спирали снизу вверх. Каждый следующий ставится так, чтобы от края
+	до края с предыдущим было ровно gap: угол поворота считается из радиусов.
+	Три пояса: внизу большие листья и маленькие ступени, на середине — гнездо-
+	сохранка и качающиеся листья, наверху маленькие листья, стручок-батут
+	и выход наружу, из-под острова, — чтобы не стукнуться о него головой.
+]]
+function Playground.beanLeaves(): { BeanLeaf }
+	local leaves: { BeanLeaf } = {}
+	local y, angle = 0, 0
+	local function add(kind, size: number, rise: number, gap: number, radius: number)
+		local previous = leaves[#leaves]
+		y += rise
+		if previous then
+			local reach = previous.size / 2 + size / 2 + gap
+			local cosine = (previous.radius ^ 2 + radius ^ 2 - reach ^ 2) / (2 * previous.radius * radius)
+			angle += math.acos(math.clamp(cosine, -1, 1))
+		end
+		local leaf: BeanLeaf = {
+			index = #leaves + 1,
+			y = y,
+			angle = angle,
+			radius = radius,
+			size = size,
+			kind = kind,
+			rise = rise,
+			gap = 0,
+		}
+		if previous then
+			local a = Vector2.new(math.cos(previous.angle), math.sin(previous.angle)) * previous.radius
+			local b = Vector2.new(math.cos(angle), math.sin(angle)) * radius
+			leaf.gap = (a - b).Magnitude - previous.size / 2 - size / 2
+		end
+		table.insert(leaves, leaf)
+	end
+	for _ = 1, 7 do
+		add("leaf", 6, 3, 2, 7)
+	end
+	add("nest", 7, 3.5, 2, 7.5)
+	for index = 1, 5 do
+		add(if index == 2 or index == 4 then "float" else "leaf", 5, 3.4, 3, 7.5)
+	end
+	-- Наружу из-под острова: стручок подбрасывает высоко, и над ним должно быть небо.
+	add("leaf", 5, 3.4, 3, 12)
+	add("pod", 5, 3.4, 3, 16.5)
+	-- Выше прыжка и уже снаружи острова: сюда только со стручка, отсюда — на остров.
+	add("high", 4.6, 8, 2.5, 18)
+	return leaves
+end
+
+-- На сколько стручок поднимает ноги: удержание скорости и полёт после него.
+function Playground.beanPodRise(): number
+	local power = Playground.BEAN_POD_POWER
+	return power * Playground.BEAN_POD_HOLD + power * power / (2 * 196.2)
+end
 
 local byId: { [string]: Spot } = {}
 for _, spot in Playground.spots do

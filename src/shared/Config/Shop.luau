@@ -467,6 +467,74 @@ local Items: { [string]: ShopItem } = {
 		},
 	},
 
+	-- Облачко из сундука на облачном острове: пушистая тучка над головой, с глазками и щёчками.
+	hat_cloud = {
+		id = "hat_cloud",
+		category = "hat",
+		title = "Облачко",
+		grantedBy = "chest:chest_sky",
+		tier = 2,
+		unlockStage = 1,
+		icon = "☁️",
+		visual = {
+			piece("Ball", Color3.fromRGB(255, 255, 255), Vector3.new(2.3, 2.3, 2.3), CFrame.new(0, 2.5, 0)),
+			piece(
+				"Ball",
+				Color3.fromRGB(250, 252, 255),
+				Vector3.new(1.6, 1.6, 1.6),
+				CFrame.new(-1.2, 2.2, 0.1)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(250, 252, 255),
+				Vector3.new(1.6, 1.6, 1.6),
+				CFrame.new(1.2, 2.2, 0.1)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(240, 245, 255),
+				Vector3.new(1.5, 1.5, 1.5),
+				CFrame.new(0.5, 3.3, 0.3)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(240, 245, 255),
+				Vector3.new(1.3, 1.3, 1.3),
+				CFrame.new(-0.6, 3.2, 0.3)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(45, 45, 70),
+				Vector3.new(0.25, 0.25, 0.25),
+				CFrame.new(-0.4, 2.65, -1.1)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(45, 45, 70),
+				Vector3.new(0.25, 0.25, 0.25),
+				CFrame.new(0.4, 2.65, -1.1)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 160, 185),
+				Vector3.new(0.35, 0.35, 0.35),
+				CFrame.new(-0.75, 2.35, -0.95)
+			),
+			piece(
+				"Ball",
+				Color3.fromRGB(255, 160, 185),
+				Vector3.new(0.35, 0.35, 0.35),
+				CFrame.new(0.75, 2.35, -0.95)
+			),
+			piece(
+				"Block",
+				Color3.fromRGB(45, 45, 70),
+				Vector3.new(0.4, 0.08, 0.06),
+				CFrame.new(0, 2.3, -1.12)
+			),
+		},
+	},
+
 	-- === Спина ===
 	-- Рюкзак-ёжик = коричневое тельце + иголки веером + носик
 	back_hedgehog = {
@@ -1231,6 +1299,14 @@ local EFFECTS: { [string]: ItemEffect } = {
 		size = 0.6,
 		lightEmission = 1,
 		trail = { color = RAINBOW, lifetime = 1.6, width = 2.4 },
+	},
+	-- Из облачка сыплются голубые искорки, как капельки.
+	hat_cloud = {
+		particles = "sparkle",
+		color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(140, 200, 255)),
+		rate = 8,
+		size = 0.45,
+		lightEmission = 0.8,
 	},
 	back_firefly_jar = {
 		particles = "sparkle",
