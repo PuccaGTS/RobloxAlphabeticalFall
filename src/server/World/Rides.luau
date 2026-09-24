@@ -1423,4 +1423,454 @@ function RidesBuilder.buildShip(model: Model, origin: CFrame)
 	CollectionService:AddTag(model, "AF_Ship")
 end
 
+-- ===== Домик на дереве и тарзанка =====
+
+local BARK = Color3.fromRGB(125, 85, 55)
+local LEAVES = {
+	Color3.fromRGB(90, 175, 85),
+	Color3.fromRGB(110, 195, 90),
+	Color3.fromRGB(70, 150, 75),
+}
+local ROPE = Color3.fromRGB(215, 190, 140)
+
+--[[
+	Дерево-великан: ствол с корнями и крона из шаров разной зелени на высоте
+	crownY. Если ствол ниже кроны (у большого дерева он держит площадку),
+	крону несут четыре ветки от углов площадки — домик стоит между ними.
+]]
+local function giantTree(
+	parent: Instance,
+	name: string,
+	foot: CFrame,
+	trunk: number,
+	height: number,
+	crownY: number,
+	crown: number,
+	spread: number
+)
+	local stem = column(parent, `{name}Trunk`, height, trunk, foot * CFrame.new(0, height / 2, 0), BARK)
+	stem.Material = Enum.Material.Wood
+	for root = 1, 5 do
+		local a = root / 5 * math.pi * 2 + 0.4
+		local out = foot * CFrame.new(math.cos(a) * trunk * 0.55, 0.6, math.sin(a) * trunk * 0.55)
+		local spur = part(
+			parent,
+			`{name}Root`,
+			Vector3.new(trunk * 0.45, 1.6, trunk * 0.9),
+			out * CFrame.Angles(0, -a + math.pi / 2, 0) * CFrame.Angles(math.rad(-25), 0, 0),
+			BARK
+		)
+		spur.Material = Enum.Material.Wood
+	end
+	if crownY > height + 2 then
+		for _, corner in { Vector2.new(1, 1), Vector2.new(1, -1), Vector2.new(-1, 1), Vector2.new(-1, -1) } do
+			local from = (foot * CFrame.new(corner.X * spread, height - 1, corner.Y * spread)).Position
+			local to = (foot * CFrame.new(corner.X * spread * 0.8, crownY - 1, corner.Y * spread * 0.8)).Position
+			local branch = beam(parent, `{name}Branch`, from, to, trunk * 0.3, BARK)
+			branch.Material = Enum.Material.Wood
+			branch.CanCollide = false
+		end
+	end
+	local random = Random.new(#name + height)
+	for puff = 1, 9 do
+		local a = puff / 9 * math.pi * 2
+		local r = if puff % 3 == 0 then 0 else crown * 0.55
+		local size = crown * random:NextNumber(0.75, 1.05)
+		local leaf = ball(
+			parent,
+			`{name}Leaves`,
+			size,
+			foot * CFrame.new(math.cos(a) * r, crownY + random:NextNumber(-1.5, 2.5), math.sin(a) * r),
+			LEAVES[puff % #LEAVES + 1]
+		)
+		leaf.Material = Enum.Material.Grass
+		leaf.CanCollide = false
+	end
+end
+
+-- Перила вдоль отрезка палубы: столбики и брус, твёрдые — с площадки не свалиться.
+local function railing(parent: Instance, from: Vector3, to: Vector3)
+	local length = (to - from).Magnitude
+	local posts = math.max(2, math.floor(length / 2.5) + 1)
+	for index = 0, posts - 1 do
+		local at = from:Lerp(to, index / (posts - 1))
+		part(
+			parent,
+			"RailPost",
+			Vector3.new(0.35, 2.6, 0.35),
+			CFrame.new(at + Vector3.new(0, 1.3, 0)),
+			WOOD_DARK
+		)
+	end
+	beam(parent, "Rail", from + Vector3.new(0, 2.6, 0), to + Vector3.new(0, 2.6, 0), 0.35, WOOD)
+	-- Невидимая стенка по перилам: ребёнок не протиснется между столбиками.
+	local wall =
+		beam(parent, "RailGuard", from + Vector3.new(0, 1.5, 0), to + Vector3.new(0, 1.5, 0), 3, WOOD)
+	wall.Transparency = 1
+	wall.Size = Vector3.new(0.3, 3, length)
+end
+
+--[[
+	Ролик тарзанки с верёвкой и круглым сиденьем, как во дворе. Стоит вверху
+	троса; на катании его двигает клиент (RideController) вместе с ребёнком.
+	Опорная точка группы — точка троса (атрибут Home).
+]]
+local function zipTrolley(parent: Instance, at: Vector3, heading: Vector3): Model
+	local spec = Rides.TREEHOUSE
+	local home = CFrame.lookAt(at, at + heading)
+	local trolley = Instance.new("Model")
+	trolley.Name = "ZipTrolley"
+	trolley:SetAttribute("Home", home)
+	trolley.Parent = parent
+	part(trolley, "Pulley", Vector3.new(0.9, 0.9, 1.4), home, RED)
+	cylinder(trolley, "Wheel", 0.5, 1.1, home * CFrame.new(0, 0.1, 0), Color3.fromRGB(70, 70, 80))
+	local drop = spec.hang + 1.5
+	part(trolley, "ZipRope", Vector3.new(0.18, drop, 0.18), home * CFrame.new(0, -drop / 2, 0), ROPE)
+	column(trolley, "ZipSeat", 0.4, 1.9, home * CFrame.new(0, -drop - 0.2, 0), YELLOW)
+	column(trolley, "ZipSeatRim", 0.3, 2.1, home * CFrame.new(0, -drop - 0.35, 0), RED)
+	for _, descendant in trolley:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.CanCollide = false
+		end
+	end
+	return trolley
+end
+
+function RidesBuilder.buildTreehouse(model: Model, origin: CFrame)
+	local spec = Rides.TREEHOUSE
+	local deck = spec.deck
+	model:SetAttribute("Origin", origin)
+	model.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	local function world(local_: Vector3): Vector3
+		return (origin * CFrame.new(local_)).Position
+	end
+
+	giantTree(
+		model,
+		"Big",
+		origin * CFrame.new(spec.big),
+		4.2,
+		deck - 1,
+		deck + 12,
+		10,
+		spec.bigDeck / 2 - 0.8
+	)
+	giantTree(model, "Small", origin * CFrame.new(spec.small), 3, deck + 9, deck + 10, 7, 0)
+
+	-- Площадка большого дерева и домик на ней: дверь к мостику, круглое окошко к площади.
+	local bigHalf = spec.bigDeck / 2
+	local bigFloor = part(
+		model,
+		"BigDeck",
+		Vector3.new(spec.bigDeck, 1, spec.bigDeck),
+		origin * CFrame.new(spec.big + Vector3.new(0, deck - 0.5, 0)),
+		WOOD
+	)
+	bigFloor.Material = Enum.Material.WoodPlanks
+	local house = origin * CFrame.new(spec.big + Vector3.new(0, deck, 0))
+	local wallColor = Color3.fromRGB(255, 225, 150)
+	local size, height = 7, 5.5
+	-- Задняя и боковые стены целые, в передней (к мостику, +X) — дверной проём.
+	part(
+		model,
+		"HouseWall",
+		Vector3.new(0.5, height, size),
+		house * CFrame.new(-size / 2, height / 2, 0),
+		wallColor
+	)
+	part(
+		model,
+		"HouseWall",
+		Vector3.new(size, height, 0.5),
+		house * CFrame.new(0, height / 2, -size / 2),
+		wallColor
+	)
+	part(
+		model,
+		"HouseWall",
+		Vector3.new(size, height, 0.5),
+		house * CFrame.new(0, height / 2, size / 2),
+		wallColor
+	)
+	for _, z in { -1, 1 } do
+		part(
+			model,
+			"HouseWall",
+			Vector3.new(0.5, height, 2.25),
+			house * CFrame.new(size / 2, height / 2, z * 2.375),
+			wallColor
+		)
+	end
+	part(
+		model,
+		"HouseLintel",
+		Vector3.new(0.5, 1.5, 2.5),
+		house * CFrame.new(size / 2, height - 0.75, 0),
+		wallColor
+	)
+	-- Круглое окошко на площадь в деревянной раме.
+	local window = cylinder(
+		model,
+		"HouseWindow",
+		0.6,
+		2.4,
+		house * CFrame.new(0, 3, -size / 2) * CFrame.Angles(0, math.rad(90), 0),
+		Color3.fromRGB(160, 215, 250)
+	)
+	window.Material = Enum.Material.Glass
+	window.Transparency = 0.3
+	cylinder(
+		model,
+		"HouseWindowRim",
+		0.5,
+		2.9,
+		house * CFrame.new(0, 3, -size / 2 - 0.05) * CFrame.Angles(0, math.rad(90), 0),
+		WOOD_DARK
+	)
+	-- Крыша-домиком: два ската красной черепицы.
+	for _, side in { -1, 1 } do
+		local slope = part(
+			model,
+			"HouseRoof",
+			Vector3.new(size / 2 / math.cos(math.rad(35)) + 0.8, 0.4, size + 1.2),
+			house
+				* CFrame.new(side * size / 4, height + size / 4 * math.tan(math.rad(35)), 0)
+				* CFrame.Angles(0, 0, side * math.rad(-35)),
+			RED
+		)
+		slope.Material = Enum.Material.Slate
+	end
+	part(
+		model,
+		"HouseGable",
+		Vector3.new(size - 0.4, 2.2, 0.4),
+		house * CFrame.new(0, height + 1, -size / 2),
+		wallColor
+	)
+	part(
+		model,
+		"HouseGable",
+		Vector3.new(size - 0.4, 2.2, 0.4),
+		house * CFrame.new(0, height + 1, size / 2),
+		wallColor
+	)
+	-- Внутри: скамейка и лампа-шарик (без света: бюджет кадра), на стене азбука.
+	part(model, "HouseBench", Vector3.new(1.2, 1, 4), house * CFrame.new(-size / 2 + 1, 0.5, 0), BLUE)
+	local lamp =
+		ball(model, "HouseLamp", 0.8, house * CFrame.new(0, height - 0.8, 0), Color3.fromRGB(255, 235, 170))
+	lamp.Material = Enum.Material.Neon
+	lamp.CanCollide = false
+	local poster = part(
+		model,
+		"HousePoster",
+		Vector3.new(0.1, 1.6, 3.2),
+		house * CFrame.new(-size / 2 + 0.3, 3, 0),
+		CREAM
+	)
+	letterFace(poster, Enum.NormalId.Right, "А Б В", RED)
+
+	-- Перила большой площадки: проём у лестницы (−Z) и у мостика (+X).
+	local b = spec.big
+	railing(
+		model,
+		world(b + Vector3.new(-bigHalf, deck, -bigHalf)),
+		world(b + Vector3.new(-bigHalf, deck, bigHalf))
+	)
+	railing(
+		model,
+		world(b + Vector3.new(-bigHalf, deck, bigHalf)),
+		world(b + Vector3.new(bigHalf, deck, bigHalf))
+	)
+	railing(
+		model,
+		world(b + Vector3.new(-bigHalf, deck, -bigHalf)),
+		world(b + Vector3.new(-1.5, deck, -bigHalf))
+	)
+	railing(
+		model,
+		world(b + Vector3.new(1.5, deck, -bigHalf)),
+		world(b + Vector3.new(bigHalf, deck, -bigHalf))
+	)
+	railing(model, world(b + Vector3.new(bigHalf, deck, bigHalf)), world(b + Vector3.new(bigHalf, deck, 1.8)))
+	railing(
+		model,
+		world(b + Vector3.new(bigHalf, deck, -1.8)),
+		world(b + Vector3.new(bigHalf, deck, -bigHalf))
+	)
+
+	-- Верёвочная лестница: по TrussPart ребёнок лезет сам.
+	local ladder = Instance.new("TrussPart")
+	ladder.Name = "Ladder"
+	ladder.Size = Vector3.new(2, 14, 2)
+	ladder.CFrame = origin * CFrame.new(b + Vector3.new(0, 7, -bigHalf - 1))
+	ladder.Color = ROPE
+	ladder.Anchored = true
+	ladder.Parent = model
+
+	-- Площадка малого дерева: проём к мостику (−X) и к тарзанке (−Z).
+	local smallHalf = spec.smallDeck / 2
+	local sm = spec.small
+	local smallFloor = part(
+		model,
+		"SmallDeck",
+		Vector3.new(spec.smallDeck, 1, spec.smallDeck),
+		origin * CFrame.new(sm + Vector3.new(0, deck - 0.5, 0)),
+		WOOD
+	)
+	smallFloor.Material = Enum.Material.WoodPlanks
+	railing(
+		model,
+		world(sm + Vector3.new(smallHalf, deck, -smallHalf)),
+		world(sm + Vector3.new(smallHalf, deck, smallHalf))
+	)
+	railing(
+		model,
+		world(sm + Vector3.new(-smallHalf, deck, smallHalf)),
+		world(sm + Vector3.new(smallHalf, deck, smallHalf))
+	)
+	railing(
+		model,
+		world(sm + Vector3.new(-smallHalf, deck, smallHalf)),
+		world(sm + Vector3.new(-smallHalf, deck, 1.8))
+	)
+	railing(
+		model,
+		world(sm + Vector3.new(-smallHalf, deck, -1.8)),
+		world(sm + Vector3.new(-smallHalf, deck, -smallHalf))
+	)
+	railing(
+		model,
+		world(sm + Vector3.new(-smallHalf, deck, -smallHalf)),
+		world(sm + Vector3.new(-1.6, deck, -smallHalf))
+	)
+	railing(
+		model,
+		world(sm + Vector3.new(1.6, deck, -smallHalf)),
+		world(sm + Vector3.new(smallHalf, deck, -smallHalf))
+	)
+
+	--[[
+		Подвесной мостик: доски со щелями, провисают дугой, по бокам верёвочные
+		поручни. Доски твёрдые, щели — нет: оступиться можно, но щель узкая.
+	]]
+	local from = b.X + bigHalf
+	local to = sm.X - smallHalf
+	local step = (to - from) / spec.planks
+	for index = 1, spec.planks do
+		local x = from + step * (index - 0.5)
+		local dip = Rides.bridgeDip(index)
+		local plank = part(
+			model,
+			"BridgePlank",
+			Vector3.new(step - 0.35, 0.35, 3.2),
+			origin * CFrame.new(x, deck - 0.18 - dip, b.Z),
+			if index % 2 == 0 then WOOD else WOOD_DARK
+		)
+		plank.Material = Enum.Material.WoodPlanks
+	end
+	for _, z in { -1.7, 1.7 } do
+		local previous = world(Vector3.new(from, deck + 2.4, b.Z + z))
+		for index = 1, spec.planks do
+			local x = from + step * index
+			local dip = if index == spec.planks then 0 else Rides.bridgeDip(index + 0.5)
+			local point = world(Vector3.new(x, deck + 2.4 - dip * 0.8, b.Z + z))
+			beam(model, "BridgeRope", previous, point, 0.22, ROPE).CanCollide = false
+			beam(model, "BridgeHanger", point, point - Vector3.new(0, 2.4 - dip * 0.2, 0), 0.12, ROPE).CanCollide =
+				false
+			previous = point
+		end
+		-- Невидимый бортик мостика: вбок не свалиться, только сквозь щель вниз.
+		local guard = part(
+			model,
+			"BridgeGuard",
+			Vector3.new(to - from, 3, 0.3),
+			origin * CFrame.new((from + to) / 2, deck + 1, b.Z + z * 1.05),
+			WOOD
+		)
+		guard.Transparency = 1
+	end
+
+	-- Тарзанка: рама над краем малой площадки, трос дугой к столбу у песочной ямы.
+	local top = spec.zipFrom
+	for _, x in { -2, 2 } do
+		column(
+			model,
+			"ZipFramePost",
+			top.Y - deck + 1.5,
+			0.6,
+			origin * CFrame.new(top.X + x, (top.Y + deck + 1.5) / 2, top.Z + 1.3),
+			WOOD_DARK
+		)
+	end
+	part(
+		model,
+		"ZipFrameBeam",
+		Vector3.new(4.6, 0.6, 0.6),
+		origin * CFrame.new(top.X, top.Y + 1.5, top.Z + 1.3),
+		WOOD_DARK
+	)
+	beam(
+		model,
+		"ZipCable",
+		world(top + Vector3.new(0, 1.2, 1.3)),
+		world(top),
+		0.18,
+		Color3.fromRGB(60, 60, 70)
+	).CanCollide =
+		false
+	local previous = world(Rides.zipPoint(0))
+	for index = 1, 12 do
+		local point = world(Rides.zipPoint(index / 12))
+		beam(model, "ZipCable", previous, point, 0.18, Color3.fromRGB(60, 60, 70)).CanCollide = false
+		previous = point
+	end
+	-- Столб — за концом пути: у конца ребёнок спрыгивает, и столб ему не мешает.
+	local post = Rides.zipLanding() + Rides.zipHeading() * 3
+	column(
+		model,
+		"ZipPost",
+		spec.zipTo.Y + 1.6,
+		0.9,
+		origin * CFrame.new(post.X, (spec.zipTo.Y + 1.6) / 2, post.Z),
+		WOOD_DARK
+	)
+	beam(
+		model,
+		"ZipCable",
+		world(spec.zipTo),
+		world(Vector3.new(post.X, spec.zipTo.Y + 1.2, post.Z)),
+		0.18,
+		Color3.fromRGB(60, 60, 70)
+	).CanCollide =
+		false
+	-- Шина-отбойник на тросе перед столбом.
+	local stop = Vector3.new(post.X, spec.zipTo.Y + 1, post.Z) - Rides.zipHeading() * 1.2
+	cylinder(
+		model,
+		"ZipBumper",
+		0.9,
+		2,
+		origin * CFrame.lookAt(stop, stop + Rides.zipHeading()) * CFrame.Angles(0, math.rad(90), 0),
+		Color3.fromRGB(45, 45, 50)
+	).CanCollide =
+		false
+	-- Песочная яма там, куда приземляются, отпустив сиденье.
+	local land = Rides.zipLanding()
+	local pit = column(
+		model,
+		"ZipSand",
+		0.3,
+		9,
+		origin * CFrame.new(land.X, 0.15, land.Z),
+		Color3.fromRGB(240, 215, 150)
+	)
+	pit.Material = Enum.Material.Sand
+	column(model, "ZipSandRim", 0.5, 10, origin * CFrame.new(land.X, 0.1, land.Z), WOOD_DARK)
+
+	local heading = (spec.zipTo - spec.zipFrom) * Vector3.new(1, 0, 1)
+	zipTrolley(model, world(Rides.zipPoint(0)), origin:VectorToWorldSpace(heading.Unit))
+	boardPad(model, origin * CFrame.new(sm + Vector3.new(0, deck + 0.15, -smallHalf + 1.2)), "AF_ZipBoard")
+	CollectionService:AddTag(model, "AF_Zip")
+end
+
 return RidesBuilder

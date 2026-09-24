@@ -153,6 +153,7 @@ local LIBRARY: { [string]: number } = {
 	amb_ship_shanty = 1836603892, -- APM Deep Blue Sea Shanty 1, 203 с: морская песня у корабля-качелей
 	amb_ship_creak = 9112750181, -- Boat Creaks 1, 36 с: скрип корабля в раскачке
 	sfx_seagulls = 9118858259, -- Seagull Squawks 3: чайки кричат, когда корабль отплывает
+	sfx_zipline = 9118722583, -- Rope Zuzz Moving Through Pulley System 1: ролик тарзанки по тросу
 	amb_run_lava = 9112752570, -- Bubbles Dribble Small Bloops 1, 14 с: лава булькает
 }
 for key, assetId in LIBRARY do

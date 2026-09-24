@@ -361,6 +361,72 @@ function Rides.shipFrame(angle: number): CFrame
 	return CFrame.Angles(0, 0, angle) * CFrame.new(0, -Rides.SHIP.arm, 0)
 end
 
+-- ===== Домик на дереве и тарзанка =====
+
+--[[
+	Два дерева-великана: на большом домик с круглым окошком, на малом —
+	площадка с тарзанкой. Наверх — по верёвочной лестнице, между деревьями —
+	подвесной мостик из досок со щелями (смотри под ноги). С малого дерева
+	тарзанка уносит вниз, через лужайку к песочной яме: встал на круг —
+	схватился за ролик и поехал, внизу отпустил и приземлился в песок.
+
+	Координаты — в системе места (−Z смотрит на площадь, центр на земле).
+]]
+Rides.TREEHOUSE = {
+	spot = "treehouse",
+	deck = 13, -- верх площадок на деревьях
+	big = Vector3.new(-11, 0, 7), -- большое дерево с домиком
+	small = Vector3.new(11, 0, 7), -- малое дерево с тарзанкой
+	bigDeck = 12, -- сторона площадки большого дерева: вокруг домика проход
+	smallDeck = 7,
+	planks = 11, -- досок в мостике
+	sag = 1.2, -- на сколько мостик провисает посередине
+	zipFrom = Vector3.new(11, 19.6, 2.6), -- трос у края малой площадки: ноги висящего — над досками
+	zipTo = Vector3.new(-4, 7.2, -19), -- столб у песочной ямы
+	zipSag = 1.4,
+	hang = 3.4, -- корень ребёнка под тросом
+	seconds = 4.2,
+}
+
+-- Точка троса тарзанки: u = 0 — у малого дерева, u = 1 — у столба внизу.
+function Rides.zipPoint(u: number): Vector3
+	local spec = Rides.TREEHOUSE
+	return spec.zipFrom:Lerp(spec.zipTo, u) - Vector3.new(0, spec.zipSag * math.sin(math.pi * u), 0)
+end
+
+-- Сколько проехал к моменту t: срывается медленно, разгоняется, у столба тормозит.
+function Rides.zipProgress(t: number): number
+	local s = math.clamp(t / Rides.TREEHOUSE.seconds, 0, 1)
+	local eased = s ^ 1.5
+	-- Последняя пятая часть пути — плавное торможение.
+	if eased > 0.8 then
+		local k = (eased - 0.8) / 0.2
+		eased = 0.8 + 0.2 * (1 - (1 - k) ^ 2)
+	end
+	return eased
+end
+
+-- Куда смотрит тарзанка по земле: от малого дерева к песочной яме.
+function Rides.zipHeading(): Vector3
+	local spec = Rides.TREEHOUSE
+	return ((spec.zipTo - spec.zipFrom) * Vector3.new(1, 0, 1)).Unit
+end
+
+Rides.ZIP_JUMP = 8 -- с какой скоростью вперёд спрыгиваешь с сиденья внизу
+
+-- Где приземляешься, спрыгнув внизу: чуть впереди конца троса. Песок — тут.
+function Rides.zipLanding(): Vector3
+	local spec = Rides.TREEHOUSE
+	return (spec.zipTo + Rides.zipHeading() * 2.5) * Vector3.new(1, 0, 1)
+end
+
+-- Высота доски мостика index (1..planks) над площадками: провисает дугой.
+function Rides.bridgeDip(index: number): number
+	local spec = Rides.TREEHOUSE
+	local u = (index - 0.5) / spec.planks
+	return spec.sag * math.sin(math.pi * u)
+end
+
 -- Сколько объектов шевелится в кадре (для бюджета Config/LiveWorld):
 -- поезд, колесо, карусель, воздушный шар, лебеди (плывут одним кругом)
 -- и корабль-качели. Горка стоит, едет только ребёнок.

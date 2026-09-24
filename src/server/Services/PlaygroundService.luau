@@ -529,6 +529,12 @@ function BUILDERS.ship(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(10, 0, -13), "🏴‍☠️")
 end
 
+-- Домик на дереве с подвесным мостиком и тарзанкой: строит World/Rides, катает RideController.
+function BUILDERS.treehouse(model: Model, origin: CFrame)
+	RidesBuilder.buildTreehouse(model, origin)
+	sign(model, origin * CFrame.new(-4, 0, -22), "🌳")
+end
+
 function BUILDERS.slide(model: Model, origin: CFrame)
 	RidesBuilder.buildSlide(model, origin)
 	sign(model, origin * CFrame.new(8, 0, -14), "🌀")

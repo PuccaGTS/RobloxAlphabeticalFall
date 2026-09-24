@@ -401,9 +401,59 @@ local function stepShips(now: number, camera: Vector3)
 	end
 end
 
+-- ===== Тарзанка у домика на дереве =====
+
+--[[
+	Ролик с сиденьем висит вверху троса. Поехал ребёнок — ролик едет с ним,
+	внизу ребёнок спрыгивает в песок, а ролик за две секунды ползёт обратно
+	наверх. Ролик двигается только у того, кто катается: сервер его не трогает.
+]]
+type Zip = { origin: CFrame, trolley: Group, heading: CFrame, back: number?, from: number? }
+local zips: { [Instance]: Zip } = {}
+local ZIP_RETURN = 2
+
+local attachZip: (Instance) -> ()
+function attachZip(model: Instance)
+	local origin = model:GetAttribute("Origin")
+	local trolley = model:FindFirstChild("ZipTrolley")
+	local home = trolley and trolley:GetAttribute("Home")
+	if
+		typeof(origin) ~= "CFrame"
+		or not trolley
+		or typeof(home) ~= "CFrame"
+		or not trolley:FindFirstChild("ZipSeat")
+	then
+		if model.Parent then
+			task.delay(2, attachZip, model)
+		end
+		return
+	end
+	zips[model] = { origin = origin, trolley = collect(trolley, home), heading = home.Rotation }
+end
+
+-- Где ролик на тросе: u = 0 — вверху.
+local function zipFrame(zip: Zip, u: number): CFrame
+	return CFrame.new((zip.origin * CFrame.new(Rides.zipPoint(u))).Position) * zip.heading
+end
+
+local function stepZips(now: number)
+	for model, zip in zips do
+		if not model.Parent then
+			zips[model] = nil
+		elseif zip.back then
+			local from = zip.from or 1
+			local k = math.clamp((now - zip.back) / (ZIP_RETURN * from), 0, 1)
+			move(zip.trolley, zipFrame(zip, from * (1 - k)))
+			if k >= 1 then
+				zip.back = nil
+			end
+		end
+	end
+end
+
 -- ===== Катание =====
 
-type Kind = "train" | "wheel" | "carousel" | "slide" | "balloon" | "swan" | "ship"
+type Kind = "train" | "wheel" | "carousel" | "slide" | "balloon" | "swan" | "ship" | "zip"
 type Ride = {
 	kind: Kind,
 	wheel: Wheel?,
@@ -415,6 +465,7 @@ type Ride = {
 	slide: CFrame?, -- опорная точка горки
 	balloon: Balloon?,
 	ship: Ship?,
+	zip: Zip?,
 	started: number,
 	departed: boolean,
 	exit: CFrame,
@@ -437,7 +488,16 @@ local function onPad(root: BasePart, pad: BasePart): boolean
 end
 
 local function seatFrame(current: Ride, now: number): CFrame?
-	if current.kind == "ship" then
+	if current.kind == "zip" then
+		local zip = current.zip
+		if not zip then
+			return nil
+		end
+		local frame = zipFrame(zip, Rides.zipProgress(now - current.started))
+		move(zip.trolley, frame)
+		-- Сидит на круглом сиденье под роликом, лицом по ходу.
+		return frame * CFrame.new(0, -Rides.TREEHOUSE.hang, 0)
+	elseif current.kind == "ship" then
 		local boat = current.ship
 		if not boat then
 			return nil
@@ -566,6 +626,29 @@ local function leaveSlide(base: CFrame, root: BasePart, humanoid: Humanoid)
 	end)
 end
 
+-- Внизу тарзанки отпускаешь сиденье и спрыгиваешь вперёд, в песок.
+local function leaveZip(zip: Zip, root: BasePart, humanoid: Humanoid, now: number)
+	local bottom = zipFrame(zip, 1)
+	ride = nil
+	zip.back = now
+	zip.from = 1
+	humanoid.Sit = false
+	local ahead = bottom.LookVector * Vector3.new(1, 0, 1)
+	root.CFrame = bottom * CFrame.new(0, -Rides.TREEHOUSE.hang, 0)
+	humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = root
+	local fling = Instance.new("LinearVelocity")
+	fling.Attachment0 = attachment
+	fling.MaxForce = 1e6
+	fling.VectorVelocity = ahead.Unit * Rides.ZIP_JUMP + Vector3.new(0, 8, 0)
+	fling.Parent = root
+	task.delay(0.3, function()
+		fling:Destroy()
+		attachment:Destroy()
+	end)
+end
+
 -- Круг посадки: светится зелёным, когда сесть можно, и сажает, если встал.
 local function checkPads(
 	tag: string,
@@ -621,6 +704,11 @@ local function stepRide(now: number)
 	if current then
 		-- Прыжок — сойти. Sit сбрасывает сам движок, когда ребёнок жмёт прыжок.
 		if not humanoid.Sit then
+			-- Спрыгнул с тарзанки на ходу: ролик уползает наверх оттуда, где был.
+			if current.kind == "zip" and current.zip then
+				current.zip.back = now
+				current.zip.from = math.max(0.01, Rides.zipProgress(now - current.started))
+			end
 			ride = nil
 			return
 		end
@@ -639,6 +727,11 @@ local function stepRide(now: number)
 				current.departed = true
 			elseif current.departed then
 				finish(true) -- облетели парк и сели на ту же лужайку
+				return
+			end
+		elseif current.kind == "zip" then
+			if now - current.started >= Rides.TREEHOUSE.seconds then
+				leaveZip(current.zip :: Zip, root, humanoid, now)
 				return
 			end
 		elseif current.kind == "ship" then
@@ -701,39 +794,54 @@ local function stepRide(now: number)
 			started.carousel = carousel
 			started.horse = nearestHorse(carousel, pad, now)
 		end
-	end) or checkPads("AF_SwanBoard", root, function(pad)
-		return ownerOf(pad, lakes) ~= nil
-	end, function(pad)
-		local lake = ownerOf(pad, lakes)
-		local started = start("swan", pad, now, nil)
-		if started then
-			started.lake = lake
-			started.boat = nearestSwan(lake, pad, now)
-		end
-	end) or checkPads("AF_SlideBoard", root, function(pad)
-		return pad.Parent ~= nil and typeof(pad.Parent:GetAttribute("Base")) == "CFrame"
-	end, function(pad)
-		local started = start("slide", pad, now, nil)
-		if started then
-			started.slide = (pad.Parent :: Instance):GetAttribute("Base")
-			playAt("sfx_slide_whistle", pad, 0.9, 120)
-		end
-	end) or checkPads("AF_ShipBoard", root, function(pad)
-		return ownerOf(pad, ships) ~= nil and select(2, Rides.shipAt(now))
-	end, function(pad)
-		local started = start("ship", pad, now, nil)
-		if started then
-			started.ship = ownerOf(pad, ships)
-		end
-	end) or checkPads("AF_BalloonBoard", root, function(pad)
-		local balloon = ownerOf(pad, balloons)
-		return balloon ~= nil and select(2, Rides.balloonAt(now, balloon.inward))
-	end, function(pad)
-		local started = start("balloon", pad, now, nil)
-		if started then
-			started.balloon = ownerOf(pad, balloons)
-		end
 	end)
+		or checkPads("AF_SwanBoard", root, function(pad)
+			return ownerOf(pad, lakes) ~= nil
+		end, function(pad)
+			local lake = ownerOf(pad, lakes)
+			local started = start("swan", pad, now, nil)
+			if started then
+				started.lake = lake
+				started.boat = nearestSwan(lake, pad, now)
+			end
+		end)
+		or checkPads("AF_SlideBoard", root, function(pad)
+			return pad.Parent ~= nil and typeof(pad.Parent:GetAttribute("Base")) == "CFrame"
+		end, function(pad)
+			local started = start("slide", pad, now, nil)
+			if started then
+				started.slide = (pad.Parent :: Instance):GetAttribute("Base")
+				playAt("sfx_slide_whistle", pad, 0.9, 120)
+			end
+		end)
+		or checkPads("AF_ZipBoard", root, function(pad)
+			local zip = ownerOf(pad, zips)
+			-- Ролик должен вернуться наверх: пока ползёт, круг жёлтый.
+			return zip ~= nil and zip.back == nil
+		end, function(pad)
+			local started = start("zip", pad, now, nil)
+			if started then
+				started.zip = ownerOf(pad, zips)
+				playAt("sfx_zipline", pad, 0.8, 90)
+			end
+		end)
+		or checkPads("AF_ShipBoard", root, function(pad)
+			return ownerOf(pad, ships) ~= nil and select(2, Rides.shipAt(now))
+		end, function(pad)
+			local started = start("ship", pad, now, nil)
+			if started then
+				started.ship = ownerOf(pad, ships)
+			end
+		end)
+		or checkPads("AF_BalloonBoard", root, function(pad)
+			local balloon = ownerOf(pad, balloons)
+			return balloon ~= nil and select(2, Rides.balloonAt(now, balloon.inward))
+		end, function(pad)
+			local started = start("balloon", pad, now, nil)
+			if started then
+				started.balloon = ownerOf(pad, balloons)
+			end
+		end)
 	if boarded then
 		return
 	end
@@ -775,6 +883,7 @@ function RideController.init()
 	watch("AF_Swans", attachSwans)
 	watch("AF_Balloon", attachBalloon)
 	watch("AF_Ship", attachShip)
+	watch("AF_Zip", attachZip)
 
 	RunService:BindToRenderStep("AF_Rides", Enum.RenderPriority.Camera.Value - 1, function()
 		local now = workspace:GetServerTimeNow()
@@ -786,6 +895,7 @@ function RideController.init()
 		stepSwans(now, eye)
 		stepBalloons(now)
 		stepShips(now, eye)
+		stepZips(now)
 		stepRide(now)
 	end)
 end

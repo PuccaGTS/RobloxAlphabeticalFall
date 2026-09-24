@@ -248,6 +248,85 @@ return function()
 		end)
 	end)
 
+	describe("Rides: домик на дереве и тарзанка", function()
+		local spec = Rides.TREEHOUSE
+		it(
+			"ноги висящего вверху — над досками, внизу — над песком",
+			function()
+				local top = Rides.zipPoint(0).Y - spec.hang - 3.3
+				expect(math.abs(top - spec.deck) < 1).to.equal(true)
+				local bottom = Rides.zipPoint(1).Y - spec.hang - 3.3
+				expect(bottom > 0.1 and bottom < 1.5).to.equal(true)
+				-- По дороге трос не опускает ребёнка в землю.
+				for u = 0, 1, 0.02 do
+					expect(Rides.zipPoint(u).Y - spec.hang - 3.3 > 0).to.equal(true)
+				end
+			end
+		)
+
+		it(
+			"песок там, куда спрыгиваешь, а столб дальше песка",
+			function()
+				local landing = Rides.zipLanding()
+				local tail = Vector3.new(spec.zipTo.X, 0, spec.zipTo.Z)
+				-- Спрыгнул вперёд — не дальше края ямы (радиус 4,5).
+				expect((landing - tail).Magnitude < 4.5).to.equal(true)
+				local post = landing + Rides.zipHeading() * 3
+				expect((post - tail).Magnitude > 4).to.equal(true)
+			end
+		)
+
+		it(
+			"едет плавно: с места, всё дальше и до самого столба",
+			function()
+				local previous = -1
+				for t = 0, spec.seconds, 0.05 do
+					local u = Rides.zipProgress(t)
+					expect(u >= previous).to.equal(true)
+					previous = u
+				end
+				expect(Rides.zipProgress(0)).to.equal(0)
+				expect(Rides.zipProgress(spec.seconds)).to.equal(1)
+				-- В конце тормозит: последний отрезок медленнее среднего.
+				local tail = Rides.zipProgress(spec.seconds) - Rides.zipProgress(spec.seconds - 0.2)
+				expect(tail < 0.2 / spec.seconds).to.equal(true)
+			end
+		)
+
+		it(
+			"трос далеко от большого дерева с домиком и внутри своего места",
+			function()
+				local spot = Playground.expect(spec.spot)
+				for u = 0, 1, 0.05 do
+					local p = Rides.zipPoint(u)
+					local flat = Vector2.new(p.X - spec.big.X, p.Z - spec.big.Z)
+					expect(flat.Magnitude > spec.bigDeck / 2 + 3).to.equal(true)
+					expect(Vector2.new(p.X, p.Z).Magnitude < spot.radius).to.equal(true)
+				end
+				for _, tree in { spec.big, spec.small } do
+					expect(Vector2.new(tree.X, tree.Z).Magnitude + spec.bigDeck / 2 < spot.radius + 2).to.equal(
+						true
+					)
+				end
+			end
+		)
+
+		it(
+			"мостик провисает, но не ниже, чем шагнёшь обратно",
+			function()
+				local deepest = 0
+				for index = 1, spec.planks do
+					deepest = math.max(deepest, Rides.bridgeDip(index))
+				end
+				expect(deepest > 0.5).to.equal(true)
+				expect(deepest <= spec.sag).to.equal(true)
+				-- Первая и последняя доски почти вровень с площадками.
+				expect(Rides.bridgeDip(1) < 0.5).to.equal(true)
+				expect(Rides.bridgeDip(spec.planks) < 0.5).to.equal(true)
+			end
+		)
+	end)
+
 	describe("Rides: корабль-качели", function()
 		it(
 			"стоит у посадки, потом раскачивается плавно и затихает",
