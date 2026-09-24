@@ -523,6 +523,276 @@ function BUILDERS.carousel(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(11, 0, -12), "🎠")
 end
 
+--[[
+	Грот с кристаллами: каменный холм с круглой пещерой внутри. Вход смотрит
+	на площадь, и на него льётся водопад с каменного козырька — сквозь завесу
+	проходишь насквозь (она не твёрдая). Внутри полумрак, каменный пол, сосульки
+	сталактитов, по стенам светятся друзы кристаллов: тронул — кристалл
+	вспыхивает и звенит своей нотой (PlaygroundController, метка AF_Crystal).
+	У дальней стены шестой сундук (Config/Chests, chest_grotto).
+]]
+local ROCK = Color3.fromRGB(125, 130, 150)
+local ROCK_DARK = Color3.fromRGB(95, 100, 120)
+local MOSS = Color3.fromRGB(100, 160, 85)
+local CRYSTALS = {
+	Color3.fromRGB(255, 70, 170),
+	Color3.fromRGB(150, 80, 255),
+	Color3.fromRGB(40, 160, 255),
+	Color3.fromRGB(30, 220, 190),
+	Color3.fromRGB(110, 230, 60),
+	Color3.fromRGB(255, 200, 40),
+	Color3.fromRGB(255, 120, 40),
+	Color3.fromRGB(90, 110, 255),
+}
+
+function BUILDERS.grotto(model: Model, origin: CFrame)
+	local spec = Playground.GROTTO
+	local radius = spec.radius
+	local height = spec.height
+	local door = -math.pi / 2 -- к площади
+	local function around(a: number, r: number, y: number): CFrame
+		return origin * CFrame.new(math.cos(a) * r, y, math.sin(a) * r)
+	end
+	local function fromDoor(a: number): number
+		return math.abs(math.atan2(math.sin(a - door), math.cos(a - door)))
+	end
+
+	-- Стены: каменные плиты по кругу, у входа проём шириной doorway.
+	local segments = 24
+	local halfDoor = spec.doorway / 2 / radius
+	for index = 0, segments - 1 do
+		local a = (index + 0.5) / segments * math.pi * 2
+		if fromDoor(a) < halfDoor + 0.05 then
+			continue
+		end
+		local width = 2 * math.pi * (radius + 1.5) / segments + 0.9
+		local slab = part(
+			model,
+			"GrottoWall",
+			Vector3.new(3, height + 1, width),
+			around(a, radius + 1.5, (height + 1) / 2)
+				* CFrame.Angles(0, -a, 0)
+				* CFrame.Angles(0, 0, math.rad(-6)),
+			if index % 3 == 0 then ROCK_DARK else ROCK
+		)
+		slab.Material = Enum.Material.Slate
+	end
+	-- Косяки входа: два валуна по бокам проёма.
+	for _, side in { -1, 1 } do
+		local a = door + side * (halfDoor + 0.2)
+		local boulder = part(
+			model,
+			"GrottoDoorRock",
+			Vector3.new(5, height + 2, 5),
+			around(a, radius + 1.8, (height + 2) / 2) * CFrame.Angles(0, side * 0.5, side * math.rad(4)),
+			ROCK_DARK
+		)
+		boulder.Material = Enum.Material.Slate
+	end
+
+	-- Потолок и холм сверху: камень, мох и цветы — снаружи это просто холмик.
+	local roof =
+		cylinder(model, "GrottoRoof", 2.5, (radius + 3) * 2, origin * CFrame.new(0, height + 1.25, 0), ROCK)
+	roof.Material = Enum.Material.Slate
+	local random = Random.new(320)
+	for index = 1, 8 do
+		local a = index / 8 * math.pi * 2
+		local r = if index % 4 == 0 then 0 else random:NextNumber(4, 8)
+		local size = random:NextNumber(8, 12)
+		local lump = part(
+			model,
+			"GrottoHill",
+			Vector3.new(size, size * 0.6, size),
+			origin * CFrame.new(math.cos(a) * r, height + 2 + size * 0.15, math.sin(a) * r),
+			if index % 2 == 0 then MOSS else ROCK
+		)
+		lump.Shape = Enum.PartType.Ball
+		lump.Material = if index % 2 == 0 then Enum.Material.Grass else Enum.Material.Slate
+		lump.CanCollide = false
+	end
+	for index = 1, 6 do
+		local a = random:NextNumber(0, math.pi * 2)
+		local bloom = part(
+			model,
+			"GrottoFlower",
+			Vector3.new(0.9, 0.9, 0.9),
+			origin * CFrame.new(math.cos(a) * 5, height + 5.2, math.sin(a) * 5),
+			RAINBOW[index]
+		)
+		bloom.Shape = Enum.PartType.Ball
+		bloom.CanCollide = false
+	end
+
+	-- Снаружи холм обложен валунами, по ним мох: издали — каменная горка, а не короб.
+	for index = 0, 17 do
+		local a = (index + 0.3) / 18 * math.pi * 2
+		if fromDoor(a) < halfDoor + 0.35 then
+			continue
+		end
+		local size = random:NextNumber(5.5, 8.5)
+		local rock = part(
+			model,
+			"GrottoBoulder",
+			Vector3.new(size, size * random:NextNumber(0.8, 1.3), size),
+			around(a, radius + 3.8, size * 0.35)
+				* CFrame.Angles(random:NextNumber(-0.4, 0.4), a, random:NextNumber(-0.4, 0.4)),
+			if index % 3 == 0 then ROCK_DARK else ROCK
+		)
+		rock.Material = Enum.Material.Slate
+		if index % 2 == 0 then
+			local moss = part(
+				model,
+				"GrottoMoss",
+				Vector3.new(size * 0.8, size * 0.35, size * 0.8),
+				around(a, radius + 3.8, size * 0.35 + size * 0.45),
+				MOSS
+			)
+			moss.Shape = Enum.PartType.Ball
+			moss.Material = Enum.Material.Grass
+			moss.CanCollide = false
+		end
+	end
+	for index = 0, 9 do
+		local a = (index + 0.5) / 10 * math.pi * 2
+		if fromDoor(a) < halfDoor + 0.2 then
+			continue
+		end
+		local size = random:NextNumber(6, 9)
+		local shoulder = part(
+			model,
+			"GrottoShoulder",
+			Vector3.new(size, size * 0.7, size),
+			around(a, radius + 2, height + 2.5 + size * 0.1),
+			if index % 2 == 0 then MOSS else ROCK
+		)
+		shoulder.Shape = Enum.PartType.Ball
+		shoulder.Material = if index % 2 == 0 then Enum.Material.Grass else Enum.Material.Slate
+		shoulder.CanCollide = false
+	end
+
+	-- Пол пещеры и сталактиты с потолка.
+	local floor =
+		cylinder(model, "GrottoFloor", 0.3, radius * 2 + 1, origin * CFrame.new(0, 0.15, 0), ROCK_DARK)
+	floor.Material = Enum.Material.Slate
+	for index = 1, 7 do
+		local a = index / 7 * math.pi * 2 + 0.3
+		local r = random:NextNumber(3, radius - 2)
+		local long = random:NextNumber(1.5, 3)
+		local drip = cylinder(
+			model,
+			"Stalactite",
+			long,
+			random:NextNumber(0.5, 0.9),
+			origin * CFrame.new(math.cos(a) * r, height - long / 2, math.sin(a) * r),
+			ROCK
+		)
+		drip.Material = Enum.Material.Slate
+		drip.CanCollide = false
+	end
+
+	-- Друзы кристаллов по стенам: главный кристалл звенит, два поменьше рядом.
+	for index, degrees in spec.crystals do
+		local a = math.rad(degrees)
+		local base = around(a, spec.crystalRing, 0) * CFrame.Angles(0, -a, 0)
+		local color = CRYSTALS[(index - 1) % #CRYSTALS + 1]
+		local sizes = { Vector3.new(1.4, 4.2, 1.4), Vector3.new(1, 2.8, 1), Vector3.new(0.9, 2.2, 0.9) }
+		local offsets = {
+			CFrame.new(0, 2, 0) * CFrame.Angles(0, math.rad(45), math.rad(12)),
+			CFrame.new(0.5, 1.3, 1.1) * CFrame.Angles(math.rad(-20), math.rad(20), math.rad(25)),
+			CFrame.new(0.4, 1.1, -1.1) * CFrame.Angles(math.rad(22), math.rad(-15), math.rad(18)),
+		}
+		for piece = 1, 3 do
+			local shard = part(
+				model,
+				if piece == 1 then `Crystal_{index}` else "CrystalShard",
+				sizes[piece],
+				base * offsets[piece],
+				color
+			)
+			shard.Material = Enum.Material.Neon
+			shard.Transparency = 0.05
+			shard.CanCollide = piece == 1
+			if piece == 1 then
+				shard:SetAttribute("Note", (index - 1) % #Playground.NOTE_SPEEDS + 1)
+				CollectionService:AddTag(shard, "AF_Crystal")
+			end
+		end
+	end
+
+	-- Козырёк над входом и водопад с него: завеса воды, сквозь которую проходишь.
+	local lip = part(
+		model,
+		"GrottoLip",
+		Vector3.new(spec.doorway + 3, 1.6, 4),
+		origin * CFrame.new(0, height + 0.4, -(radius + 2.2)),
+		ROCK
+	)
+	lip.Material = Enum.Material.Slate
+	local curtain = part(
+		model,
+		"WaterCurtain",
+		Vector3.new(spec.doorway + 1, height, 0.4),
+		origin * CFrame.new(0, height / 2, -(radius + 3.6)),
+		Color3.fromRGB(150, 210, 250)
+	)
+	curtain.Material = Enum.Material.Glass
+	curtain.Transparency = 0.45
+	curtain.Reflectance = 0.2
+	curtain.CanCollide = false
+	curtain.CanQuery = false
+	-- Струи: белые полосы бегут вниз по завесе, у земли — брызги.
+	local streams = Instance.new("ParticleEmitter")
+	streams.Name = "Streams"
+	streams.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	streams.EmissionDirection = Enum.NormalId.Bottom
+	streams.Orientation = Enum.ParticleOrientation.VelocityParallel
+	streams.Squash = NumberSequence.new(2.5)
+	streams.Speed = NumberRange.new(16, 22)
+	streams.Lifetime = NumberRange.new(0.45, 0.6)
+	streams.Rate = 40
+	streams.SpreadAngle = Vector2.new(2, 2)
+	streams.Size = NumberSequence.new(0.9)
+	streams.Transparency =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0.8) })
+	streams.Color = ColorSequence.new(Color3.fromRGB(240, 250, 255))
+	local source = part(
+		model,
+		"WaterSource",
+		Vector3.new(spec.doorway + 1, 0.2, 0.3),
+		origin * CFrame.new(0, height - 0.3, -(radius + 3.6)),
+		Color3.new(1, 1, 1)
+	)
+	source.Transparency = 1
+	source.CanCollide = false
+	source.CanQuery = false
+	source.CanTouch = false
+	streams.Parent = source
+	local pool = cylinder(
+		model,
+		"GrottoPool",
+		0.2,
+		9,
+		origin * CFrame.new(0, 0.2, -(radius + 4.5)),
+		Color3.fromRGB(80, 170, 230)
+	)
+	pool.Material = Enum.Material.Glass
+	pool.Transparency = 0.2
+	pool.CanCollide = false
+	local spray = Instance.new("ParticleEmitter")
+	spray.Name = "Spray"
+	spray.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	spray.Speed = NumberRange.new(3, 6)
+	spray.Lifetime = NumberRange.new(0.6, 1)
+	spray.Rate = 14
+	spray.SpreadAngle = Vector2.new(60, 60)
+	spray.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 2.5) })
+	spray.Transparency =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	spray.Parent = pool
+
+	sign(model, origin * CFrame.new(spec.doorway + 2, 0, -(radius + 6)), "💎")
+end
+
 -- Корабль-качели: строит World/Rides, качает и катает RideController.
 function BUILDERS.ship(model: Model, origin: CFrame)
 	RidesBuilder.buildShip(model, origin)

@@ -154,6 +154,8 @@ local LIBRARY: { [string]: number } = {
 	amb_ship_creak = 9112750181, -- Boat Creaks 1, 36 с: скрип корабля в раскачке
 	sfx_seagulls = 9118858259, -- Seagull Squawks 3: чайки кричат, когда корабль отплывает
 	sfx_zipline = 9118722583, -- Rope Zuzz Moving Through Pulley System 1: ролик тарзанки по тросу
+	sfx_crystal = 9116394545, -- Magic Glows Soft Clusters Of Chiming Hits 1: кристалл в гроте звенит
+	amb_cave_drip = 9126190860, -- Water Drips Into Filled Bowl Cave, 14 с: капли в гроте
 	amb_run_lava = 9112752570, -- Bubbles Dribble Small Bloops 1, 14 с: лава булькает
 }
 for key, assetId in LIBRARY do

@@ -47,6 +47,10 @@ Ambient.LAKE = { key = "amb_lake", volume = 0.5, radius = 45 }
 -- Корабль-качели (Config/Rides.SHIP): морская песня, слышно только рядом.
 Ambient.SHIP = { key = "amb_ship_shanty", volume = 0.4, radius = 60 }
 
+-- Грот с кристаллами (Config/Playground.GROTTO): шум водопада у входа, капли внутри.
+Ambient.GROTTO_FALL = { key = "amb_stream", volume = 0.6, radius = 40 }
+Ambient.GROTTO_DRIP = { key = "amb_cave_drip", volume = 0.6, radius = 16 }
+
 -- Струйки воды водопада: за сколько секунд пробегают пласт сверху вниз.
 Ambient.FALL_STRIPE_SECONDS = 1.6
 

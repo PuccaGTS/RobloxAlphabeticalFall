@@ -136,6 +136,16 @@ function AmbientController.init()
 	local lakeAt = Vector3.new(lake.X, Decor.groundY(lake.X, lake.Z) + 3, lake.Z)
 	placeSpot(sounds, lakeAt, Ambient.SWANS)
 	placeSpot(sounds, lakeAt, Ambient.LAKE)
+	-- Грот: вход смотрит на площадь, водопад шумит у входа, капли — внутри.
+	local grotto = Playground.position(Playground.expect("grotto"))
+	local grottoGround = Decor.groundY(grotto.X, grotto.Z)
+	local toPlaza = (-grotto * Vector3.new(1, 0, 1)).Unit
+	placeSpot(
+		sounds,
+		grotto + toPlaza * (Playground.GROTTO.radius + 2) + Vector3.new(0, grottoGround + 4, 0),
+		Ambient.GROTTO_FALL
+	)
+	placeSpot(sounds, grotto + Vector3.new(0, grottoGround + 5, 0), Ambient.GROTTO_DRIP)
 	local ship = Playground.position(Playground.expect(Rides.SHIP.spot))
 	placeSpot(sounds, Vector3.new(ship.X, Decor.groundY(ship.X, ship.Z) + 6, ship.Z), Ambient.SHIP)
 	animateFallStripes()

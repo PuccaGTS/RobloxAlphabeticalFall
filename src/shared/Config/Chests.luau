@@ -67,6 +67,18 @@ local CHESTS: { Chest } = {
 		insideSpot = "beanstalk",
 		height = Playground.BEAN_TOP,
 	},
+	--[[
+		Шестой — в гроте с кристаллами (Config/Playground, grotto), у дальней
+		стены: войти можно только сквозь водопад. Внутри «Кристальная корона».
+	]]
+	{
+		id = "chest_grotto",
+		itemId = "hat_crystal",
+		angle = 320,
+		distance = 226 + 6.5, -- центр грота плюс Playground.GROTTO.chest: у дальней стены
+		rotation = 130, -- крышкой ко входу
+		insideSpot = "grotto",
+	},
 }
 
 Chests.all = CHESTS

@@ -124,6 +124,31 @@ HANDLERS.AF_Trampoline = function(top: BasePart)
 	end)
 end
 
+--[[
+	Кристалл в гроте: тронул — звенит своей нотой (волшебный перезвон, Pro Sound
+	Effects), вспыхивает белым и медленно гаснет обратно в свой цвет, сыплет искры.
+]]
+HANDLERS.AF_Crystal = function(crystal: BasePart)
+	local color = crystal.Color
+	local size = crystal.Size
+	crystal.Touched:Connect(function(hit)
+		if not isMine(hit) or not ready(crystal, 0.6) then
+			return
+		end
+		local note = crystal:GetAttribute("Note") or 1
+		local id = AudioRegistry.ids.sfx_crystal
+		if id and id ~= "" then
+			playSound(id, (Playground.NOTE_SPEEDS[note] or 1) * 0.9, 0.6, crystal)
+		end
+		crystal.Color = Color3.new(1, 1, 1)
+		crystal.Size = size * 1.12
+		TweenService
+			:Create(crystal, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { Color = color, Size = size })
+			:Play()
+		burst(crystal, color, 10)
+	end)
+end
+
 HANDLERS.AF_Note = function(key: BasePart)
 	local home = key.CFrame
 	key.Touched:Connect(function(hit)

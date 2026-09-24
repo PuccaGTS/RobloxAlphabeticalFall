@@ -535,6 +535,76 @@ local Items: { [string]: ShopItem } = {
 		},
 	},
 
+	-- Кристальная корона из грота: золотой обруч и светящиеся кристаллы разных цветов.
+	hat_crystal = {
+		id = "hat_crystal",
+		category = "hat",
+		title = "Кристальная корона",
+		grantedBy = "chest:chest_grotto",
+		tier = 2,
+		unlockStage = 1,
+		icon = "💎",
+		visual = {
+			piece(
+				"Cylinder",
+				GOLD,
+				Vector3.new(0.5, 2.3, 2.3),
+				CFrame.new(0, 0.95, 0) * CFrame.Angles(0, 0, math.rad(90)),
+				Enum.Material.Metal
+			),
+			glass(
+				piece(
+					"Block",
+					Color3.fromRGB(190, 140, 255),
+					Vector3.new(0.5, 1.5, 0.5),
+					CFrame.new(0, 1.9, -1.05) * CFrame.Angles(0, math.rad(45), 0),
+					Enum.Material.Neon
+				),
+				0.15
+			),
+			glass(
+				piece(
+					"Block",
+					Color3.fromRGB(120, 220, 255),
+					Vector3.new(0.42, 1.15, 0.42),
+					CFrame.new(-0.85, 1.7, -0.6) * CFrame.Angles(0, math.rad(45), math.rad(12)),
+					Enum.Material.Neon
+				),
+				0.15
+			),
+			glass(
+				piece(
+					"Block",
+					Color3.fromRGB(255, 150, 200),
+					Vector3.new(0.42, 1.15, 0.42),
+					CFrame.new(0.85, 1.7, -0.6) * CFrame.Angles(0, math.rad(45), math.rad(-12)),
+					Enum.Material.Neon
+				),
+				0.15
+			),
+			glass(
+				piece(
+					"Block",
+					Color3.fromRGB(140, 240, 170),
+					Vector3.new(0.38, 0.95, 0.38),
+					CFrame.new(-0.8, 1.6, 0.65) * CFrame.Angles(0, math.rad(45), math.rad(10)),
+					Enum.Material.Neon
+				),
+				0.15
+			),
+			glass(
+				piece(
+					"Block",
+					Color3.fromRGB(255, 225, 120),
+					Vector3.new(0.38, 0.95, 0.38),
+					CFrame.new(0.8, 1.6, 0.65) * CFrame.Angles(0, math.rad(45), math.rad(-10)),
+					Enum.Material.Neon
+				),
+				0.15
+			),
+		},
+	},
+
 	-- === Спина ===
 	-- Рюкзак-ёжик = коричневое тельце + иголки веером + носик
 	back_hedgehog = {
@@ -1307,6 +1377,14 @@ local EFFECTS: { [string]: ItemEffect } = {
 		rate = 8,
 		size = 0.45,
 		lightEmission = 0.8,
+	},
+	-- Кристальная корона переливается искрами всех цветов грота.
+	hat_crystal = {
+		particles = "sparkle",
+		color = ColorSequence.new(Color3.fromRGB(190, 140, 255), Color3.fromRGB(120, 220, 255)),
+		rate = 10,
+		size = 0.5,
+		lightEmission = 1,
 	},
 	back_firefly_jar = {
 		particles = "sparkle",

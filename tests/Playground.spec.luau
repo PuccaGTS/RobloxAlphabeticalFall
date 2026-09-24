@@ -236,4 +236,47 @@ return function()
 			end
 		)
 	end)
+
+	describe("Playground: грот с кристаллами", function()
+		local Chests = require(Shared.Config.Chests)
+		local spec = Playground.GROTTO
+		local spot = Playground.expect("grotto")
+
+		it("сундук внутри грота, у дальней стены", function()
+			local chest
+			for _, candidate in Chests.all do
+				if candidate.id == "chest_grotto" then
+					chest = candidate
+				end
+			end
+			expect(chest).to.be.ok()
+			expect(chest.insideSpot).to.equal("grotto")
+			local centre = Playground.position(spot)
+			local position = Chests.position(chest)
+			local offset = Vector2.new(position.X - centre.X, position.Z - centre.Z).Magnitude
+			expect(offset < spec.radius - 3).to.equal(true)
+			-- Дальше от площади, чем центр грота: у задней стены, а не у входа.
+			expect(Vector2.new(position.X, position.Z).Magnitude > spot.distance).to.equal(true)
+		end)
+
+		it(
+			"кристаллы не загораживают вход и сундук, у каждого своя нота",
+			function()
+				local notes = {}
+				for index, degrees in spec.crystals do
+					local a = math.rad(degrees)
+					-- Вход на −90°: до него от кристалла больше полуширины проёма с запасом.
+					local fromDoor =
+						math.abs(math.deg(math.atan2(math.sin(a + math.pi / 2), math.cos(a + math.pi / 2))))
+					expect(fromDoor > 30).to.equal(true)
+					local at = Vector2.new(math.cos(a), math.sin(a)) * spec.crystalRing
+					expect((at - Vector2.new(0, spec.chest)).Magnitude > 3.5).to.equal(true)
+					notes[(index - 1) % #Playground.NOTE_SPEEDS + 1] = true
+				end
+				expect(#spec.crystals <= #Playground.NOTE_SPEEDS).to.equal(true)
+				expect(spec.crystalRing < spec.radius).to.equal(true)
+				expect(spot.radius >= spec.radius + 5).to.equal(true)
+			end
+		)
+	end)
 end
