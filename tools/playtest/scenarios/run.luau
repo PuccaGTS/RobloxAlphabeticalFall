@@ -259,6 +259,72 @@ return function(player, note)
 			end
 		end
 
+		-- Ветер должен сносить с открытого мостика, а за щитом — нет.
+		if id == "wind" then
+			local zone = child:FindFirstChild(`WindZone_{index}_1`)
+			local deck = child:FindFirstChild(`WindBridge_{index}_1`)
+			local cloud = child:FindFirstChild(`WindCloud_{index}_1`)
+			if zone and deck and cloud then
+				local period = zone:GetAttribute("Period")
+				local gust = zone:GetAttribute("Gust")
+				local phase = zone:GetAttribute("Phase")
+				local startAt = period - gust
+				local function cycle()
+					return (workspace:GetServerTimeNow() + phase) % period
+				end
+				-- Дождаться момента цикла (с запасом lead секунд до него).
+				local function waitFor(moment, lead)
+					local target = (moment - lead) % period
+					while math.abs(cycle() - target) > 0.05 do
+						task.wait(0.02)
+					end
+				end
+				local face = cloud:GetAttribute("Base")
+				local view = CFrame.lookAt(
+					(deck.CFrame * CFrame.new(0, 7, 14)).Position
+						+ (face.Position - deck.Position) * Vector3.new(-0.9, 0, -0.9),
+					face.Position:Lerp(deck.Position, 0.5)
+				)
+				-- Снимок уходит примерно через 4 с после вызова: целимся заранее.
+				waitFor(startAt - 0.4, 4.1)
+				_G.ZZ_Shot(player, `run_{index}_wind_puff`, view, 70)
+				waitFor(startAt + gust * 0.5, 4.1)
+				_G.ZZ_Shot(player, `run_{index}_wind_blow`, view, 70)
+
+				local function trial(label, offset)
+					waitFor(0.2, 0)
+					local r = standOn(deck)
+					r.CFrame = deck.CFrame * offset * CFrame.new(0, deck.Size.Y / 2 + 3, 0)
+					local start = zone.CFrame:PointToObjectSpace(r.Position)
+					local drift, lowest = 0, 0
+					local deadline = os.clock() + period + 0.5
+					while os.clock() < deadline do
+						task.wait(0.05)
+						local now = zone.CFrame:PointToObjectSpace(r.Position)
+						drift = math.max(drift, math.abs(now.X - start.X))
+						lowest = math.min(lowest, now.Y - start.Y)
+					end
+					note(
+						string.format(
+							"   wind %s: drift %.1f across, lowest %.1f (bridge half %.1f)",
+							label,
+							drift,
+							lowest,
+							deck.Size.X / 2
+						)
+					)
+				end
+				-- Открытое место: четверть участка до щита, посреди мостика.
+				trial("open", CFrame.new(0, 0, deck.Size.Z * 0.3))
+				-- За щитом: вплотную к нему с подветренной стороны.
+				local shelter = child:FindFirstChild(`WindShelter_{index}_1`)
+				if shelter then
+					local rel = deck.CFrame:PointToObjectSpace(shelter.Position)
+					trial("shelter", CFrame.new(rel.X - math.sign(rel.X) * 1.8, 0, rel.Z))
+				end
+			end
+		end
+
 		-- Механика: поставить в опасное место и посмотреть, вернёт ли к флажку.
 		if id == "lava" or id == "boulders" or id == "spinner" or id == "hammers" or id == "stompers" then
 			-- Сначала через флажок: он и есть точка возврата.

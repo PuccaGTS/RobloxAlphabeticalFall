@@ -375,6 +375,98 @@ return function()
 			end
 		)
 
+		it(
+			"ветродуи: ветер слабее бега, но стоять под ним нельзя",
+			function()
+				for heat = 1, 5 do
+					local speed = Attractions.param("wind", "speed", heat)
+					local gust = Attractions.param("wind", "gust", heat)
+					local bridge = Attractions.param("wind", "bridge", heat)
+					-- Против ветра идти можно: он заметно слабее бега.
+					expect(speed < Tunnel.WALK_SPEED * 0.8).to.equal(true)
+					-- А кто не упирается и не прячется, того за порыв снесёт с мостика.
+					expect(speed * gust > bridge / 2 + 2).to.equal(true)
+					expect(bridge >= 5).to.equal(true)
+					expect(Attractions.param("wind", "gap", heat) <= Attractions.MAX_GAP).to.equal(true)
+				end
+				-- За щитом прячешься целиком: корень на трёх студах, голова ещё на 2,5.
+				expect(Attractions.WIND_SHELTER_HEIGHT > 3 + 2.5).to.equal(true)
+			end
+		)
+
+		it(
+			"ветродуи: тучки дуют по очереди то слева, то справа",
+			function()
+				for _, plan in plans("wind") do
+					expect(#plan.zones >= 2).to.equal(true)
+					for index = 2, #plan.zones do
+						expect(plan.zones[index].side).to.equal(-plan.zones[index - 1].side)
+					end
+				end
+			end
+		)
+
+		it("ветродуи: щёки надуваются раньше порыва", function()
+			for heat = 1, 5 do
+				local period = Attractions.param("wind", "period", heat)
+				local gust = Attractions.param("wind", "gust", heat)
+				local startAt = period - gust
+				-- Тихо дольше, чем щёки надуваются: у тучки есть спокойное время.
+				expect(startAt > Attractions.WIND_WARN + 0.5).to.equal(true)
+				expect(Attractions.windGust(startAt - 0.05, period, gust)).to.equal(0)
+				expect(Attractions.windWarning(startAt - 0.5, period, gust)).to.equal(true)
+				expect(Attractions.windWarning(startAt + 0.5, period, gust)).to.equal(false)
+				expect(Attractions.windGust(startAt + gust / 2, period, gust)).to.equal(1)
+				expect(Attractions.windGust(0.1, period, gust)).to.equal(0)
+			end
+		end)
+
+		it(
+			"ветродуи: от щита до щита всегда есть когда пробежать",
+			function()
+				-- Ребёнок бежит не во всю прыть: семь десятых скорости бега.
+				local speed = Tunnel.WALK_SPEED * 0.7
+				for _, plan in plans("wind") do
+					local function exposed(z, t)
+						for _, zone in plan.zones do
+							if z >= zone.from and z <= zone.to then
+								if math.abs(z - zone.z) < Attractions.WIND_SHELTER / 2 then
+									return false
+								end
+								return Attractions.windGust(t + zone.phase, plan.period, plan.gust) > 0
+							end
+						end
+						return false
+					end
+					-- Где можно стоять и ждать: у флажка, за каждым щитом, на полу выхода.
+					local stops = { -1 }
+					for _, zone in plan.zones do
+						table.insert(stops, zone.z)
+					end
+					table.insert(stops, plan.length + 1)
+					for index = 2, #stops do
+						local from, to = stops[index - 1], stops[index]
+						local duration = (to - from) / speed
+						local found = false
+						for start = 0, plan.period, 0.05 do
+							local clear = true
+							for tau = 0, duration, 0.02 do
+								if exposed(from + speed * tau, start + tau) then
+									clear = false
+									break
+								end
+							end
+							if clear then
+								found = true
+								break
+							end
+						end
+						expect(found).to.equal(true)
+					end
+				end
+			end
+		)
+
 		it("по тому же генератору — тот же план", function()
 			for _, id in Attractions.ids() do
 				local a = AttractionPlan.make(id, 4, Random.new(99))

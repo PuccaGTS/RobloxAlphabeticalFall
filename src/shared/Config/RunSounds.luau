@@ -29,6 +29,8 @@ RunSounds.EVENTS = {
 	whoosh = { key = "sfx_run_whoosh", volume = 0.6, speed = { 0.8, 1 }, seconds = 2 },
 	roll = { key = "sfx_run_roll", volume = 0.7, seconds = 7 },
 	creak = { key = "sfx_run_creak", volume = 0.35, speed = { 0.85, 1.1 }, seconds = 3 },
+	-- Тучка-ветродуй дует губами: «фу-у-у» слышно раньше, чем долетит ветер.
+	blow = { key = "sfx_run_blow", volume = 0.9, speed = { 0.9, 1.1 }, seconds = 4 },
 } :: { [string]: Event }
 
 -- Звуки, которые звучат всё время, пока аттракцион рядом: бульканье лавы.

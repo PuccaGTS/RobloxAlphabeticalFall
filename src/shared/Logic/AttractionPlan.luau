@@ -386,7 +386,47 @@ local function stompers(heat: number, random: Random)
 	}
 end
 
+--[[
+	Ветродуи: участки мостика подряд, у каждого своя тучка. Тучки висят
+	по очереди слева и справа, щит — посреди участка у наветренного края.
+	Фазы соседних тучек близки, но не равны: порывы бегут волной вдоль
+	мостика, и от щита до щита всегда есть когда пробежать (это держит тест).
+]]
+local function wind(heat: number, random: Random)
+	local zones = Attractions.param("wind", "zones", heat)
+	local gap = Attractions.param("wind", "gap", heat)
+	local period = Attractions.param("wind", "period", heat)
+	local length = Attractions.WIND_ZONE
+	local shift = random:NextNumber(0, period)
+	local side = if random:NextInteger(1, 2) == 1 then 1 else -1
+	local list = {}
+	local z = gap
+	for zone = 1, zones do
+		table.insert(list, {
+			zone = zone,
+			from = z,
+			to = z + length,
+			z = z + length / 2,
+			side = side, -- где висит тучка: дует от неё к другому краю мостика
+			phase = (shift + (zone - 1) * period * 0.12) % period,
+		})
+		side = -side
+		z += length + gap
+	end
+	return {
+		zones = list,
+		bridge = Attractions.param("wind", "bridge", heat),
+		gap = gap,
+		speed = Attractions.param("wind", "speed", heat),
+		gust = Attractions.param("wind", "gust", heat),
+		period = period,
+		-- После последнего участка — щель до пола выхода (если щели вообще есть).
+		length = z,
+	}
+end
+
 local MAKERS = {
+	wind = wind,
 	bounce = bounce,
 	cookies = cookies,
 	stompers = stompers,

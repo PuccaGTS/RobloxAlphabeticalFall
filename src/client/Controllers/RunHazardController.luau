@@ -31,6 +31,7 @@ local RunHazardController = {}
 local MOVER_TAG = "RunMover"
 local HURT_TAG = "RunHurt"
 local BOUNCE_TAG = "RunBounce"
+local WIND_TAG = "RunWind"
 
 -- Насколько персонаж «шире» точки корня: полстуда вбок, ноги на три студа вниз.
 local SIDE_MARGIN = 1
@@ -61,6 +62,10 @@ type Crumb = {
 }
 local crumbs: { [BasePart]: Crumb } = {}
 local stomped: { [BasePart]: boolean } = {}
+
+-- Участки тучек-ветродуев (тег RunWind) и какие из них сейчас дуют: для звука «фу-у-у».
+local winds: { [BasePart]: boolean } = {}
+local gusting: { [BasePart]: boolean } = {}
 
 --[[
 	Звуки аттракционов (Config/RunSounds). Звучат в мире, у детали, и только
@@ -379,6 +384,121 @@ local function bounceCheck(root: BasePart)
 	end
 end
 
+local function meshScale(model: Instance, name: string, scale: Vector3)
+	local p = model:FindFirstChild(name)
+	local mesh = p and p:FindFirstChildOfClass("SpecialMesh")
+	if mesh then
+		mesh.Scale = scale
+	end
+end
+
+--[[
+	Ветродуй: тучка по циклу надувает щёки, отклоняется назад — и дует,
+	зажмурившись. Кто на её участке и не за щитом, того сносит: корень
+	сдвигается по ветру каждый кадр. Толчок скоростью персонаж погасил бы
+	сам, а сдвиг — нет: против ветра остаётся только упираться.
+]]
+local function windStep(zone: BasePart, now: number, root: BasePart?, dt: number)
+	local period = zone:GetAttribute("Period") or 5
+	local gust = zone:GetAttribute("Gust") or 1.5
+	local phase = zone:GetAttribute("Phase") or 0
+	local s = now + phase
+	local strength = Attractions.windGust(s, period, gust)
+	local warning = Attractions.windWarning(s, period, gust)
+	local cycle = s % period
+	local startAt = period - gust
+	-- Насколько надуты щёки: растут, пока тучка набирает воздух, и сдуваются за порыв.
+	local puff = if warning
+		then (cycle - (startAt - Attractions.WIND_WARN)) / Attractions.WIND_WARN
+		elseif cycle >= startAt then 1 - (cycle - startAt) / gust
+		else 0
+
+	local model = zone.Parent
+	local cloud = model and model:FindFirstChild(zone:GetAttribute("Cloud") or "")
+	if cloud and cloud:IsA("Model") then
+		local base = cloud:GetAttribute("Base")
+		if typeof(base) == "CFrame" then
+			-- Набирая воздух, тучка отклоняется назад; дуя — подаётся к мостику.
+			local lean = if warning then 1.4 * puff else -1.2 * strength
+			cloud:PivotTo(base * CFrame.new(0, math.sin(now * 1.6 + phase) * 0.35, lean))
+		end
+		local cheeks = Vector3.one * (1 + 0.8 * puff)
+		meshScale(cloud, "CheekL", cheeks)
+		meshScale(cloud, "CheekR", cheeks)
+		local squint = strength > 0
+		local eyes = if squint then Vector3.new(1.1, 0.22, 1) else Vector3.one
+		meshScale(cloud, "EyeL", eyes)
+		meshScale(cloud, "EyeR", eyes)
+		for _, name in { "ShineL", "ShineR" } do
+			local shine = cloud:FindFirstChild(name)
+			if shine then
+				shine.Transparency = if squint then 1 else 0
+			end
+		end
+		meshScale(
+			cloud,
+			"Mouth",
+			if squint
+				then Vector3.new(1, 1.3, 1)
+				elseif warning then Vector3.new(0.5, 0.35, 1)
+				else Vector3.one * 0.8
+		)
+		local stream = cloud:FindFirstChild("Stream")
+		local emitter = stream and stream:FindFirstChildOfClass("ParticleEmitter")
+		if emitter then
+			emitter.Enabled = strength > 0.3
+		end
+		-- Линии ветра: видны в порыв и извиваются, как ленточки.
+		for line = 1, 3 do
+			local beam = stream and stream:FindFirstChild(`Line{line}`)
+			if beam and beam:IsA("Beam") then
+				beam.Enabled = strength > 0.05
+				if strength > 0.05 then
+					local wave = now * 7 + line * 1.3
+					beam.CurveSize0 = 2.5 * math.sin(wave)
+					beam.CurveSize1 = -2.5 * math.sin(wave + 1.1)
+					beam.Width0 = 0.9 * strength
+				end
+			end
+		end
+		local blowing = strength > 0
+		if blowing and not gusting[zone] then
+			sound("blow", cloud:GetPivot().Position)
+		end
+		gusting[zone] = blowing
+	end
+
+	-- Флажок на щите: висит, пока тихо, вытягивается по ветру и трепещет в порыв.
+	local flag = model and model:FindFirstChild(zone:GetAttribute("Flag") or "")
+	if flag and flag:IsA("BasePart") then
+		local top = flag:GetAttribute("Base")
+		if typeof(top) == "CFrame" then
+			local droop = 1.35 * (1 - strength)
+			local flutter = math.sin(now * 19 + phase) * 0.25 * strength
+			flag.CFrame = top
+				* CFrame.Angles(0, flutter, -droop)
+				* CFrame.new(flag.Size.X / 2, -flag.Size.Y / 2, 0)
+		end
+	end
+
+	if not root or strength <= 0 then
+		return
+	end
+	local p = zone.CFrame:PointToObjectSpace(root.Position)
+	local half = zone.Size / 2
+	if math.abs(p.X) > half.X or math.abs(p.Y) > half.Y or math.abs(p.Z) > half.Z then
+		return
+	end
+	-- Щит стоит посреди участка: в его длину по ходу ветра нет.
+	if math.abs(p.Z) < (zone:GetAttribute("ShelterHalf") or 0) then
+		return
+	end
+	local wind = zone:GetAttribute("Wind")
+	if typeof(wind) == "Vector3" then
+		root.CFrame += wind * strength * dt
+	end
+end
+
 local function onHit()
 	local now = os.clock()
 	if now - lastHit < HIT_COOLDOWN then
@@ -388,8 +508,8 @@ local function onHit()
 	RemoteDefs.event("RunHazard"):FireServer()
 end
 
-local function step()
-	if next(movers) == nil and next(hurting) == nil and next(bouncers) == nil then
+local function step(frame: number)
+	if next(movers) == nil and next(hurting) == nil and next(bouncers) == nil and next(winds) == nil then
 		return
 	end
 	local character = player.Character
@@ -461,6 +581,18 @@ local function step()
 		end
 	end
 
+	for zone in winds do
+		if not zone.Parent then
+			winds[zone] = nil
+			gusting[zone] = nil
+			continue
+		end
+		if rootPosition and (zone.Position - rootPosition).Magnitude > NEAR + 20 then
+			continue
+		end
+		windStep(zone, now, root, math.min(frame, 0.1))
+	end
+
 	if not rootPosition then
 		return
 	end
@@ -497,6 +629,7 @@ local function watch(tag: string, set: { [BasePart]: boolean })
 		crumbs[instance :: BasePart] = nil
 		cueMark[instance :: BasePart] = nil
 		stomped[instance :: BasePart] = nil
+		gusting[instance :: BasePart] = nil
 	end)
 end
 
@@ -504,6 +637,7 @@ function RunHazardController.init()
 	watch(MOVER_TAG, movers)
 	watch(HURT_TAG, hurting)
 	watch(BOUNCE_TAG, bouncers)
+	watch(WIND_TAG, winds)
 	RunService.RenderStepped:Connect(step)
 end
 

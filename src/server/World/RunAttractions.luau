@@ -31,6 +31,7 @@ local RunAttractions = {}
 RunAttractions.MOVER_TAG = "RunMover"
 RunAttractions.HURT_TAG = "RunHurt"
 RunAttractions.BOUNCE_TAG = "RunBounce" -- батут: клиент подбрасывает приземлившегося
+RunAttractions.WIND_TAG = "RunWind" -- участок тучки-ветродуя: клиент сдувает стоящего на нём
 
 local function part(model: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3): BasePart
 	local p = Instance.new("Part")
@@ -1201,6 +1202,284 @@ function BUILDERS.stompers(model: Model, path, ride)
 		end
 	end
 	sign(model, `Sign_{ride.index}`, at(path, ride, 0, lift + size + 7, 0), "🧱")
+end
+
+--[[
+	Ветродуи: узкий деревянный мостик над пропастью, сбоку висят тучки
+	с лицами — по одной на участок, по очереди слева и справа. Тучка
+	надувает щёки и дует поперёк мостика: кого застало на участке, того
+	сносит (сдувает клиент, RunHazardController). Посреди участка у края,
+	откуда дует, стоит щит с флажком — за ним ветра нет. Флажок висит,
+	пока тихо, и вытягивается по ветру, когда дует.
+]]
+local WIND_PLANKS = Color3.fromRGB(205, 160, 110)
+local WIND_EDGE = Color3.fromRGB(250, 250, 255)
+local WIND_SHIELD = Color3.fromRGB(120, 180, 235)
+local WIND_ROOF = Color3.fromRGB(245, 110, 100)
+local WIND_FLAGS = {
+	Color3.fromRGB(255, 205, 70),
+	Color3.fromRGB(255, 140, 180),
+	Color3.fromRGB(130, 220, 150),
+	Color3.fromRGB(190, 150, 255),
+}
+local WIND_CHEEK = Color3.fromRGB(255, 150, 175)
+local WIND_EYE = Color3.fromRGB(45, 45, 70)
+
+-- Деталь-«капля» лица: шар из меша, который клиент сплющивает и надувает (Scale меша).
+local function blob(model: Instance, name: string, size: Vector3, cframe: CFrame, color: Color3): BasePart
+	local p = ghost(part(model, name, size, cframe, color))
+	p.CastShadow = false
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = p
+	return p
+end
+
+local function windCloud(model: Instance, name: string, face: CFrame): Model
+	local cloud = Instance.new("Model")
+	cloud.Name = name
+	-- Тучку клиент двигает целиком: по деталям она пришла бы к нему дырявой.
+	cloud.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
+	cloud.Parent = model
+	local body = ghost(part(cloud, "Body", Vector3.new(7, 7, 7), face, CLOUD))
+	body.Shape = Enum.PartType.Ball
+	body.CastShadow = false
+	-- Клубы вокруг: по бокам, сверху и сзади. Лицо смотрит вперёд, в −Z.
+	local puffs = {
+		{ -2.8, -0.7, 0.5, 5 },
+		{ 2.8, -0.7, 0.5, 5 },
+		{ 0, 2.3, 0.8, 5.2 },
+		{ -1.8, 1.7, 1.3, 4.4 },
+		{ 1.8, 1.7, 1.3, 4.4 },
+		{ 0, 0.3, 2.3, 5.6 },
+		{ -4.3, -1.2, 1.2, 3.4 },
+		{ 4.3, -1.2, 1.2, 3.4 },
+	}
+	for index, spec in puffs do
+		local d = spec[4]
+		local ball = ghost(
+			part(
+				cloud,
+				`Puff{index}`,
+				Vector3.new(d, d, d),
+				face * CFrame.new(spec[1], spec[2], spec[3]),
+				if index % 3 == 0 then CLOUD_SHADE else CLOUD
+			)
+		)
+		ball.Shape = Enum.PartType.Ball
+		ball.CastShadow = false
+	end
+	for _, side in { -1, 1 } do
+		local tag = if side < 0 then "L" else "R"
+		blob(
+			cloud,
+			`Eye{tag}`,
+			Vector3.new(0.9, 1.3, 0.5),
+			face * CFrame.new(side * 1.25, 0.8, -3.3),
+			WIND_EYE
+		)
+		local shine = ghost(
+			part(
+				cloud,
+				`Shine{tag}`,
+				Vector3.new(0.35, 0.35, 0.35),
+				face * CFrame.new(side * 1.25 + 0.18, 1.1, -3.55),
+				Color3.new(1, 1, 1)
+			)
+		)
+		shine.Shape = Enum.PartType.Ball
+		shine.CastShadow = false
+		blob(
+			cloud,
+			`Cheek{tag}`,
+			Vector3.new(1.7, 1.4, 0.9),
+			face * CFrame.new(side * 2.3, -0.5, -2.85),
+			WIND_CHEEK
+		)
+	end
+	blob(cloud, "Mouth", Vector3.new(1.1, 1.1, 0.6), face * CFrame.new(0, -0.9, -3.35), WIND_EYE)
+
+	--[[
+		Струя: белые вытянутые клубы летят изо рта поперёк мостика. Включает
+		клиент на время порыва — по ним видно, куда и когда дует.
+	]]
+	local mouth =
+		ghost(part(cloud, "Stream", Vector3.new(1, 1.5, 1), face * CFrame.new(0, -0.9, -3.6), CLOUD))
+	mouth.Transparency = 1
+	local stream = Instance.new("ParticleEmitter")
+	stream.Name = "Stream"
+	stream.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	stream.EmissionDirection = Enum.NormalId.Front
+	stream.Orientation = Enum.ParticleOrientation.VelocityParallel
+	stream.Squash = NumberSequence.new(1.8)
+	stream.Speed = NumberRange.new(34, 48)
+	stream.Lifetime = NumberRange.new(0.6, 0.85)
+	stream.SpreadAngle = Vector2.new(22, 22)
+	stream.Rate = 60
+	stream.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 3) })
+	stream.Transparency =
+		NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 1) })
+	stream.LightEmission = 0.25
+	stream.Enabled = false
+	stream.Parent = mouth
+
+	cloud.PrimaryPart = body
+	cloud:SetAttribute("Base", face)
+	return cloud
+end
+
+function BUILDERS.wind(model: Model, path, ride)
+	local bridge = ride.bridge
+	local length = Attractions.WIND_ZONE
+	local height = Attractions.WIND_SHELTER_HEIGHT
+	local shelter = Attractions.WIND_SHELTER
+	local cloudX = Tunnel.WIDTH / 2 - 2.5
+	for _, zone in ride.zones do
+		local name = `{ride.index}_{zone.zone}`
+		local deck = part(
+			model,
+			`WindBridge_{name}`,
+			Vector3.new(bridge, 1.5, length),
+			at(path, ride, 0, -0.75, zone.z),
+			WIND_PLANKS
+		)
+		deck.Material = Enum.Material.WoodPlanks
+		-- Белая кромка: край мостика виден и в прыжке, и когда сносит.
+		for _, side in { -1, 1 } do
+			ghost(
+				part(
+					model,
+					`WindEdge_{name}_{side}`,
+					Vector3.new(0.4, 0.12, length),
+					at(path, ride, side * (bridge / 2 - 0.2), 0.03, zone.z),
+					WIND_EDGE
+				)
+			)
+			-- Сваи уходят в пропасть: мостик стоит, а не висит в воздухе.
+			local pile = ghost(
+				part(
+					model,
+					`WindPile_{name}_{side}`,
+					Vector3.new(1, 24, 1),
+					at(path, ride, side * (bridge / 2 - 0.6), -13.5, zone.z),
+					Color3.fromRGB(140, 100, 70)
+				)
+			)
+			pile.Material = Enum.Material.Wood
+		end
+
+		-- Куда дует: от тучки к другому краю мостика, в мировых координатах.
+		local downwind = (
+			at(path, ride, -zone.side, 0, zone.z).Position - at(path, ride, 0, 0, zone.z).Position
+		).Unit
+
+		-- Щит у края, откуда дует. Сквозь него не пройти — за ним и прячутся.
+		local wall = part(
+			model,
+			`WindShelter_{name}`,
+			Vector3.new(1, height, shelter),
+			at(path, ride, zone.side * (bridge / 2 - 0.5), height / 2, zone.z),
+			WIND_SHIELD
+		)
+		wall.Material = Enum.Material.WoodPlanks
+		ghost(
+			part(
+				model,
+				`WindRoof_{name}`,
+				Vector3.new(2, 0.6, shelter + 0.8),
+				at(path, ride, zone.side * (bridge / 2 - 0.5), height + 0.3, zone.z),
+				WIND_ROOF
+			)
+		)
+		local poleX = zone.side * (bridge / 2 - 0.5)
+		local pole = ghost(
+			part(
+				model,
+				`WindPole_{name}`,
+				Vector3.new(0.25, 3.2, 0.25),
+				at(path, ride, poleX, height + 1.6, zone.z + shelter / 2 - 0.3),
+				Color3.fromRGB(250, 250, 250)
+			)
+		)
+		-- Верх флагштока: вправо (X) — по ветру, вверх — вверх. Флажок висит от него.
+		local top = CFrame.fromMatrix(pole.Position + Vector3.new(0, 1.5, 0), downwind, Vector3.yAxis)
+		local flag = ghost(
+			part(
+				model,
+				`WindFlag_{name}`,
+				Vector3.new(2.6, 1.3, 0.12),
+				top * CFrame.Angles(0, 0, -1.35) * CFrame.new(1.3, -0.65, 0),
+				WIND_FLAGS[(zone.zone - 1) % #WIND_FLAGS + 1]
+			)
+		)
+		flag:SetAttribute("Base", top)
+
+		local face = CFrame.lookAt(
+			at(path, ride, zone.side * cloudX, Attractions.WIND_CLOUD_Y, zone.z).Position,
+			at(path, ride, 0, Attractions.WIND_CLOUD_Y - 2, zone.z).Position
+		)
+		local cloud = windCloud(model, `WindCloud_{name}`, face)
+
+		-- Невидимый участок тучки: по нему клиент понимает, кого сдувать.
+		local area = ghost(
+			part(
+				model,
+				`WindZone_{name}`,
+				Vector3.new(Tunnel.WIDTH, 30, length),
+				at(path, ride, 0, 8, zone.z),
+				Color3.new(1, 1, 1)
+			)
+		)
+		area.Transparency = 1
+		area:SetAttribute("Wind", downwind * ride.speed)
+		area:SetAttribute("Period", ride.period)
+		area:SetAttribute("Phase", zone.phase)
+		area:SetAttribute("Gust", ride.gust)
+		area:SetAttribute("ShelterHalf", shelter / 2)
+		area:SetAttribute("Cloud", `WindCloud_{name}`)
+		area:SetAttribute("Flag", `WindFlag_{name}`)
+		CollectionService:AddTag(area, RunAttractions.WIND_TAG)
+
+		--[[
+			Линии ветра, как в мультике: три белые ленты изо рта тучки через
+			мостик. Видны только в порыв и извиваются (изгиб качает клиент).
+		]]
+		local mouth = cloud:FindFirstChild("Stream")
+		for line = 1, 3 do
+			local from = Instance.new("Attachment")
+			from.Name = `LineFrom{line}`
+			from.Position = Vector3.new((line - 2) * 1.2, (line - 2) * 0.7, 0)
+			from.Parent = mouth
+			local to = Instance.new("Attachment")
+			to.Name = `LineTo{line}`
+			to.Parent = area
+			to.WorldPosition = at(
+				path,
+				ride,
+				-zone.side * (bridge / 2 + 5),
+				0.5 + line * 1.8,
+				zone.z + (line - 2) * 4.5
+			).Position
+			local beam = Instance.new("Beam")
+			beam.Name = `Line{line}`
+			beam.Attachment0 = from
+			beam.Attachment1 = to
+			beam.Width0 = 0.7
+			beam.Width1 = 0.25
+			beam.FaceCamera = true
+			beam.Segments = 24
+			beam.LightEmission = 0.4
+			beam.Color = ColorSequence.new(Color3.fromRGB(235, 248, 255))
+			beam.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.2),
+				NumberSequenceKeypoint.new(0.7, 0.35),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			beam.Enabled = false
+			beam.Parent = mouth
+		end
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 14, 0), "🌬️")
 end
 
 function RunAttractions.buildAttraction(model: Model, path, ride)

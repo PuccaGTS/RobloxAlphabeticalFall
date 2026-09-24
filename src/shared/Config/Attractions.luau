@@ -63,6 +63,11 @@ local CATALOG: { Attraction } = {
 	{ id = "bounce", title = "Батуты", fromLevel = 7, seconds = 8, floor = false },
 	{ id = "cookies", title = "Печеньки", fromLevel = 8, seconds = 7, floor = false },
 	{ id = "stompers", title = "Кубики-топотуны", fromLevel = 9, seconds = 9, floor = true },
+	--[[
+		На десятом и одиннадцатом уровнях нового не было — ребёнок, дошедший
+		так далеко, встречал только знакомое. Теперь десятый открывает ветер.
+	]]
+	{ id = "wind", title = "Ветродуи", fromLevel = 10, seconds = 9, floor = false },
 }
 
 Attractions.CATALOG = CATALOG
@@ -210,6 +215,21 @@ Attractions.HEAT = {
 		period = { 4.2, 3.9, 3.6, 3.3, 3 }, -- полный цикл кубика
 		down = { 1.2, 1.3, 1.4, 1.5, 1.6 }, -- из них внизу (с падением и подъёмом)
 	},
+	--[[
+		Ветродуи: узкий мостик над пропастью, сбоку висят тучки с лицами.
+		Тучка надувает щёки — и дует поперёк мостика, сдувая в пропасть.
+		Переждать порыв можно за щитом, который стоит посреди каждого участка,
+		или упираться: ветер слабее бега, и против него устоишь, если не зевать.
+		Соседние тучки висят по разные стороны — дует то вправо, то влево.
+	]]
+	wind = {
+		zones = { 2, 3, 3, 4, 4 }, -- сколько тучек, у каждой свой участок мостика
+		bridge = { 9, 8, 7, 6, 5.5 }, -- ширина мостика
+		gap = { 0, 0, 2.5, 3, 3.5 }, -- щель между участками: прыгать приходится под ветром
+		speed = { 9, 10.5, 12, 13.5, 15 }, -- как быстро сдувает вбок, студов в секунду
+		gust = { 1.4, 1.6, 1.8, 2, 2.2 }, -- сколько дует порыв
+		period = { 5.2, 5, 4.8, 4.6, 4.4 }, -- полный цикл тучки: тихо, щёки, порыв
+	},
 }
 
 function Attractions.param(id: string, name: string, heat: number): number
@@ -295,6 +315,37 @@ function Attractions.stomperWarning(s: number, period: number, down: number): bo
 	s = s % period
 	local fallAt = period - down
 	return s >= fallAt - Attractions.STOMPER_WARN and s < fallAt
+end
+
+Attractions.WIND_ZONE = 16 -- длина участка одной тучки вдоль бега
+Attractions.WIND_WARN = 1 -- столько тучка надувает щёки перед порывом
+Attractions.WIND_RAMP = 0.2 -- порыв набирает силу и стихает за столько секунд
+Attractions.WIND_SHELTER = 4.5 -- длина щита вдоль бега: за ним ветра нет
+Attractions.WIND_SHELTER_HEIGHT = 6 -- выше головы: за щитом прячешься целиком
+Attractions.WIND_CLOUD_Y = 8 -- на какой высоте над мостиком висит тучка
+
+--[[
+	Сила ветра тучки в момент s её цикла, от 0 до 1. Цикл: тихо, в конце —
+	щёки надуваются (WIND_WARN), потом порыв длиной gust. Одна функция на
+	клиента, который сдувает и рисует, и на тест, который ищет, когда
+	пробежать от щита до щита.
+]]
+function Attractions.windGust(s: number, period: number, gust: number): number
+	s = s % period
+	local startAt = period - gust
+	if s < startAt then
+		return 0
+	end
+	local t = s - startAt
+	local ramp = Attractions.WIND_RAMP
+	return math.clamp(math.min(t / ramp, (gust - t) / ramp), 0, 1)
+end
+
+-- Надувает ли тучка щёки: через секунду подует.
+function Attractions.windWarning(s: number, period: number, gust: number): boolean
+	s = s % period
+	local startAt = period - gust
+	return s >= startAt - Attractions.WIND_WARN and s < startAt
 end
 
 return Attractions
