@@ -237,6 +237,34 @@ return function()
 		)
 	end)
 
+	describe("Playground: азбука-дорожка", function()
+		local Letters = require(Shared.Config.Letters)
+		local spec = Playground.ABC
+		it(
+			"по плитке на каждую букву, змейкой без разрывов и внутри места",
+			function()
+				local total = 0
+				for _, count in spec.rows do
+					total += count
+				end
+				expect(total).to.equal(#Letters.ordered())
+				local spot = Playground.expect("abcpath")
+				local previous
+				for order = 1, total do
+					local at = Playground.abcTile(order)
+					expect(Vector2.new(at.X, at.Z).Magnitude + spec.tile / 2 < spot.radius).to.equal(true)
+					if previous then
+						-- Следующая буква — соседняя плитка: вдоль ряда или в соседний ряд.
+						local step = (at - previous).Magnitude
+						expect(step <= math.max(spec.pitch, spec.rowGap) + 0.01).to.equal(true)
+						expect(step >= spec.tile + 0.5).to.equal(true)
+					end
+					previous = at
+				end
+			end
+		)
+	end)
+
 	describe("Playground: грот с кристаллами", function()
 		local Chests = require(Shared.Config.Chests)
 		local spec = Playground.GROTTO

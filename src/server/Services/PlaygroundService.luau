@@ -21,6 +21,7 @@ local Rental = require(Shared.Config.Rental)
 local RidesBuilder = require(script.Parent.Parent.World.Rides)
 local RentalVehicles = require(script.Parent.Parent.World.RentalVehicles)
 local Letter3D = require(script.Parent.Parent.World.Letter3D)
+local Letters = require(Shared.Config.Letters)
 
 local PlaygroundService = {}
 
@@ -791,6 +792,96 @@ function BUILDERS.grotto(model: Model, origin: CFrame)
 	spray.Parent = pool
 
 	sign(model, origin * CFrame.new(spec.doorway + 2, 0, -(radius + 6)), "💎")
+end
+
+--[[
+	Азбука-дорожка: плитки А…Я змейкой по белым бордюрам, на каждой — буква
+	крупно, цвет — по ступени алфавита (как на Башне). У А флажок «старт»,
+	у Я — золотая звезда на столбике. Звучит и загорается всё у ребёнка
+	(PlaygroundController, метка AF_AbcTile).
+]]
+function BUILDERS.abcpath(model: Model, origin: CFrame)
+	local spec = Playground.ABC
+	local ordered = Letters.ordered()
+	for order, id in ordered do
+		local letter = Letters.expect(id)
+		local at = origin * CFrame.new(Playground.abcTile(order))
+		local color = RAINBOW[(letter.stage - 1) % #RAINBOW + 1]
+		part(
+			model,
+			`AbcBorder_{order}`,
+			Vector3.new(spec.tile + 0.6, 0.3, spec.tile + 0.6),
+			at * CFrame.new(0, 0.15, 0),
+			Color3.fromRGB(250, 248, 240)
+		).CanCollide =
+			false
+		local tile = part(
+			model,
+			`Abc_{order}`,
+			Vector3.new(spec.tile, 0.4, spec.tile),
+			at * CFrame.new(0, 0.3, 0),
+			color
+		)
+		tile:SetAttribute("Order", order)
+		tile:SetAttribute("Letter", id)
+		CollectionService:AddTag(tile, "AF_AbcTile")
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Top
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 30
+		gui.Parent = tile
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		label.BackgroundTransparency = 1
+		label.Text = letter.glyph
+		label.TextScaled = true
+		label.Font = Enum.Font.FredokaOne
+		label.TextColor3 = Color3.new(1, 1, 1)
+		label.TextStrokeTransparency = 0.3
+		label.TextStrokeColor3 = Color3.fromRGB(60, 60, 90)
+		-- Буква читается от площади: низ буквы — к ней.
+		label.Rotation = 180
+		label.Parent = gui
+	end
+	-- Флажок у А и звезда у Я: где начало и где конец дорожки.
+	local first = origin * CFrame.new(Playground.abcTile(1))
+	local pole = part(
+		model,
+		"AbcStartPole",
+		Vector3.new(0.3, 5, 0.3),
+		first * CFrame.new(spec.tile / 2 + 1, 2.5, 0),
+		Color3.fromRGB(245, 245, 245)
+	)
+	pole.CanCollide = false
+	part(
+		model,
+		"AbcStartFlag",
+		Vector3.new(0.12, 1.4, 2.2),
+		first * CFrame.new(spec.tile / 2 + 1, 4.3, -1.1),
+		Color3.fromRGB(90, 200, 110)
+	).CanCollide =
+		false
+	local last = origin * CFrame.new(Playground.abcTile(#ordered))
+	local lastX = if #spec.rows % 2 == 1 then -1 else 1
+	local post = part(
+		model,
+		"AbcFinishPost",
+		Vector3.new(0.4, 4, 0.4),
+		last * CFrame.new(lastX * (spec.tile / 2 + 1), 2, 0),
+		Color3.fromRGB(245, 245, 245)
+	)
+	post.CanCollide = false
+	local gold = part(
+		model,
+		"AbcFinishStar",
+		Vector3.new(1.8, 1.8, 1.8),
+		last * CFrame.new(lastX * (spec.tile / 2 + 1), 4.6, 0),
+		Color3.fromRGB(255, 205, 60)
+	)
+	gold.Shape = Enum.PartType.Ball
+	gold.Material = Enum.Material.Neon
+	gold.CanCollide = false
+	sign(model, origin * CFrame.new(-spec.pitch * 4.5, 0, -spec.rowGap * 3), "🔤")
 end
 
 -- Корабль-качели: строит World/Rides, качает и катает RideController.

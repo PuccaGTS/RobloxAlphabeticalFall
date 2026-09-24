@@ -113,6 +113,13 @@ Playground.spots = {
 	]]
 	{ id = "ship", title = "🏴‍☠️ Корабль", angle = 30, distance = 176, radius = 18 },
 	--[[
+		Азбука-дорожка: 33 плитки от А до Я змейкой. Наступил — плитка называет
+		свою букву; идёшь по порядку — плитки загораются за тобой, дошёл до Я
+		по порядку — вся дорожка вспыхивает волной и звучат фанфары. Это та же
+		песенка-алфавит, только ногами. Звёзд не даёт, как всё в парке.
+	]]
+	{ id = "abcpath", title = "🔤 Азбука-дорожка", angle = 342, distance = 100, radius = 19 },
+	--[[
 		Домик на дереве (Config/Rides.TREEHOUSE): верёвочная лестница, подвесной
 		мостик между двумя деревьями и тарзанка вниз, в песочную яму.
 	]]
@@ -341,6 +348,43 @@ Playground.GROTTO = {
 	crystals = { -40, 0, 38, 68, 112, 142, 180, 220 },
 	chest = 6.5, -- сундук у дальней стены, столько от центра
 }
+
+--[[
+	Азбука-дорожка: плитки змейкой по рядам, А — у площади слева, Я — в дальнем
+	ряду; с площади читается слева направо. Координаты — в системе места (−Z к площади).
+]]
+Playground.ABC = {
+	rows = { 7, 7, 7, 6, 6 }, -- сколько плиток в ряду: всего 33
+	tile = 3.4, -- сторона плитки
+	pitch = 4.4, -- от центра до центра вдоль ряда
+	rowGap = 5, -- между рядами
+	speakEvery = 0.7, -- не чаще: бегущий ребёнок не копит очередь из названий
+	celebrate = 7, -- столько горит праздник, потом дорожка гаснет
+}
+
+-- Где плитка order (1..33) в системе места: змейка, ряды от площади вдаль.
+function Playground.abcTile(order: number): Vector3
+	local spec = Playground.ABC
+	local index = order
+	for row, count in spec.rows do
+		if index <= count then
+			-- Короткий ряд сдвинут к стыку с прошлым: змейка не рвётся на повороте.
+			local widest = 0
+			for _, n in spec.rows do
+				widest = math.max(widest, n)
+			end
+			local odd = row % 2 == 1
+			local shift = (widest - count) * spec.pitch / 2 * (if odd then 1 else -1)
+			local offset = (index - 1 - (count - 1) / 2) * spec.pitch + shift
+			-- С площади (−Z) экранное «вправо» — это −X: нечётный ряд идёт к −X.
+			local x = if odd then -offset else offset
+			local z = (row - (#spec.rows + 1) / 2) * spec.rowGap
+			return Vector3.new(x, 0, z)
+		end
+		index -= count
+	end
+	error(`Playground.abcTile: нет плитки {order}`)
+end
 
 -- Центр места на земле (Y = 0: высоту земли добавляет тот, кто строит).
 function Playground.position(spot: Spot): Vector3

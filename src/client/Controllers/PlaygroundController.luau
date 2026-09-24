@@ -30,6 +30,7 @@ local Playground = require(Shared.Config.Playground)
 local AudioController = require(script.Parent.AudioController)
 local EmoteController = require(script.Parent.EmoteController)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
+local Letters = require(Shared.Config.Letters)
 
 local PlaygroundController = {}
 
@@ -234,7 +235,7 @@ HANDLERS.AF_PhotoMark = function(mark: BasePart)
 end
 
 -- Крупное число над клеткой: видно, на что наступил, даже пока голос молчит.
-local function showNumber(tile: BasePart, number: number)
+local function showNumber(tile: BasePart, number: number | string)
 	local billboard = Instance.new("BillboardGui")
 	billboard.Size = UDim2.fromOffset(120, 120)
 	billboard.StudsOffset = Vector3.new(0, 3, 0)
@@ -255,6 +256,84 @@ local function showNumber(tile: BasePart, number: number)
 		:Play()
 	task.delay(1.3, function()
 		billboard:Destroy()
+	end)
+end
+
+--[[
+	Азбука-дорожка. Каждая плитка называет свою букву (не чаще раза в
+	speakEvery: бегом по дорожке очередь из названий не копится). Цепочка —
+	у ребёнка своя: шагнул на следующую по алфавиту — она загорается и
+	остаётся гореть; шагнул на А — цепочка начинается заново. Дошёл до Я,
+	не пропустив ни одной, — по дорожке бежит волна света, фанфары, искры.
+]]
+local abcTiles: { [number]: BasePart } = {}
+local abcColors: { [BasePart]: Color3 } = {}
+local abcNext = 1
+local abcSpoke = 0
+local abcParty = false
+
+local function abcLight(tile: BasePart, lit: boolean)
+	tile.Material = if lit then Enum.Material.Neon else Enum.Material.SmoothPlastic
+end
+
+local function abcReset()
+	for _, tile in abcTiles do
+		abcLight(tile, false)
+		tile.Color = abcColors[tile] or tile.Color
+	end
+	abcNext = 1
+end
+
+local function abcCelebrate()
+	abcParty = true
+	playSound(CHEER_SOUND, 1, 0.6, abcTiles[#abcTiles] or abcTiles[1])
+	-- Волна от А до Я: каждая плитка вспыхивает белым и сыплет искры.
+	for order = 1, #abcTiles do
+		local tile = abcTiles[order]
+		task.delay(order * 0.06, function()
+			if tile.Parent then
+				tile.Color = Color3.new(1, 1, 1)
+				TweenService:Create(tile, TweenInfo.new(0.6), { Color = abcColors[tile] }):Play()
+				burst(tile, abcColors[tile] or tile.Color, 6)
+			end
+		end)
+	end
+	task.delay(Playground.ABC.celebrate, function()
+		abcParty = false
+		abcReset()
+	end)
+end
+
+HANDLERS.AF_AbcTile = function(tile: BasePart)
+	local order = tile:GetAttribute("Order") or 1
+	abcTiles[order] = tile
+	abcColors[tile] = tile.Color
+	tile.Touched:Connect(function(hit)
+		if not isMine(hit) or not ready(tile, 0.8) or abcParty then
+			return
+		end
+		local id = tile:GetAttribute("Letter")
+		local letter = id and Letters.get(id)
+		if not letter then
+			return
+		end
+		local now = os.clock()
+		if now - abcSpoke >= Playground.ABC.speakEvery then
+			abcSpoke = now
+			AudioController.speak(letter.vo.name)
+		end
+		playSound(NOTE_SOUND, 0.7 + order * 0.025, 0.3, tile)
+		showNumber(tile, letter.glyph)
+		if order == 1 then
+			abcReset()
+		end
+		if order == abcNext then
+			abcLight(tile, true)
+			abcNext += 1
+			if abcNext > #abcTiles and #abcTiles >= 33 then
+				abcCelebrate()
+			end
+		end
 	end)
 end
 

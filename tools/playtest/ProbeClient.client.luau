@@ -278,11 +278,12 @@ workspace:GetAttributeChangedSignal("ZZ_Inspect"):Connect(function()
 			table.insert(
 				lines,
 				string.format(
-					"pos %.1f,%.1f,%.1f rot %s",
+					"pos %.1f,%.1f,%.1f rot %s material %s",
 					node.Position.X,
 					node.Position.Y,
 					node.Position.Z,
-					tostring(node.Orientation)
+					tostring(node.Orientation),
+					node.Material.Name
 				)
 			)
 		end
