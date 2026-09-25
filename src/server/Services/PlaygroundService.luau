@@ -2489,6 +2489,160 @@ function BUILDERS.beanstalk(model: Model, origin: CFrame)
 	glow.Parent = air
 end
 
+--[[
+	Рыбалка у пруда: песчаный берег, вода, камыши и кувшинки, деревянные
+	мостки от берега к середине, на краю мостков — жёлтый круг рыбака и ведро.
+	Рыбок с буквами, удочку и леску делает клиент (Controllers/FishingController):
+	у каждого ребёнка свой улов, и сети это ничего не стоит.
+]]
+local POND_WATER = Color3.fromRGB(70, 165, 215)
+local POND_SAND = Color3.fromRGB(230, 210, 160)
+local PIER_WOOD = Color3.fromRGB(165, 118, 72)
+
+function BUILDERS.pond(model: Model, origin: CFrame)
+	local spec = Playground.POND
+	local radius = spec.radius
+	local shore = cylinder(
+		model,
+		"PondShore",
+		0.3,
+		(radius + spec.shore) * 2,
+		origin * CFrame.new(0, 0.15, 0),
+		POND_SAND
+	)
+	shore.Material = Enum.Material.Sand
+	local deep = cylinder(
+		model,
+		"PondDeep",
+		0.05,
+		radius * 1.3,
+		origin * CFrame.new(0, 0.33, 0),
+		Color3.fromRGB(40, 110, 160)
+	)
+	deep.CanCollide = false
+	-- Вода не держит: в неё можно зайти по щиколотку, как в настоящий пруд.
+	local water = cylinder(model, "PondWater", 0.3, radius * 2, origin * CFrame.new(0, 0.42, 0), POND_WATER)
+	water.Material = Enum.Material.Glass
+	water.Transparency = 0.3
+	water.CanCollide = false
+	water:SetAttribute("Radius", radius)
+	CollectionService:AddTag(water, "AF_Pond")
+
+	-- Камыши по берегу, кроме стороны мостков (−Z, к площади).
+	local random = Random.new(33)
+	for index = 1, 26 do
+		local angle = random:NextNumber(0, math.pi * 2)
+		if math.sin(angle) < -0.85 then
+			continue -- у мостков свободно
+		end
+		local distance = radius + random:NextNumber(-0.6, 1.4)
+		local height = random:NextNumber(2.2, 3.8)
+		local at = origin
+			* CFrame.new(math.cos(angle) * distance, 0.3 + height / 2, math.sin(angle) * distance)
+		local stem =
+			part(model, `Reed_{index}`, Vector3.new(0.18, height, 0.18), at, Color3.fromRGB(95, 150, 70))
+		stem.CanCollide = false
+		local tip = part(
+			model,
+			`ReedTip_{index}`,
+			Vector3.new(0.9, 0.4, 0.4),
+			at * CFrame.new(0, height / 2 - 0.2, 0),
+			Color3.fromRGB(120, 80, 45)
+		)
+		tip.Shape = Enum.PartType.Cylinder
+		tip.CFrame = tip.CFrame * CFrame.Angles(0, 0, math.pi / 2)
+		tip.CanCollide = false
+	end
+	-- Кувшинки: зелёные листья с розовым цветком.
+	for index, spot in { { 5, 4 }, { -6, 3 }, { -3, 7 }, { 6.5, -1 } } do
+		local at = origin * CFrame.new(spot[1], 0.6, spot[2])
+		local pad = cylinder(model, `LilyPad_{index}`, 0.06, 2.4, at, Color3.fromRGB(90, 170, 80))
+		pad.CanCollide = false
+		local bloom = part(
+			model,
+			`LilyFlower_{index}`,
+			Vector3.new(0.7, 0.5, 0.7),
+			at * CFrame.new(0.3, 0.25, 0.2),
+			Color3.fromRGB(245, 150, 190)
+		)
+		bloom.Shape = Enum.PartType.Ball
+		bloom.CanCollide = false
+	end
+
+	-- Мостки: от берега у площади к середине пруда, на сваях.
+	local from = radius + spec.shore + 1
+	local to = radius - spec.pier
+	local length = from - to
+	local deck = part(
+		model,
+		"PierDeck",
+		Vector3.new(4.2, 0.4, length),
+		origin * CFrame.new(0, 0.9, -(from + to) / 2),
+		PIER_WOOD
+	)
+	deck.Material = Enum.Material.WoodPlanks
+	for index = 0, 3 do
+		for _, side in { -1, 1 } do
+			local post = part(
+				model,
+				`PierPost_{index}_{side}`,
+				Vector3.new(0.5, 1.6, 0.5),
+				origin * CFrame.new(side * 1.9, 0.5, -(to + index * length / 3)),
+				Color3.fromRGB(120, 85, 55)
+			)
+			post.Material = Enum.Material.Wood
+		end
+	end
+	-- Ступенька с песка на мостки: без неё пятилетка упирается в край доски.
+	part(
+		model,
+		"PierStep",
+		Vector3.new(4.2, 0.45, 1.4),
+		origin * CFrame.new(0, 0.5, -(from + 0.7)),
+		PIER_WOOD
+	).Material =
+		Enum.Material.WoodPlanks
+
+	-- Круг рыбака на краю мостков: встал — рыбалка началась.
+	local mark = cylinder(
+		model,
+		"FishingMark",
+		0.06,
+		3.2,
+		origin * CFrame.new(0, 1.12, -(to + 1.6)),
+		Color3.fromRGB(255, 210, 90)
+	)
+	mark.CanCollide = false
+	mark.Material = Enum.Material.Neon
+	mark.Transparency = 0.2
+	mark:SetAttribute("Pond", water.Position)
+	CollectionService:AddTag(mark, "AF_FishingMark")
+
+	-- Ведро для улова: у края мостков, сбоку от рыбака.
+	local bucketAt = origin * CFrame.new(1.4, 1.1, -(to + 3.4))
+	local bucket = cylinder(
+		model,
+		"FishBucket",
+		1.3,
+		1.5,
+		bucketAt * CFrame.new(0, 0.65, 0),
+		Color3.fromRGB(80, 140, 210)
+	)
+	bucket.Material = Enum.Material.Metal
+	local rim = cylinder(
+		model,
+		"FishBucketRim",
+		0.15,
+		1.65,
+		bucketAt * CFrame.new(0, 1.3, 0),
+		Color3.fromRGB(200, 200, 210)
+	)
+	rim.CanCollide = false
+	mark:SetAttribute("Bucket", bucketAt.Position + Vector3.new(0, 1.4, 0))
+
+	sign(model, origin * CFrame.new(4.5, 0, -(from + 1)), "🎣 Рыбалка")
+end
+
 function PlaygroundService.build(parent: Instance): number
 	local folder = Instance.new("Folder")
 	folder.Name = "Playground"

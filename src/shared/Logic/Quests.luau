@@ -282,6 +282,15 @@ Quests.POOL = {
 		park = true,
 	},
 	{
+		id = "park_pond",
+		icon = "🎣",
+		title = "Поймай три рыбки на рыбалке",
+		event = "park:pond",
+		need = 1,
+		target = "spot:pond",
+		park = true,
+	},
+	{
 		id = "park_rental",
 		icon = "🛴",
 		title = "Прокатись на самокате или лошадке",

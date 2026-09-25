@@ -480,6 +480,34 @@ workspace:GetAttributeChangedSignal("ZZ_Fireworks"):Connect(function()
 		report:FireServer("fireworks shown")
 	end)
 end)
+-- Рыбалка (Controllers/FishingController): ZZ_Fish = "right" | "wrong" — «тап» по рыбке
+-- с нужной буквой или по чужой; в отчёт — что стало с уловом.
+workspace:GetAttributeChangedSignal("ZZ_Fish"):Connect(function()
+	local want = workspace:GetAttribute("ZZ_Fish")
+	if want == nil then
+		return
+	end
+	local client = player:WaitForChild("PlayerScripts"):WaitForChild("Client")
+	local Fishing = require(client.Controllers.FishingController)
+	local before = Fishing.debug()
+	local camera = workspace.CurrentCamera
+	local tapped = "none"
+	for _, fish in before.fishes do
+		local match = fish.letterId == before.target
+		if not fish.busy and ((want == "right") == match) then
+			local point = camera:WorldToViewportPoint(fish.position + Vector3.new(0, 0.9, 0))
+			Fishing.tap(Vector2.new(point.X, point.Y))
+			tapped = fish.letterId
+			break
+		end
+	end
+	task.wait(2.5)
+	local after = Fishing.debug()
+	report:FireServer(
+		`FISH {want}: active={before.active} target={before.target} tapped={tapped} caught {before.caught}->{after.caught} newTarget={after.target}`
+	)
+end)
+
 -- Итог испытания глазами клиента: пройден ли уровень (тогда будет салют).
 task.spawn(function()
 	local net = ReplicatedStorage:WaitForChild("Net", 30)
