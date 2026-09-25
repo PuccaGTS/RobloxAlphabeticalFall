@@ -81,13 +81,6 @@ Playground.spots = {
 		только над полянкой. Рядом тихо играет «Jingle Bells» (APM, без загрузки).
 	]]
 	{ id = "winter", title = "⛄ Зимняя полянка", angle = 99, distance = 222, radius = 22 },
-	--[[
-		Брызгалки: мягкий круг, из пола бьют струи — то бегут по кругу, то
-		хлопают разом, — в середине гейзер, на входе две арки-занавеса, большая
-		красная кнопка «всё сразу» и ведро на башне, которое время от времени
-		опрокидывается на того, кто под ним. Кого окатило — с того капает.
-	]]
-	{ id = "splash", title = "💦 Брызгалки", angle = 172, distance = 226, radius = 16 },
 	-- Озеро с лодочками-лебедями (Config/Rides.SWANS): видно с дорожки к домам.
 	{ id = "lake", title = "🦢 Лебеди", angle = 10, distance = 218, radius = 26 },
 	--[[
@@ -169,55 +162,6 @@ Playground.ICE_RADIUS = 10 -- каток посередине
 ]]
 Playground.SKATE_GRIP = 0.9
 Playground.SKATE_SPEED = 24
-
-Playground.SPLASH_RADIUS = 13 -- мягкий круг брызгалок
-Playground.SPLASH_JETS = 8 -- струй кольцом, плюс гейзер в середине
-Playground.SPLASH_RING = 7 -- радиус кольца струй
-Playground.SPLASH_JET_HEIGHT = 7 -- выше этого струя кольца не бьёт
-Playground.SPLASH_GEYSER_HEIGHT = 14
-Playground.SPLASH_CYCLE = 16 -- хореография струй повторяется раз в столько секунд
-Playground.SPLASH_GEYSER_EVERY = 7 -- гейзер вздыхает раз в столько секунд
-Playground.SPLASH_BURST = 3 -- сколько бьёт всё сразу после кнопки
-Playground.SPLASH_BUCKET_EVERY = 15 -- ведро опрокидывается раз в столько секунд
-Playground.SPLASH_BUCKET_TIP = 1.6 -- сколько оно висит опрокинутым
-Playground.SPLASH_WET = 3 -- сколько секунд капает с окаченного
-
---[[
-	Высота струи index (1..SPLASH_JETS — кольцо, 0 — гейзер) в секунду now
-	по серверным часам, доля от 0 до 1. У всех детей одна и та же картина.
-	  0–4    одна струя бежит по кругу;
-	  4–8    все разом, раз в секунду;
-	  8–12   чётные и нечётные по очереди;
-	  12–16  все вполсилы — можно пробежать насквозь.
-]]
-function Playground.splashJet(index: number, now: number): number
-	if index == 0 then
-		return if now % Playground.SPLASH_GEYSER_EVERY < 1.3 then 1 else 0.15
-	end
-	local t = now % Playground.SPLASH_CYCLE
-	if t < 4 then
-		return if math.floor(t * 2) % Playground.SPLASH_JETS == index - 1 then 1 else 0
-	elseif t < 8 then
-		return if math.floor(t) % 2 == 0 then 1 else 0
-	elseif t < 12 then
-		return if math.floor(t / 0.75) % 2 == index % 2 then 0.9 else 0
-	end
-	return 0.55
-end
-
--- Ведро: 0 — стоит, 1 — опрокинуто. Наклон и обратно — по полсекунды.
-function Playground.splashBucket(now: number): number
-	local t = now % Playground.SPLASH_BUCKET_EVERY
-	local tip = Playground.SPLASH_BUCKET_TIP
-	if t < 0.5 then
-		return t / 0.5
-	elseif t < tip then
-		return 1
-	elseif t < tip + 0.5 then
-		return 1 - (t - tip) / 0.5
-	end
-	return 0
-end
 
 Playground.SUNFLOWER_ROWS = 4
 Playground.SUNFLOWER_PER_ROW = 5
