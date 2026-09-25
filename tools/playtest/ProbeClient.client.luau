@@ -508,6 +508,33 @@ workspace:GetAttributeChangedSignal("ZZ_Fish"):Connect(function()
 	)
 end)
 
+-- Тир (Controllers/GalleryController): ZZ_Gallery = "right" | "wrong" — «тап» по шарику.
+workspace:GetAttributeChangedSignal("ZZ_Gallery"):Connect(function()
+	local want = workspace:GetAttribute("ZZ_Gallery")
+	if want == nil then
+		return
+	end
+	local client = player:WaitForChild("PlayerScripts"):WaitForChild("Client")
+	local Gallery = require(client.Controllers.GalleryController)
+	local before = Gallery.debug()
+	local camera = workspace.CurrentCamera
+	local tapped = "none"
+	for _, balloon in before.balloons do
+		local match = balloon.letterId == before.target
+		if not balloon.popped and ((want == "right") == match) then
+			local point = camera:WorldToViewportPoint(balloon.position)
+			Gallery.tap(Vector2.new(point.X, point.Y))
+			tapped = balloon.letterId
+			break
+		end
+	end
+	task.wait(2)
+	local after = Gallery.debug()
+	report:FireServer(
+		`GALLERY {want}: active={before.active} target={before.target} tapped={tapped} hits {before.hits}->{after.hits}`
+	)
+end)
+
 -- Итог испытания глазами клиента: пройден ли уровень (тогда будет салют).
 task.spawn(function()
 	local net = ReplicatedStorage:WaitForChild("Net", 30)

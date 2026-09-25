@@ -47,6 +47,11 @@ Ambient.LAKE = { key = "amb_lake", volume = 0.5, radius = 45 }
 -- Корабль-качели (Config/Rides.SHIP): морская песня, слышно только рядом.
 Ambient.SHIP = { key = "amb_ship_shanty", volume = 0.4, radius = 60 }
 
+-- Тир (Config/Playground gallery): ярмарочная музыка, слышно только рядом со стендом.
+Ambient.GALLERY = { key = "amb_carnival", volume = 0.35, radius = 50 }
+-- Пруд с рыбками (Config/Playground pond): тихий лягушачий хор в камышах.
+Ambient.POND = { key = "amb_frogs", volume = 0.25, radius = 32 }
+
 -- Грот с кристаллами (Config/Playground.GROTTO): шум водопада у входа, капли внутри.
 Ambient.GROTTO_FALL = { key = "amb_stream", volume = 0.6, radius = 40 }
 Ambient.GROTTO_DRIP = { key = "amb_cave_drip", volume = 0.6, radius = 16 }

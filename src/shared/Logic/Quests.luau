@@ -291,6 +291,15 @@ Quests.POOL = {
 		park = true,
 	},
 	{
+		id = "park_gallery",
+		icon = "🎯",
+		title = "Попади мячом в три шарика в тире",
+		event = "park:gallery",
+		need = 1,
+		target = "spot:gallery",
+		park = true,
+	},
+	{
 		id = "park_rental",
 		icon = "🛴",
 		title = "Прокатись на самокате или лошадке",

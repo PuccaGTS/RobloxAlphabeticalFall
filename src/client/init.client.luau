@@ -34,6 +34,7 @@ local RunHazardController = require(Controllers.RunHazardController)
 local QuestController = require(Controllers.QuestController)
 local MapController = require(Controllers.MapController)
 local FishingController = require(Controllers.FishingController)
+local GalleryController = require(Controllers.GalleryController)
 local SkateController = require(Controllers.SkateController)
 local SplashController = require(Controllers.SplashController)
 local EveningController = require(Controllers.EveningController)
@@ -85,6 +86,7 @@ MailController.init()
 QuestController.init()
 MapController.init()
 FishingController.init()
+GalleryController.init()
 DevController.init() -- панель появится только в Studio и у владельца места
 
 ShopUI.build({
@@ -184,6 +186,7 @@ RemoteDefs.event("ProfileSnapshot").OnClientEvent:Connect(function(snapshot: any
 	DailyLetterController.update(snapshot)
 	ChestController.update(snapshot)
 	FishingController.update(snapshot)
+	GalleryController.update(snapshot)
 end)
 
 -- Сундук в парке: вещь уже надета сервером, здесь — чтобы ребёнок понял, что нашёл.

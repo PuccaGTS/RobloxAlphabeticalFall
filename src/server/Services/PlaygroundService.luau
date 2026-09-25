@@ -2643,6 +2643,140 @@ function BUILDERS.pond(model: Model, origin: CFrame)
 	sign(model, origin * CFrame.new(4.5, 0, -(from + 1)), "🎣 Рыбалка")
 end
 
+--[[
+	Тир: ярмарочный стенд лицом к площади. Полосатый прилавок, за ним синяя
+	стена со звёздами, над ней полосатый навес с флажками. Перед прилавком
+	жёлтый круг стрелка, на прилавке корзинка с мячами. Шарики с буквами на
+	стене и летящий мяч делает клиент (Controllers/GalleryController).
+]]
+local GALLERY_RED = Color3.fromRGB(230, 70, 70)
+local GALLERY_WHITE = Color3.fromRGB(250, 245, 235)
+local GALLERY_BLUE = Color3.fromRGB(60, 90, 180)
+
+function BUILDERS.gallery(model: Model, origin: CFrame)
+	local width = 13
+	-- Пол стенда: доски.
+	part(model, "GalleryFloor", Vector3.new(width + 2, 0.3, 11), origin * CFrame.new(0, 0.15, 1.5), PIER_WOOD).Material =
+		Enum.Material.WoodPlanks
+
+	-- Прилавок в красно-белую полоску.
+	local stripes = 8
+	for index = 1, stripes do
+		local x = (index - (stripes + 1) / 2) * (width / stripes)
+		local counter = part(
+			model,
+			`GalleryCounter_{index}`,
+			Vector3.new(width / stripes, 3, 1.4),
+			origin * CFrame.new(x, 1.8, -3),
+			if index % 2 == 0 then GALLERY_RED else GALLERY_WHITE
+		)
+		counter.Material = Enum.Material.SmoothPlastic
+	end
+	part(
+		model,
+		"GalleryCounterTop",
+		Vector3.new(width + 0.6, 0.35, 1.9),
+		origin * CFrame.new(0, 3.45, -3),
+		PIER_WOOD
+	).Material =
+		Enum.Material.Wood
+	-- Корзинка с мячами на прилавке.
+	local basketAt = origin * CFrame.new(-4.6, 3.6, -3)
+	local basket = cylinder(
+		model,
+		"GalleryBasket",
+		0.9,
+		1.8,
+		basketAt * CFrame.new(0, 0.45, 0),
+		Color3.fromRGB(190, 140, 80)
+	)
+	basket.Material = Enum.Material.Fabric
+	for index, color in
+		{ GALLERY_RED, Color3.fromRGB(250, 210, 70), Color3.fromRGB(90, 190, 110), GALLERY_BLUE }
+	do
+		local toy = part(
+			model,
+			`GalleryBall_{index}`,
+			Vector3.new(0.7, 0.7, 0.7),
+			basketAt * CFrame.new((index - 2.5) * 0.35, 1.05, (index % 2 - 0.5) * 0.4),
+			color
+		)
+		toy.Shape = Enum.PartType.Ball
+		toy.CanCollide = false
+	end
+
+	-- Задняя стена со звёздами: на ней висят шарики.
+	local wall =
+		part(model, "GalleryWall", Vector3.new(width, 9, 0.6), origin * CFrame.new(0, 4.8, 6), GALLERY_BLUE)
+	wall.Material = Enum.Material.SmoothPlastic
+	local random = Random.new(75)
+	for index = 1, 14 do
+		local star = part(
+			model,
+			`GalleryStar_{index}`,
+			Vector3.new(0.5, 0.5, 0.1),
+			origin
+				* CFrame.new(random:NextNumber(-6, 6), random:NextNumber(1, 9), 5.66)
+				* CFrame.Angles(0, 0, math.rad(45)),
+			Color3.fromRGB(255, 225, 110)
+		)
+		star.Material = Enum.Material.Neon
+		star.CanCollide = false
+	end
+	wall:SetAttribute("Columns", Playground.GALLERY.columns)
+	wall:SetAttribute("Rows", Playground.GALLERY.rows)
+	CollectionService:AddTag(wall, "AF_GalleryWall")
+
+	-- Стойки и полосатый навес с флажками.
+	for _, x in { -width / 2, width / 2 } do
+		for _, z in { -3.6, 6 } do
+			part(
+				model,
+				"GalleryPost",
+				Vector3.new(0.6, 10.5, 0.6),
+				origin * CFrame.new(x, 5.25, z),
+				GALLERY_WHITE
+			).CanCollide = z
+				> 0
+		end
+	end
+	for index = 1, stripes do
+		local x = (index - (stripes + 1) / 2) * (width / stripes)
+		local stripe = part(
+			model,
+			`GalleryRoof_{index}`,
+			Vector3.new(width / stripes, 0.4, 11),
+			origin * CFrame.new(x, 10.6, 1.2) * CFrame.Angles(math.rad(-8), 0, 0),
+			if index % 2 == 0 then GALLERY_RED else GALLERY_WHITE
+		)
+		stripe.CanCollide = false
+		local flag = part(
+			model,
+			`GalleryFlag_{index}`,
+			Vector3.new(1, 1, 0.1),
+			origin * CFrame.new(x, 9.6, -4.3) * CFrame.Angles(0, 0, math.rad(45)),
+			RAINBOW[(index - 1) % #RAINBOW + 1]
+		)
+		flag.CanCollide = false
+	end
+
+	-- Круг стрелка перед прилавком.
+	local mark = cylinder(
+		model,
+		"GalleryMark",
+		0.06,
+		3.4,
+		origin * CFrame.new(0, 0.34, -5.6),
+		Color3.fromRGB(255, 210, 90)
+	)
+	mark.CanCollide = false
+	mark.Material = Enum.Material.Neon
+	mark.Transparency = 0.2
+	CollectionService:AddTag(mark, "AF_GalleryMark")
+
+	sign(model, origin * CFrame.new(width / 2 + 2, 0, -5), "🎯 Тир")
+end
+
 function PlaygroundService.build(parent: Instance): number
 	local folder = Instance.new("Folder")
 	folder.Name = "Playground"

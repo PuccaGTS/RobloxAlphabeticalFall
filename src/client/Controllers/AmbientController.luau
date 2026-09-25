@@ -148,6 +148,10 @@ function AmbientController.init()
 	placeSpot(sounds, grotto + Vector3.new(0, grottoGround + 5, 0), Ambient.GROTTO_DRIP)
 	local ship = Playground.position(Playground.expect(Rides.SHIP.spot))
 	placeSpot(sounds, Vector3.new(ship.X, Decor.groundY(ship.X, ship.Z) + 6, ship.Z), Ambient.SHIP)
+	for id, spec in { gallery = Ambient.GALLERY, pond = Ambient.POND } do
+		local at = Playground.position(Playground.expect(id))
+		placeSpot(sounds, Vector3.new(at.X, Decor.groundY(at.X, at.Z) + 4, at.Z), spec)
+	end
 	animateFallStripes()
 
 	--[[
