@@ -77,6 +77,21 @@ local CATALOG: { Attraction } = {
 	},
 	{ id = "lava", title = "Лавовые кочки", fromLevel = 3, seconds = 8, floor = false },
 	{ id = "cookies", title = "Печеньки", fromLevel = 3, seconds = 7, floor = false },
+	--[[
+		Мост из букв (docs/17-CONTENT-PLAN.md § 7.4): у пропасти плита с буквой,
+		которую только что назвала станция, дальше ряды по три доски. Держит
+		следующая по алфавиту — и за ребёнком ложится настил, мост А-Б-В-Г
+		достраивается на глазах. Чужая доска мягко уходит вниз, к флажку.
+		Учит порядок букв ногами: пропустил букву — упал.
+	]]
+	{
+		id = "letterbridge",
+		title = "Мост из букв",
+		fromLevel = 3,
+		seconds = 9,
+		floor = false,
+		lettersOnly = true,
+	},
 	{ id = "swings", title = "Качели", fromLevel = 4, seconds = 10, floor = false },
 	{ id = "bounce", title = "Батуты", fromLevel = 4, seconds = 8, floor = false },
 	{ id = "hammers", title = "Молоты", fromLevel = 5, seconds = 7, floor = false },
@@ -222,6 +237,15 @@ Attractions.HEAT = {
 		rows = { 3, 3, 4, 4, 5 },
 		size = { 7, 6.5, 6, 5.5, 5 }, -- поперечник кочки
 		gap = { 2.5, 3, 3.5, 4, 4.5 }, -- от края до края между рядами
+	},
+	--[[
+		Мост из букв: ряды по три доски, по одной на дорожку. Чем жарче, тем
+		длиннее мост, уже доски и шире шаг между рядами.
+	]]
+	letterbridge = {
+		rows = { 3, 3, 4, 4, 5 },
+		size = { 6.5, 6, 6, 5.5, 5 }, -- сторона доски
+		gap = { 2.5, 3, 3, 3.5, 4 }, -- от края до края между рядами
 	},
 	cookies = {
 		rows = { 5, 6, 7, 7, 8 },

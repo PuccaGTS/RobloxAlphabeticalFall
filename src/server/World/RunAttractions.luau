@@ -1102,6 +1102,34 @@ end
 	и называет букву), чужая булькает и мягко уходит вниз (Mover = crumble
 	с короткой выдержкой) — ребёнок падает на мягкое дно и возвращается к флажку.
 ]]
+--[[
+	Буква на верхней грани детали parent: прозрачная пластина в кадре top
+	со стороной side и надпись цвета буквы. Лежит на кочке и на доске моста.
+]]
+local function topGlyph(parent: BasePart, top: CFrame, side: number, glyph: string?, color: Color3?)
+	local plate = ghost(part(parent, "Glyph", Vector3.new(side, 0.05, side), top, Color3.new(1, 1, 1)))
+	plate.Transparency = 1
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Top
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	-- Крупно: TextScaled не рисует выше 100 пикселей, поэтому пикселей на студ мало.
+	gui.PixelsPerStud = 100 / side
+	gui.LightInfluence = 0
+	gui.Parent = plate
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	-- Верх надписи на верхней грани смотрит вбок: поворачиваем, чтобы бегущий читал её прямо.
+	label.Rotation = 90
+	label.BackgroundTransparency = 1
+	label.Text = glyph or "?"
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.TextColor3 = color or Color3.new(1, 1, 1)
+	label.TextStrokeColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0
+	label.Parent = gui
+end
+
 local STONE = Color3.fromRGB(160, 150, 138)
 local MOSS = Color3.fromRGB(110, 175, 95)
 
@@ -1140,38 +1168,48 @@ function BUILDERS.letterstones(model: Model, path, ride)
 		)
 		moss.Shape = Enum.PartType.Cylinder
 		moss.Material = Enum.Material.Grass
-		-- Буква лежит на макушке: прозрачная пластина, на ней надпись цвета буквы.
-		local plate = ghost(
-			part(
-				body,
-				"Glyph",
-				Vector3.new(size * 0.8, 0.05, size * 0.8),
-				center * CFrame.new(0, 0.83, 0),
-				Color3.new(1, 1, 1)
-			)
-		)
-		plate.Transparency = 1
-		local gui = Instance.new("SurfaceGui")
-		gui.Face = Enum.NormalId.Top
-		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-		-- Крупно: TextScaled не рисует выше 100 пикселей, поэтому пикселей на студ мало.
-		gui.PixelsPerStud = 100 / (size * 0.8)
-		gui.LightInfluence = 0
-		gui.Parent = plate
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.fromScale(1, 1)
-		-- Верх надписи на верхней грани смотрит вбок: поворачиваем, чтобы бегущий читал её прямо.
-		label.Rotation = 90
-		label.BackgroundTransparency = 1
-		label.Text = stone.glyph or "?"
-		label.TextScaled = true
-		label.Font = Enum.Font.FredokaOne
-		label.TextColor3 = stone.color or Color3.new(1, 1, 1)
-		label.TextStrokeColor3 = Color3.new(1, 1, 1)
-		label.TextStrokeTransparency = 0
-		label.Parent = gui
+		topGlyph(body, center * CFrame.new(0, 0.83, 0), size * 0.8, stone.glyph, stone.color)
 	end
 	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 12, 0), "🔤")
+end
+
+--[[
+	Мост из букв: у края пола широкая плита-начало с буквой отрезка, дальше
+	ряды по три доски над пропастью. Верная доска ряда — следующая по алфавиту
+	(Mover = bridgestep: звенит, называет букву, и клиент кладёт настил от
+	прошлой верной доски к этой — мост строится за ребёнком). Чужая доска —
+	как чужая буквенная кочка: булькает и мягко уходит вниз, к флажку.
+]]
+local PLANK = Color3.fromRGB(215, 170, 115)
+local PLANK_START = Color3.fromRGB(245, 215, 130)
+
+function BUILDERS.letterbridge(model: Model, path, ride)
+	local size = ride.size
+	local startAt = at(path, ride, 0, -0.5, ride.start)
+	local first =
+		part(model, `BridgeStart_{ride.index}`, Vector3.new(Tunnel.WIDTH - 1, 1, size), startAt, PLANK_START)
+	first.Material = Enum.Material.WoodPlanks
+	first:SetAttribute("Ride", ride.index)
+	topGlyph(first, startAt * CFrame.new(0, 0.53, 0), size * 0.8, ride.first.glyph, ride.first.color)
+
+	for index, step in ride.steps do
+		local center = at(path, ride, step.x, -0.5, step.z)
+		local board =
+			part(model, `BridgeStep_{ride.index}_{index}`, Vector3.new(size, 1, size), center, PLANK)
+		board.Material = Enum.Material.WoodPlanks
+		if step.right then
+			mover(board, "bridgestep", { Vo = step.vo, Row = step.row, Ride = ride.index })
+		else
+			mover(board, "crumble", {
+				Hold = Attractions.STONE_HOLD,
+				Fall = Attractions.STONE_SINK,
+				Back = Attractions.COOKIE_BACK,
+				Sink = true,
+			})
+		end
+		topGlyph(board, center * CFrame.new(0, 0.53, 0), size * 0.8, step.glyph, step.color)
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 12, 0), "🌉")
 end
 
 --[[

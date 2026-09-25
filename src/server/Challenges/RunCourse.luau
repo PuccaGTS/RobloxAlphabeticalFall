@@ -37,6 +37,7 @@ local TRACK_SEED_SALT = 15485863
 local ATTRACTION_SEED_SALT = 49979687
 -- Буквы на буквенных кочках: свой генератор, чтобы не сдвигать остальной план.
 local STONES_SEED_SALT = 86028121
+local BRIDGE_SEED_SALT = 32452843
 
 --[[
 	Отвлекающие буквы уровня: по группам из Config/Levels, каждая перемешана
@@ -249,6 +250,59 @@ function RunCourse.new(id: string, params)
 				stone.glyph = letter.glyph
 				stone.color = letter.color
 				stone.vo = letter.vo.name
+			end
+		end
+
+		--[[
+			Мост из букв: плита-начало — буква отрезка (станция её только что
+			назвала), верная доска ряда n — n-я следующая по алфавиту. Мост
+			не выходит за Я: у конца алфавита начало сдвигается назад. Чужие
+			доски — соседи по алфавиту через одну и с другой стороны: ошибка —
+			это пропуск буквы или шаг назад, то есть ровно незнание порядка.
+		]]
+		local bridgeRandom = Random.new(seed + BRIDGE_SEED_SALT)
+		local alphabet = Letters.ordered()
+		local function stamp(target: any, letterId: string)
+			local letter = Letters.expect(letterId)
+			target.letterId = letterId
+			target.glyph = letter.glyph
+			target.color = letter.color
+			target.vo = letter.vo.name
+		end
+		for _, ride in course.attractions do
+			if ride.id ~= "letterbridge" then
+				continue
+			end
+			local targetId = gates[ride.segment].targetLetter
+			local start = math.min(table.find(alphabet, targetId) or 1, #alphabet - ride.rows)
+			ride.first = {}
+			stamp(ride.first, alphabet[start])
+			for _, step in ride.steps do
+				local order = start + step.row
+				if step.right then
+					stamp(step, alphabet[order])
+				end
+			end
+			local rows: { [number]: { any } } = {}
+			for _, step in ride.steps do
+				if not step.right then
+					rows[step.row] = rows[step.row] or {}
+					table.insert(rows[step.row], step)
+				end
+			end
+			for row, wrong in rows do
+				local order = start + row
+				local near: { string } = {}
+				for _, shift in { 1, 2, -1, -2, 3, -3 } do
+					local id = alphabet[order + shift]
+					if id then
+						table.insert(near, id)
+					end
+				end
+				local picked = CourseLayout.shuffled(near, bridgeRandom)
+				for index, step in wrong do
+					stamp(step, picked[index])
+				end
 			end
 		end
 

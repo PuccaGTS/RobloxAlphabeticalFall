@@ -286,6 +286,54 @@ return function(player, note)
 			end
 		end
 
+		-- Мост из букв: верная доска держит и кладёт настил, чужая уходит вниз.
+		if id == "letterbridge" then
+			local rights, wrong = {}, nil
+			for _, board in child:GetChildren() do
+				if string.sub(board.Name, 1, 11) == "BridgeStep_" and board:IsA("BasePart") then
+					local label = board:FindFirstChild("Glyph")
+					label = label and label:FindFirstChildWhichIsA("TextLabel", true)
+					if board:GetAttribute("Mover") == "bridgestep" then
+						rights[board:GetAttribute("Row")] = board
+						note(`   letterbridge: row {board:GetAttribute("Row")} right {label and label.Text}`)
+					else
+						wrong = wrong or board
+					end
+				end
+			end
+			local start = child:FindFirstChild(`BridgeStart_{index}`)
+			local startLabel = start and start:FindFirstChild("Glyph")
+			startLabel = startLabel and startLabel:FindFirstChildWhichIsA("TextLabel", true)
+			note(`   letterbridge: start {startLabel and startLabel.Text}`)
+			for row = 1, #rights do
+				standOn(rights[row])
+				task.wait(1.2)
+			end
+			local last = rights[#rights]
+			if start and last then
+				_G.ZZ_Shot(
+					player,
+					`run_{index}_letterbridge_built`,
+					CFrame.lookAt(
+						start.Position + Vector3.new(0, 16, 0) - (last.Position - start.Position).Unit * 10,
+						last.Position
+					),
+					70
+				)
+				task.wait(4.5)
+			end
+			if wrong then
+				local r = standOn(wrong)
+				local startY = r.Position.Y
+				local lowest = startY
+				for _ = 1, 25 do
+					task.wait(0.1)
+					lowest = math.min(lowest, r.Position.Y)
+				end
+				note(string.format("   letterbridge wrong: stood at %.1f, lowest %.1f", startY, lowest))
+			end
+		end
+
 		-- Печенька должна раскрошиться под стоящим: встать и подождать.
 		if id == "cookies" then
 			local cookie = child:FindFirstChild(`Cookie_{index}_2`)

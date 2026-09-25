@@ -209,6 +209,37 @@ return function()
 			end
 		)
 
+		it(
+			"мост из букв: в ряду три доски и одна верная, прыжок между рядами по силам",
+			function()
+				for _, plan in plans("letterbridge") do
+					expect(plan.gap + 1 <= Attractions.MAX_GAP).to.equal(true)
+					local rights, rows, previous = {}, {}, nil
+					for _, step in plan.steps do
+						rows[step.row] = (rows[step.row] or 0) + 1
+						expect(math.abs(step.x) + plan.size / 2 <= Tunnel.WIDTH / 2).to.equal(true)
+						if step.right then
+							expect(rights[step.row]).to.equal(nil)
+							rights[step.row] = step.x
+						end
+					end
+					expect(#rights).to.equal(plan.rows)
+					for row = 1, plan.rows do
+						expect(rows[row]).to.equal(3)
+						if previous then
+							expect(math.abs(rights[row] - previous) <= 9).to.equal(true)
+						end
+						previous = rights[row]
+					end
+				end
+			end
+		)
+
+		it("мост из букв: только в мире букв", function()
+			expect(table.find(Attractions.unlocked(11), "letterbridge")).to.be.ok()
+			expect(table.find(Attractions.unlocked(11, true), "letterbridge")).to.equal(nil)
+		end)
+
 		it("буквенные кочки: только в мире букв", function()
 			expect(table.find(Attractions.unlocked(11), "letterstones")).to.be.ok()
 			expect(table.find(Attractions.unlocked(11, true), "letterstones")).to.equal(nil)
@@ -665,6 +696,43 @@ return function()
 								rows[stone.row] = rows[stone.row] or {}
 								expect(rows[stone.row][stone.letterId]).to.equal(nil)
 								rows[stone.row][stone.letterId] = true
+							end
+						end
+					end
+				end
+				expect(seen > 0).to.equal(true)
+			end
+		)
+
+		it(
+			"мост из букв идёт по алфавиту от буквы отрезка, чужие доски — соседи по алфавиту",
+			function()
+				local alphabet = Letters.ordered()
+				local seen = 0
+				for _, spec in levelSpecs() do
+					for _, ride in spec.params.attractions do
+						if ride.id == "letterbridge" then
+							seen += 1
+							local target = spec.params.gates[ride.segment].targetLetter
+							local start = table.find(alphabet, ride.first.letterId)
+							expect(start).to.be.ok()
+							-- Начало — буква отрезка, если мост не упирается в Я.
+							if table.find(alphabet, target) + ride.rows <= #alphabet then
+								expect(ride.first.letterId).to.equal(target)
+							end
+							local rows = {}
+							for _, step in ride.steps do
+								local order = table.find(alphabet, step.letterId)
+								expect(order).to.be.ok()
+								if step.right then
+									expect(order).to.equal(start + step.row)
+								else
+									expect(order ~= start + step.row).to.equal(true)
+									expect(math.abs(order - (start + step.row)) <= 3).to.equal(true)
+								end
+								rows[step.row] = rows[step.row] or {}
+								expect(rows[step.row][step.letterId]).to.equal(nil)
+								rows[step.row][step.letterId] = true
 							end
 						end
 					end

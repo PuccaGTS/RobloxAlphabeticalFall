@@ -17,6 +17,7 @@ local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteDefs = require(Shared.Net.RemoteDefs)
@@ -344,12 +345,15 @@ end
 ]]
 local stoneSaid: { [BasePart]: number } = {}
 
-local function letterstone(part: BasePart, now: number, root: Vector3?)
+local originalMaterial: { [BasePart]: Enum.Material } = {}
+
+-- true — ребёнок только что встал на кочку (или доску моста), а не стоит на ней давно.
+local function letterstone(part: BasePart, now: number, root: Vector3?): boolean
 	if not root or not standsOn(part, root, part.Size.Y / 2) then
-		return
+		return false
 	end
 	if (stoneSaid[part] or -math.huge) + 2.5 > now then
-		return
+		return false
 	end
 	stoneSaid[part] = now
 	sound("stone_right", part.Position)
@@ -359,14 +363,70 @@ local function letterstone(part: BasePart, now: number, root: Vector3?)
 	end
 	local color = originalColor[part] or part.Color
 	originalColor[part] = color
+	local material = originalMaterial[part] or part.Material
+	originalMaterial[part] = material
 	part.Color = Color3.fromRGB(150, 235, 150)
 	part.Material = Enum.Material.Neon
 	task.delay(0.6, function()
 		if part.Parent then
 			part.Color = color
-			part.Material = Enum.Material.Slate
+			part.Material = material
 		end
 	end)
+	return true
+end
+
+--[[
+	Доска моста из букв (RunAttractions.letterbridge): верная звенит и называет
+	букву, как кочка, а ещё от прошлой верной доски (или от плиты-начала)
+	к ней ложится настил. Дошёл до конца — за спиной целый мост по алфавиту.
+	Настил — только у этого ребёнка: забег свой у каждого.
+]]
+local bridged: { [BasePart]: boolean } = {}
+
+local function bridgestep(part: BasePart, now: number, root: Vector3?)
+	if not letterstone(part, now, root) or bridged[part] then
+		return
+	end
+	bridged[part] = true
+	local row = part:GetAttribute("Row")
+	local ride = part:GetAttribute("Ride")
+	local parent = part.Parent
+	if typeof(row) ~= "number" or not parent then
+		return
+	end
+	local previous: BasePart? = nil
+	for _, sibling in parent:GetChildren() do
+		if not sibling:IsA("BasePart") or sibling:GetAttribute("Ride") ~= ride then
+			continue
+		end
+		local isStart = row == 1 and string.sub(sibling.Name, 1, 12) == "BridgeStart_"
+		local isPrevious = sibling:GetAttribute("Mover") == "bridgestep"
+			and sibling:GetAttribute("Row") == row - 1
+		if isStart or isPrevious then
+			previous = sibling
+			break
+		end
+	end
+	if not previous then
+		return
+	end
+	-- С плиты-начала настил идёт от её точки напротив доски, а не от середины.
+	local from = previous.Position
+	if row == 1 then
+		from = (previous.CFrame * CFrame.new(previous.CFrame:PointToObjectSpace(part.Position).X, 0, 0)).Position
+	end
+	local to = part.Position
+	local plank = Instance.new("Part")
+	plank.Name = "BridgePlank"
+	plank.Anchored = true
+	plank.Material = Enum.Material.WoodPlanks
+	plank.Color = Color3.fromRGB(250, 205, 120)
+	plank.Size = Vector3.new(2.6, 0.6, (to - from).Magnitude)
+	plank.CFrame = CFrame.lookAt((from + to) / 2, to) * CFrame.new(0, 0.2, 0)
+	plank.Transparency = 1
+	plank.Parent = parent
+	TweenService:Create(plank, TweenInfo.new(0.4), { Transparency = 0 }):Play()
 end
 
 --[[
@@ -580,6 +640,10 @@ local function step(frame: number)
 		end
 		if part:GetAttribute("Mover") == "letterstone" then
 			letterstone(part, now, rootPosition)
+			continue
+		end
+		if part:GetAttribute("Mover") == "bridgestep" then
+			bridgestep(part, now, rootPosition)
 			continue
 		end
 		local cframe = positionFor(part, now)

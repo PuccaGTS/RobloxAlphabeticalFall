@@ -385,6 +385,38 @@ local function letterstones(heat: number, random: Random)
 end
 
 --[[
+	Мост из букв: плита-начало вплотную к полу, за ней ряды по три доски.
+	В ряду одна верная (right) — на ней следующая по алфавиту буква; какие
+	буквы где, решает забег (Challenges/RunCourse). Верные соседних рядов
+	не дальше соседней дорожки, как у буквенных кочек.
+]]
+local function letterbridge(heat: number, random: Random)
+	local rows = Attractions.param("letterbridge", "rows", heat)
+	local size = Attractions.param("letterbridge", "size", heat)
+	local gap = Attractions.param("letterbridge", "gap", heat)
+
+	local steps = {}
+	local z = size + gap + size / 2
+	local previous: number? = nil
+	for row = 1, rows do
+		local right = laneNear(random, previous)
+		for lane, x in LANES do
+			table.insert(steps, { row = row, lane = lane, x = x, z = z, right = x == right })
+		end
+		previous = right
+		z += size + gap
+	end
+	return {
+		steps = steps,
+		rows = rows,
+		size = size,
+		gap = gap,
+		start = size / 2, -- центр плиты-начала
+		length = z - size / 2,
+	}
+end
+
+--[[
 	Кубики-топотуны: ряды по три кубика над дорожками. В ряду кубики топают
 	по очереди, со сдвигом в треть цикла, соседние ряды — со своим сдвигом:
 	волна топота бежит по аттракциону, и переждать её надо с умом.
@@ -513,6 +545,7 @@ local MAKERS = {
 	bounce = bounce,
 	cookies = cookies,
 	letterstones = letterstones,
+	letterbridge = letterbridge,
 	stompers = stompers,
 	islands = islands,
 	lava = lava,
