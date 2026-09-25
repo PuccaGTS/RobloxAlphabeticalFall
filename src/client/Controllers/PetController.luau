@@ -13,11 +13,10 @@
 	подошёл к соседу, нажал на его буквёнка — услышал «Буква Ж». Это то самое
 	постоянное фоновое повторение, ради которого буквята и придуманы.
 
-	Пока арта нет, буквёнок собран из примитивов — но это зверёк, а не шарик:
-	у каждой буквы свой (котик, зайчик, мишка, птенчик, лягушонок), с животиком,
-	щёчками, лапками и хвостиком. Моргает, машет крыльями, прыгает от касания
-	и радуется верным ответам хозяина. Модель художника встанет сюда же
-	(docs/10-CONTENT-PIPELINE.md).
+	Буквёнок — плюшевая игрушка из Creator Store (assets/models/pets): у каждой
+	буквы свой зверёк — котик, зайчик, мишка, цыплёнок, лягушонок. Прыгает от
+	касания и радуется верным ответам хозяина. Если модели нет, зверёк
+	собирается из примитивов, как раньше: с животиком, щёчками и лапками.
 ]]
 
 local Players = game:GetService("Players")
@@ -52,6 +51,11 @@ local HOP_SECONDS = 0.5
 -- Радость за верный ответ: прыжок с оборотом и искры. Чуть дольше прыжка от касания.
 local CHEER_SECONDS = 0.9
 local BLINK_SECONDS = 0.13
+-- Игрушки из Store (assets/models/pets): размер по большей стороне и поворот мордочкой к -Z.
+local MODEL_SIZE = 2.8
+local MODEL_YAW = { cat = 0, bunny = 90, bear = 0, bird = 90, frog = 120 }
+local assets = ReplicatedStorage:WaitForChild("Assets", 10)
+local petModels = assets and assets:FindFirstChild("pets")
 
 type Pet = {
 	model: Model,
@@ -128,12 +132,72 @@ local function attached(
 	return part
 end
 
+local finish: (Model, BasePart, string, Shop.PetSkin?, string?) -> Pet
+local tint: (Pet, Color3) -> ()
+
+--[[
+	Зверёк из Creator Store (assets/models/pets, импорт tools/models/import.py).
+	На проверке 25.09.2026 буквят из шариков назвали «набор геометрических фигур,
+	выглядит нелепо»: теперь это плюшевые игрушки — котик, зайчик, мишка,
+	цыплёнок и лягушонок. Модель сжата до размера буквёнка и повёрнута мордочкой
+	вперёд (-Z); её детали следуют за невидимым телом, как детали эскиза.
+
+	Скин перекрашивает игрушку: текстуру — через VertexColor, простые детали —
+	цветом, материал и прозрачность — как у скина. Радужный скин красит её
+	каждый кадр (tint).
+]]
+local function buildFromModel(letterId: string, template: Model, skin: Shop.PetSkin?, skinId: string?): Pet
+	local letter = Letters.expect(letterId)
+	local model = Instance.new("Model")
+	model.Name = `Pet_{letterId}`
+	local body = piece(model, "Body", Enum.PartType.Ball, Vector3.one * BODY_SIZE, letter.color)
+	body.Transparency = 1
+	body.CanQuery = true -- только тело ловит касание
+	model.PrimaryPart = body
+
+	local toy = template:Clone()
+	local _, size = toy:GetBoundingBox()
+	toy:ScaleTo(toy:GetScale() * MODEL_SIZE / math.max(size.X, size.Y, size.Z))
+	local box = toy:GetBoundingBox()
+	-- Центр игрушки — в центре тела, мордочка — по ходу хозяина.
+	local yaw = math.rad(MODEL_YAW[template.Name] or 0)
+	local home = CFrame.Angles(0, yaw, 0) * CFrame.new(-box.Position)
+	for _, part in toy:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			part.CastShadow = false
+			part:SetAttribute("Offset", home * part.CFrame)
+			part:SetAttribute("Tint", "model")
+			part:SetAttribute("BaseColor", part.Color)
+			if skin then
+				part.Material = skin.material
+				part.Transparency = math.max(part.Transparency, skin.transparency or 0)
+			end
+			part.Parent = model
+		end
+	end
+	toy:Destroy()
+	local pet = finish(model, body, letterId, skin, skinId)
+	if skin then
+		tint(pet, skin.color)
+	end
+	return pet
+end
+
 local function build(letterId: string, skinId: string?): Pet
 	local letter = Letters.expect(letterId)
 	local item = if skinId then Shop.get(skinId) else nil
 	local skin = if item and item.category == "petskin" then item.skin else nil
 	local species = speciesOf(letterId)
 	local r = BODY_SIZE / 2
+
+	local template = petModels and petModels:FindFirstChild(species)
+	if template and template:IsA("Model") then
+		return buildFromModel(letterId, template, skin, skinId)
+	end
 
 	local model = Instance.new("Model")
 	model.Name = `Pet_{letterId}`
@@ -359,6 +423,12 @@ local function build(letterId: string, skinId: string?): Pet
 		)
 	end
 
+	return finish(model, body, letterId, skin, skinId)
+end
+
+-- Общее для эскиза и модели: буква над головой, касание, запись о питомце.
+function finish(model: Model, body: BasePart, letterId: string, skin: Shop.PetSkin?, skinId: string?): Pet
+	local letter = Letters.expect(letterId)
 	local tag = piece(model, "Tag", Enum.PartType.Block, Vector3.one * 0.1, letter.color)
 	tag.Transparency = 1
 	tag:SetAttribute("Offset", CFrame.new(0, BODY_SIZE * 1.15, 0))
@@ -422,11 +492,21 @@ local function place(pet: Pet, at: CFrame)
 end
 
 -- Радужный скин перекрашивает не только тело, но и уши, лапки, хвост и животик.
-local function tint(pet: Pet, color: Color3)
+function tint(pet: Pet, color: Color3)
 	pet.body.Color = color
 	for _, part in pet.model:GetChildren() do
 		local kind = part:GetAttribute("Tint")
-		if part:IsA("BasePart") and kind then
+		if part:IsA("BasePart") and kind == "model" then
+			-- Игрушка: текстура тонируется целиком, простая деталь — наполовину к цвету скина.
+			local mesh = part:FindFirstChildWhichIsA("SpecialMesh")
+			if mesh and mesh.TextureId ~= "" then
+				local top = math.max(color.R, color.G, color.B, 0.01)
+				mesh.VertexColor = Vector3.new(color.R / top, color.G / top, color.B / top)
+			else
+				local base = part:GetAttribute("BaseColor")
+				part.Color = (if typeof(base) == "Color3" then base else color):Lerp(color, 0.6)
+			end
+		elseif part:IsA("BasePart") and kind then
 			part.Color = if kind == "light"
 				then lighter(color, if part.Name == "Belly" then 0.55 else 0.3)
 				elseif kind == "dark" then darker(color, 0.15)

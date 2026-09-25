@@ -1,0 +1,110 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Part",
+   "name": "Teddy bear",
+   "properties": {
+    "Reflectance": {
+     "Float32": 0
+    },
+    "CanCollide": {
+     "Bool": true
+    },
+    "Color": {
+     "Color3": [
+      0.7686274647712708,
+      0.1568627506494522,
+      0.10980392247438431
+     ]
+    },
+    "CFrame": {
+     "CFrame": {
+      "orientation": [
+       [
+        0.027364790439605713,
+        0.9995988607406616,
+        0.007299719378352165
+       ],
+       [
+        -0.020757043734192848,
+        -0.006732669658958912,
+        0.9997618794441223
+       ],
+       [
+        0.9994099140167236,
+        -0.027509795501828194,
+        0.020564479753375053
+       ]
+      ],
+      "position": [
+       -775.7117919921875,
+       40.41743087768555,
+       194.0800323486328
+      ]
+     }
+    },
+    "Transparency": {
+     "Float32": 0
+    },
+    "Anchored": {
+     "Bool": true
+    },
+    "Shape": {
+     "Enum": 1
+    },
+    "Material": {
+     "Enum": 256
+    },
+    "CastShadow": {
+     "Bool": true
+    },
+    "Size": {
+     "Vector3": [
+      3,
+      0.800000011920929,
+      1
+     ]
+    }
+   },
+   "children": [
+    {
+     "className": "SpecialMesh",
+     "name": "Mesh",
+     "properties": {
+      "Offset": {
+       "Vector3": [
+        0,
+        0,
+        0
+       ]
+      },
+      "VertexColor": {
+       "Vector3": [
+        1,
+        1,
+        1
+       ]
+      },
+      "MeshType": {
+       "Enum": 5
+      },
+      "Scale": {
+       "Vector3": [
+        1,
+        1,
+        1
+       ]
+      },
+      "MeshId": {
+       "ContentId": "http://www.roblox.com/asset/?id=12218321"
+      },
+      "TextureId": {
+       "ContentId": "http://www.roblox.com/asset/?id=12218077"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

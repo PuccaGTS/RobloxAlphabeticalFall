@@ -1,0 +1,122 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Frog Friend",
+   "children": [
+    {
+     "className": "Model",
+     "name": "FrogBack",
+     "children": [
+      {
+       "className": "Part",
+       "name": "Handle",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -4.371138828673793e-08,
+            0.18103410303592682,
+            -0.9834768176078796
+           ],
+           [
+            0,
+            0.9834768176078796,
+            0.18103410303592682
+           ],
+           [
+            1,
+            7.913252275670857e-09,
+            -4.29891358066925e-08
+           ]
+          ],
+          "position": [
+           -17.410001754760742,
+           2.1900596618652344,
+           -8.490005493164062
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          2,
+          3,
+          2
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Offset": {
+           "Vector3": [
+            0,
+            0,
+            0
+           ]
+          },
+          "VertexColor": {
+           "Vector3": [
+            1,
+            1,
+            1
+           ]
+          },
+          "MeshType": {
+           "Enum": 5
+          },
+          "Scale": {
+           "Vector3": [
+            1,
+            1,
+            1
+           ]
+          },
+          "MeshId": {
+           "ContentId": "rbxassetid://6093106481"
+          },
+          "TextureId": {
+           "ContentId": "rbxassetid://6092989000"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

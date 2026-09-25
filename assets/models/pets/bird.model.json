@@ -1,0 +1,436 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Cute Chick",
+   "children": [
+    {
+     "className": "Part",
+     "name": "Blush",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        1,
+        0.8509804010391235,
+        0.9333333373069763
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          -1
+         ]
+        ],
+        "position": [
+         -161.76751708984375,
+         19.745622634887695,
+         104.93821716308594
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.8932681083679199,
+        1.146142601966858,
+        11.460000038146973
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          2.252495050430298,
+          3.3624424934387207,
+          3.0332047939300537
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://8780229071"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Body",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        1,
+        0.95686274766922,
+        0.6196078658103943
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          -1
+         ]
+        ],
+        "position": [
+         -173.59585571289062,
+         18.526235580444336,
+         104.54031372070312
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        26.27849578857422,
+        37.05247116088867,
+        34.387062072753906
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.9838110208511353,
+          1,
+          0.9978595972061157
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://8780195503"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Eyes",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.06666667014360428,
+        0.06666667014360428,
+        0.06666667014360428
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          -1
+         ]
+        ],
+        "position": [
+         -162.5426025390625,
+         22.059865951538086,
+         104.76828002929688
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        2.3025498390197754,
+        2.784837245941162,
+        12.049623489379883
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          5.239460468292236,
+          3.639630079269409,
+          3.404151678085327
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://8780207939"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Feet",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        1,
+        0.48627451062202454,
+        0.14509804546833038
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          1
+         ]
+        ],
+        "position": [
+         -171.72637939453125,
+         1.2785314321517944,
+         105.12751007080078
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        2.7514400482177734,
+        2.557062864303589,
+        24.38382339477539
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          4.103295803070068,
+          4.385403156280518,
+          4.0497002601623535
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://8780317360"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Peak",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        1,
+        0.48627451062202454,
+        0.14509804546833038
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          -1
+         ]
+        ],
+        "position": [
+         -160.82249450683594,
+         19.78101348876953,
+         104.6361083984375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        1.7695422172546387,
+        2.0317413806915283,
+        3.5127201080322266
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          3.013576030731201,
+          3.2232825756073,
+          3.017336845397949
+         ]
+        },
+        "MeshId": {
+         "ContentId": "rbxassetid://8780237665"
+        },
+        "MeshType": {
+         "Enum": 5
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
