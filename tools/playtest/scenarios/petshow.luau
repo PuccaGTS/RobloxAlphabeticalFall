@@ -7,7 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 return function(player, note)
-	task.wait(3)
+	task.wait(12) -- раньше клиент не готов, и первый снимок выходит с площади
 	game:GetService("Lighting").ClockTime = 13
 	local prefix = workspace:GetAttribute("ZZ_Only")
 	local rows = {}
