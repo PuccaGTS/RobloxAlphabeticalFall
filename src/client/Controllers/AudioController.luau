@@ -8,8 +8,10 @@
 	  · название буквы (letter_) нельзя прервать ничем — это эталон;
 	  · на время любой реплики музыка и эмбиент опускаются до 30%;
 	  · кнопка «динамик» повторяет последнюю значимую реплику;
-	  · реплика без загруженного аудио показывается текстом (Config/VOText):
-	    пока озвучка не записана, иначе игра молчит и задание не понять.
+	  · реплика без загруженного аудио показывается текстом (Config/VOText);
+	  · голосом звучат только названия букв и числа (AudioRegistry.isVoiced):
+	    в Roblox дети обычно играют без звука, поэтому задания, похвала и сюжет —
+	    подписи на экране, а не реплики (docs/05-AUDIO-VO.md § 1).
 ]]
 
 local SoundService = game:GetService("SoundService")
@@ -208,7 +210,8 @@ end
 local function enqueue(key: string): boolean
 	ensureGroups()
 
-	local assetId = AudioRegistry.resolve(key)
+	-- Подпись без голоса: задания, похвала, сюжет. Звучат только буквы и числа.
+	local assetId = if AudioRegistry.isVoiced(key) then AudioRegistry.resolve(key) else nil
 	if not assetId then
 		-- реплика не записана: запоминаем как «последнюю» всё равно,
 		-- чтобы кнопка «повторить» вела себя предсказуемо, когда аудио появится
@@ -235,23 +238,32 @@ function AudioController.speak(key: string): boolean
 end
 
 --[[
-	Фраза: несколько реплик подряд как одно задание. Так говорит математика —
-	«Сколько будет» + «два» + «плюс» + «два» (docs/16-MATH.md § 5).
+	Фраза: несколько реплик подряд как одно задание — «Сколько будет» + «два» +
+	«плюс» + «два» (docs/16-MATH.md § 5). Подпись показывается фразой целиком.
 
-	Возвращает false, если не прозвучало НИЧЕГО: часть кусков может быть ещё
-	не записана, и это не повод молчать целиком — ребёнок услышит то, что есть,
-	а недостающее увидит на воротах.
+	Голосом — только если во фразе звучит всё (одни числа и буквы) или в ней
+	ровно одно число/буква: «Беги на цифру семь» — прозвучит «семь». Задача
+	с двумя числами молчит: «два … два» без «плюс» только запутает; её видно
+	на воротах и в подписи.
 ]]
 function AudioController.speakPhrase(keys: { string }): boolean
 	ensureGroups()
 
-	local spoken = false
-	local complete = true
+	local voicedKeys: { string } = {}
 	for _, key in keys do
-		if enqueue(key) then
-			spoken = true
-		else
-			complete = false
+		if AudioRegistry.isVoiced(key) then
+			table.insert(voicedKeys, key)
+		end
+	end
+	local spoken = false
+	local complete = #voicedKeys == #keys
+	if complete or #voicedKeys == 1 then
+		for _, key in voicedKeys do
+			if enqueue(key) then
+				spoken = true
+			else
+				complete = false
+			end
 		end
 	end
 

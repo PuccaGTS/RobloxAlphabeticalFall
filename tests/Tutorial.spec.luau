@@ -80,10 +80,10 @@ return function()
 	end)
 
 	describe("Tutorial — связь с игрой", function()
-		-- Обучение не имеет права требовать новой записи: озвучки и так не хватает.
+		-- Обучение не имеет права требовать новой записи: его реплики — подписи.
 		it("говорит только объявленными репликами", function()
 			local declared = {}
-			for _, key in AudioRegistry.requiredKeys() do
+			for _, key in AudioRegistry.captionKeys() do
 				declared[key] = true
 			end
 			for _, step in Tutorial.STEPS do

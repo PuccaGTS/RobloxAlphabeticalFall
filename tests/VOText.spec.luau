@@ -17,7 +17,7 @@ return function()
 			for _, key in Stages.THEMES do
 				music[key] = true
 			end
-			for _, key in AudioRegistry.requiredKeys() do
+			for _, key in AudioRegistry.captionKeys() do
 				if not music[key] then
 					local text = VOText.get(key)
 					if text == nil or text == "" then

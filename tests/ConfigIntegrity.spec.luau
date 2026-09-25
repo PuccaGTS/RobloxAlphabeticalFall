@@ -375,16 +375,23 @@ return function()
 		end)
 
 		--[[
-			Потолок объёма записи. Он тут не ради красоты: концепция сменилась именно
-			потому, что 600 реплик со звуками записать не вышло. Если список снова
-			начнёт разрастаться, тест обязан об этом сказать.
-
-			Математика влезла в этот же потолок и не подвинула его: задача собирается
-			из кусков («Сколько будет» + «два» + «плюс» + «два»), а не пишется
-			на каждый пример.
+			Минимум озвучки (docs/05-AUDIO-VO.md § 1): голосом — только 33 буквы
+			и 10 чисел. Если в запись снова поползут фразы, тест обязан сказать.
 		]]
-		it("реплик остаётся немного: не больше сотни", function()
-			expect(#AudioRegistry.requiredKeys() <= 100).to.equal(true)
+		it("голосом звучат только буквы и числа: 43 реплики", function()
+			local voiced = 0
+			for _, key in AudioRegistry.requiredKeys() do
+				if AudioRegistry.isVoiced(key) then
+					voiced += 1
+					local isLetter = string.sub(key, 1, 7) == "letter_"
+					local isNumber = string.match(key, "^num_%d+$") ~= nil
+					expect(isLetter or isNumber).to.equal(true)
+				end
+			end
+			expect(voiced).to.equal(Letters.count() + 10)
+			expect(AudioRegistry.isVoiced("praise_01")).to.equal(false)
+			expect(AudioRegistry.isVoiced("instr_letter_rain")).to.equal(false)
+			expect(AudioRegistry.isVoiced("mtask_howmuch")).to.equal(false)
 		end)
 
 		it("в реестре есть все реплики математики", function()

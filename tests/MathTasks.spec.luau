@@ -357,10 +357,10 @@ return function()
 
 	describe("Math.Озвучка", function()
 		it(
-			"каждый кусок сгенерированной фразы есть в списке озвучки",
+			"каждый кусок сгенерированной фразы есть в подписях",
 			function()
 				local keys = {}
-				for _, key in MathConfig.voKeys() do
+				for _, key in MathConfig.captionKeys() do
 					keys[key] = true
 				end
 				for stage = 1, 11 do
@@ -371,7 +371,7 @@ return function()
 						for _, key in task.vo do
 							if not keys[key] then
 								error(
-									`ступень {stage}, сид {seed}: ключа «{key}» нет в voKeys()`
+									`ступень {stage}, сид {seed}: ключа «{key}» нет в captionKeys()`
 								)
 							end
 						end
@@ -380,17 +380,10 @@ return function()
 			end
 		)
 
-		--[[
-			Тот самый потолок, ради которого задача произносится по кускам.
-			Реплика на каждый пример — это под три сотни записей, и ровно такой объём
-			однажды уже сменил концепцию игры (docs/05-AUDIO-VO.md § 1).
-		]]
-		it(
-			"реплик математики — два десятка, а не три сотни",
-			function()
-				expect(#MathConfig.voKeys() <= 25).to.equal(true)
-			end
-		)
+		-- Минимум озвучки: голосом у математики только числа (docs/05-AUDIO-VO.md § 1).
+		it("голосом у математики только десять чисел", function()
+			expect(#MathConfig.voKeys()).to.equal(10)
+		end)
 
 		it("фраза читается словами: она же идёт в субтитры", function()
 			local task = MathConfig.generate(7, Random.new(11))

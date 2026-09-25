@@ -66,13 +66,27 @@ local function reportContentState()
 		)
 	end
 
-	local pending = AudioRegistry.pending()
-	if #pending > 0 then
+	-- Голос — только буквы и числа; остальное (темы ступеней) — музыка.
+	local pendingVoice, pendingMusic, voice = 0, 0, 0
+	for _, key in AudioRegistry.requiredKeys() do
+		if AudioRegistry.isVoiced(key) then
+			voice += 1
+		end
+	end
+	for _, key in AudioRegistry.pending() do
+		if AudioRegistry.isVoiced(key) then
+			pendingVoice += 1
+		else
+			pendingMusic += 1
+		end
+	end
+	if pendingVoice + pendingMusic > 0 then
 		print(
 			string.format(
-				"[AlphabetFall] озвучка не загружена для %d из %d реплик — игра работает молча",
-				#pending,
-				#AudioRegistry.requiredKeys()
+				"[AlphabetFall] не загружено: голос %d из %d (буквы и числа), музыка ступеней %d — остальное подписями",
+				pendingVoice,
+				voice,
+				pendingMusic
 			)
 		)
 	end

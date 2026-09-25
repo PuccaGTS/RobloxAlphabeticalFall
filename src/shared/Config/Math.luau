@@ -449,23 +449,24 @@ local PHRASES: { [string]: string } = {
 Module.PHRASES = PHRASES
 
 --[[
-	Все ключи озвучки, которые нужны математике: десять чисел и десять кусков фраз.
-
-	Список короткий не случайно. Записать реплику на каждый пример — это под три
-	сотни файлов, и ровно такой объём однажды уже похоронил обучение звукам
-	(docs/05-AUDIO-VO.md § 1). Поэтому задача произносится по частям, а тест
-	на потолок в сотню реплик держит это правило вместо честного слова.
+	Озвучка математики — только числа от одного до десяти (docs/05-AUDIO-VO.md § 1:
+	минимум голоса). Задача целиком видна на воротах и подписью; куски фраз
+	(«Сколько будет», «плюс») собирают подпись, но голосом не звучат.
 ]]
 function Module.voKeys(): { string }
 	local keys: { string } = {}
-
 	for value = 1, MathConfig.MAX_NUMBER do
 		table.insert(keys, `num_{value}`)
 	end
+	return keys
+end
+
+-- Всё, из чего складывается подпись задачи: числа и куски фраз («Сколько будет», «плюс»).
+function Module.captionKeys(): { string }
+	local keys = Module.voKeys()
 	for key in PHRASES do
 		table.insert(keys, key)
 	end
-
 	table.sort(keys)
 	return keys
 end

@@ -93,12 +93,15 @@ return function()
 				for stage = 1, MathConfig.count() do
 					for _, round in BerryCount.Build(nil, {}, 5, stage, 3).params.rounds do
 						for _, key in round.vo do
-							expect(AudioRegistry.ids[key]).to.be.ok()
+							-- Голос — только у чисел, у кусков фраз — подпись.
+							if AudioRegistry.isVoiced(key) then
+								expect(AudioRegistry.ids[key]).to.be.ok()
+							end
 							expect(VOText.get(key)).to.be.ok()
 						end
 					end
 				end
-				expect(AudioRegistry.ids.instr_berries).to.be.ok()
+				expect(table.find(AudioRegistry.captionKeys(), "instr_berries")).to.be.ok()
 			end
 		)
 	end)

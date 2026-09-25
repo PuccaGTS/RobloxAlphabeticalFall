@@ -9,9 +9,11 @@
 	Порядок работы: записали → загрузили на аккаунт ГРУППЫ → вписали id сюда → коммит.
 	См. docs/05-AUDIO-VO.md и docs/10-CONTENT-PIPELINE.md.
 
-	Реплик стало мало и они простые: 33 названия букв плюс общий набор инструкций,
-	похвал и подсказок. Никаких изолированных звуков и слитных слогов — почему,
-	написано в docs/05-AUDIO-VO.md § 1.
+	Минимум озвучки (решение 25.09.2026, docs/05-AUDIO-VO.md § 1): в Roblox дети
+	обычно играют без звука, поэтому голосом звучат только 33 названия букв
+	и числа от одного до десяти. Задания, похвала, подсказки и сюжет — подписи
+	на экране (Config/VOText): их ключи остаются, но голоса у них нет и не будет
+	(isVoiced). Никаких изолированных звуков и слогов — docs/05-AUDIO-VO.md § 1.
 ]]
 
 local Letters = require(script.Parent.Letters)
@@ -34,43 +36,7 @@ AudioRegistry.HINT_COUNT = 3
 	Заполняется по мере загрузки аудио. Формат: ["letter_m"] = "rbxassetid://123456".
 	Пустая строка = реплика ещё не записана.
 ]]
-local ids: { [string]: string } = {
-	-- === Инструкции испытаний ===
-	-- Инструкция всегда общая и заканчивается на «вот эту букву:», после чего
-	-- играет letter_*. Так 6 файлов покрывают все 33 буквы вместо 198 комбинаций.
-	instr_letter_rain = "",
-	instr_alphabet_ladder = "",
-	instr_tunnel_run = "",
-	instr_lava_floor = "",
-	instr_bubbles = "",
-	instr_mirror = "",
-	instr_math_gates = "",
-	instr_scales = "",
-	instr_berries = "",
-
-	-- === Сюжет и навигация ===
-	story_intro = "",
-	story_meet_letter = "", -- «Познакомься! Это…» + letter_*
-	story_stage_open = "", -- «Открылись новые буквы!»
-	story_stage_done = "", -- «Ты выучил всю ступень!»
-
-	-- === UI ===
-	ui_shop = "",
-	ui_stars = "",
-	ui_goodbye = "",
-	ui_rest_reminder = "",
-}
-
--- Похвала/коррекция/подсказки генерируются пачкой: praise_01..praise_08 и т.д.
-for i = 1, AudioRegistry.PRAISE_COUNT do
-	ids[string.format("praise_%02d", i)] = ""
-end
-for i = 1, AudioRegistry.RETRY_COUNT do
-	ids[string.format("retry_%02d", i)] = ""
-end
-for i = 1, AudioRegistry.HINT_COUNT do
-	ids[string.format("hint_%02d", i)] = ""
-end
+local ids: { [string]: string } = {}
 
 -- Названия букв: ключи создаются из справочника, чтобы список нельзя было забыть обновить.
 for letterId in Letters.all do
@@ -80,12 +46,7 @@ for letterId in Letters.all do
 	end
 end
 
---[[
-	Математика: десять чисел и куски фраз, из которых собирается любая задача
-	(«Сколько будет» + «два» + «плюс» + «два»). Ключи берутся из Config/Math,
-	чтобы список нельзя было забыть обновить, а сама сборка из кусков нужна ради
-	объёма записи: реплика на каждый пример — это под три сотни файлов.
-]]
+-- Числа от одного до десяти (Config/Math.voKeys): голосом, как и буквы.
 for _, key in MathConfig.voKeys() do
 	if ids[key] == nil then
 		ids[key] = ""
@@ -169,45 +130,70 @@ end
 
 AudioRegistry.ids = ids
 
+-- Голосом звучат только названия букв и числа: у остальных реплик есть лишь подпись.
+local voiced: { [string]: boolean } = {}
+for id in Letters.all do
+	voiced[Letters.expect(id).vo.name] = true
+end
+for _, key in MathConfig.voKeys() do
+	voiced[key] = true
+end
+
+function AudioRegistry.isVoiced(key: string): boolean
+	return voiced[key] == true
+end
+
+local function sorted(set: { [string]: boolean }): { string }
+	local keys: { string } = {}
+	for key in set do
+		table.insert(keys, key)
+	end
+	table.sort(keys)
+	return keys
+end
+
 --[[
-	Все ключи, которые игра реально попросит проиграть. Считается из конфигов —
-	именно этот список сверяет тест ConfigIntegrity.
+	Всё, что нужно записать и загрузить: названия букв, числа и музыка ступеней.
+	Именно этот список сверяет тест ConfigIntegrity и считает сервер при старте.
 ]]
 function AudioRegistry.requiredKeys(): { string }
-	local set: { [string]: boolean } = {}
-
-	for id in Letters.all do
-		set[Letters.expect(id).vo.name] = true
-	end
-
-	for _, id in Challenges.ids() do
-		set[Challenges.expect(id).voInstruction] = true
-	end
-
+	local set: { [string]: boolean } = table.clone(voiced)
 	for _, stage in Stages.all do
 		set[stage.music] = true
 	end
+	return sorted(set)
+end
 
-	for _, key in MathConfig.voKeys() do
+--[[
+	Всё, что игра показывает подписью (Config/VOText): задания испытаний,
+	сюжет, похвала, подсказки, куски математики, обучение, прощание — и сами
+	буквы с числами. Голоса у подписей нет (isVoiced), только текст.
+]]
+function AudioRegistry.captionKeys(): { string }
+	local set: { [string]: boolean } = table.clone(voiced)
+	for _, id in Challenges.ids() do
+		set[Challenges.expect(id).voInstruction] = true
+	end
+	for _, key in MathConfig.captionKeys() do
 		set[key] = true
 	end
-
-	for _, key in { "story_intro", "story_meet_letter", "story_stage_open", "story_stage_done" } do
+	for _, key in
+		{
+			"story_intro",
+			"story_meet_letter",
+			"story_stage_open",
+			"story_stage_done",
+			"ui_goodbye",
+			"ui_rest_reminder",
+		}
+	do
 		set[key] = true
 	end
-
-	-- Лимит времени и отдых (docs/13-PARENT-MODE.md § 3): прощание и совет передохнуть.
-	for _, key in { "ui_goodbye", "ui_rest_reminder" } do
-		set[key] = true
-	end
-
-	-- Голос обучения первых минут: без него стрелка есть, а что делать — непонятно.
 	for _, step in Tutorial.STEPS do
 		if step.vo then
 			set[step.vo] = true
 		end
 	end
-
 	for i = 1, AudioRegistry.PRAISE_COUNT do
 		set[string.format("praise_%02d", i)] = true
 	end
@@ -217,13 +203,7 @@ function AudioRegistry.requiredKeys(): { string }
 	for i = 1, AudioRegistry.HINT_COUNT do
 		set[string.format("hint_%02d", i)] = true
 	end
-
-	local keys: { string } = {}
-	for key in set do
-		table.insert(keys, key)
-	end
-	table.sort(keys)
-	return keys
+	return sorted(set)
 end
 
 -- Ключи, объявленные в конфигах, но не заведённые в реестре вовсе.
