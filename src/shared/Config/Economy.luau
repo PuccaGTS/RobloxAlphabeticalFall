@@ -18,14 +18,32 @@ local Economy = {}
 
 Economy.CURRENCY_NAME = "Звёздочки"
 
+--[[
+	Пересчёт 24.09.2026. Было: 1 ⭐ за ответ и 5/10/20 за итог — после семи занятий
+	на площади «35 ⭐, куплю шапку, а дальше? идти всё сначала?». Шапки стоят
+	10–50, рюкзаки и следы — 50–200, дом целиком — около 8500.
+
+	Стало (docs/04-ECONOMY.md § 2, расчёт темпа):
+	  · занятие на площади: 2 ⭐ за ответ и 10/20/35 за итог — 20–50 ⭐ за 1–2 минуты;
+	  · первое за день каждое занятие — ещё +15 (Logic/Variety): за разнообразие,
+	    а не за повтор одного и того же;
+	  · первое прохождение уровня пути — 40 + 10 × номер (50 ⭐ за первый, 150 за
+	    одиннадцатый): это самый трудный путь в игре, и он должен окупаться;
+	  · изученная буква — 25 (прилетает и буквёнок).
+	Первые 15 минут дают около 300 ⭐: две-три вещи T0 и шаг дома, а на рюкзак
+	или след T1 копится за вечер. Потолок в час поднят под новые числа.
+]]
 Economy.REWARDS = {
-	correctAnswer = 1,
-	-- Буква, подобранная на дорожке забега: та самая «монетка» из docs/14 § 4.2.
-	-- Монеток в игре нет — валюта собирается только правильными буквами.
+	correctAnswer = 2,
+	-- Плита на весах особого участка мира математики: звёздочка за верную кучку.
 	letterCollected = 1,
-	challengeStars = { 5, 10, 20 }, -- за 1, 2 и 3 звезды результата
-	challengeMinimum = 3, -- даём всегда, даже при худшем проходе
-	letterLearned = 15, -- переход в статус 2, один раз на букву
+	challengeStars = { 10, 20, 35 }, -- за 1, 2 и 3 звезды результата
+	challengeMinimum = 10, -- даём всегда, даже при худшем проходе
+	varietyBonus = 15, -- первое за сутки прохождение каждого занятия
+	dailyQuest = 25, -- одно из трёх заданий дня (Logic/Quests)
+	dailyQuestsAll = 40, -- все три задания дня, сверху
+	levelFirstClear = 40, -- плюс 10 за номер уровня, один раз на уровень каждого мира
+	letterLearned = 25, -- переход в статус 2, один раз на букву
 	letterMastered = 40, -- переход в статус 3, один раз на букву
 	stageCleared = 60, -- ступень пройдена настолько, что открылась следующая
 	letterOfTheDay = 30,
@@ -44,7 +62,7 @@ Economy.DAILY_STREAK_REWARDS = {
 
 -- Защита экономики: потолок начислений в час на игрока. Превышение — сигнал в лог,
 -- а не бан: ребёнок не должен пострадать от нашей ошибки в балансе.
-Economy.MAX_STARS_PER_HOUR = 400
+Economy.MAX_STARS_PER_HOUR = 800
 
 Economy.COOP_HELP_DAILY_CAP = 3
 
@@ -81,6 +99,11 @@ end
 function Economy.rewardForChallenge(stars: number): number
 	local index = math.clamp(math.floor(stars), 1, #Economy.REWARDS.challengeStars)
 	return math.max(Economy.REWARDS.challengeStars[index], Economy.REWARDS.challengeMinimum)
+end
+
+-- Первое прохождение уровня пути: чем дальше уровень, тем он труднее и тем больше награда.
+function Economy.rewardForLevel(index: number): number
+	return Economy.REWARDS.levelFirstClear + 10 * math.max(1, math.floor(index))
 end
 
 function Economy.rewardForStreak(day: number): number

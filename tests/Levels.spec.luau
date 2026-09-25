@@ -29,12 +29,22 @@ return function()
 			end
 		)
 
-		-- docs/14-TUNNEL-MODE.md § 3.3: 4–6 отрезков между сохранками
-		it("в уровне от четырёх до шести отрезков", function()
+		-- docs/14-TUNNEL-MODE.md § 3.3: 3–5 отрезков, первые уровни короче (проверка 24.09.2026)
+		it("в уровне от трёх до пяти отрезков", function()
 			for _, level in Levels.all do
-				expect(level.segments >= 4 and level.segments <= 6).to.equal(true)
+				expect(level.segments >= 3 and level.segments <= 5).to.equal(true)
 			end
 		end)
+
+		it(
+			"на каждом отрезке не меньше двух аттракционов — прямо не пробежать",
+			function()
+				for _, level in Levels.all do
+					expect(level.attractions >= 2).to.equal(true)
+					expect(level.heat >= 2).to.equal(true)
+				end
+			end
+		)
 
 		it("путь не становится короче к концу", function()
 			for index = 2, Levels.count() do
@@ -133,13 +143,14 @@ return function()
 			function()
 				-- Очередь нарочно не по алфавиту и с буквами из будущего: они не должны попасть.
 				local queue = { "ya", "g", "a", "e", "b" }
-				local targets = Levels.targets(3, queue)
-				local fresh = Levels.stage(3).letters
+				-- Восьмой уровень: пять отрезков, из них два — повторение.
+				local targets = Levels.targets(8, queue)
+				local fresh = Levels.stage(8).letters
 
 				expect(targets[#fresh + 1]).to.equal("g")
 				expect(targets[#fresh + 2]).to.equal("a")
 				for slot = #fresh + 1, #targets do
-					expect(Letters.expect(targets[slot]).stage < 3).to.equal(true)
+					expect(Letters.expect(targets[slot]).stage < 8).to.equal(true)
 				end
 			end
 		)

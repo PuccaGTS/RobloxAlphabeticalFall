@@ -21,6 +21,8 @@ local Tutorial = require(script.Parent.Tutorial)
 local PlayLimit = require(script.Parent.PlayLimit)
 local DailyLetter = require(script.Parent.DailyLetter)
 local Mail = require(script.Parent.Mail)
+local Variety = require(script.Parent.Variety)
+local Quests = require(script.Parent.Quests)
 local MathLevels = require(script.Parent.Parent.Config.MathLevels)
 
 export type Step = (profile: any) -> ()
@@ -192,6 +194,11 @@ local STEPS: { [number]: Step } = {
 	]]
 	[11] = function(profile)
 		profile.mail = Mail.sanitize(profile.mail)
+	end,
+	-- 12 → 13: бонус за разнообразие и задания дня начинаются с чистого листа.
+	[12] = function(profile)
+		profile.variety = Variety.sanitize(profile.variety)
+		profile.quests = Quests.sanitize(profile.quests)
 	end,
 }
 

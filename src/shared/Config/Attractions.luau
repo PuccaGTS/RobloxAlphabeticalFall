@@ -46,30 +46,27 @@ Attractions.MAX_RISE = 3 -- на сколько следующая кочка м
 Attractions.FLAG_LEAD = 5 -- флажок стоит на полу перед аттракционом, в стольких студах от его начала
 Attractions.EXIT = 6 -- ровный пол после аттракциона: отдышаться до следующего
 
+--[[
+	Порядок — порядок появления. Раньше первый уровень знал только островки
+	и вертушку, второй — ещё валуны и ленты, и на проверке 24.09.2026 уровни
+	А-Б-В и Г-Д-Е назвали «абсолютно одинаковыми». Теперь каждый уровень до
+	восьмого открывает хотя бы одно новое, а самый новый встаёт на уровне первым
+	(AttractionPlan.sequence): вход в уровень — всегда что-то невиданное.
+]]
 local CATALOG: { Attraction } = {
 	{ id = "islands", title = "Островки", fromLevel = 1, seconds = 6, floor = false },
 	{ id = "spinner", title = "Вертушка", fromLevel = 1, seconds = 4, floor = true },
+	{ id = "belts", title = "Ленты", fromLevel = 1, seconds = 8, floor = false },
 	{ id = "boulders", title = "Валуны", fromLevel = 2, seconds = 8, floor = true },
-	{ id = "belts", title = "Ленты", fromLevel = 2, seconds = 8, floor = false },
-	{ id = "clouds", title = "Облачка", fromLevel = 3, seconds = 9, floor = false },
-	{ id = "lava", title = "Лавовые кочки", fromLevel = 4, seconds = 8, floor = false },
-	{ id = "swings", title = "Качели", fromLevel = 5, seconds = 10, floor = false },
-	{ id = "hammers", title = "Молоты", fromLevel = 6, seconds = 7, floor = false },
-	--[[
-		С седьмого уровня новых аттракционов не было: самый новый встаёт первым,
-		и дальние уровни встречали ребёнка уже знакомым. Теперь каждый из трёх
-		последних открывает своё — батуты, печеньки, топотунов.
-	]]
-	{ id = "bounce", title = "Батуты", fromLevel = 7, seconds = 8, floor = false },
-	{ id = "cookies", title = "Печеньки", fromLevel = 8, seconds = 7, floor = false },
-	{ id = "stompers", title = "Кубики-топотуны", fromLevel = 9, seconds = 9, floor = true },
-	--[[
-		На десятом и одиннадцатом уровнях нового не было — ребёнок, дошедший
-		так далеко, встречал только знакомое. Теперь десятый открывает ветер.
-	]]
-	{ id = "wind", title = "Ветродуи", fromLevel = 10, seconds = 9, floor = false },
-	-- Последний, одиннадцатый уровень тоже встречает новым: подъёмники на шариках.
-	{ id = "lifts", title = "Подъёмники", fromLevel = 11, seconds = 10, floor = false },
+	{ id = "clouds", title = "Облачка", fromLevel = 2, seconds = 9, floor = false },
+	{ id = "lava", title = "Лавовые кочки", fromLevel = 3, seconds = 8, floor = false },
+	{ id = "cookies", title = "Печеньки", fromLevel = 3, seconds = 7, floor = false },
+	{ id = "swings", title = "Качели", fromLevel = 4, seconds = 10, floor = false },
+	{ id = "bounce", title = "Батуты", fromLevel = 4, seconds = 8, floor = false },
+	{ id = "hammers", title = "Молоты", fromLevel = 5, seconds = 7, floor = false },
+	{ id = "stompers", title = "Кубики-топотуны", fromLevel = 6, seconds = 9, floor = true },
+	{ id = "wind", title = "Ветродуи", fromLevel = 7, seconds = 9, floor = false },
+	{ id = "lifts", title = "Подъёмники", fromLevel = 8, seconds = 10, floor = false },
 }
 
 Attractions.CATALOG = CATALOG
@@ -114,16 +111,17 @@ end
 ]]
 Attractions.HEAT = {
 	islands = {
-		size = { 9, 8, 7, 6, 5.5 }, -- диаметр островка
-		gapMin = { 3, 3.5, 4, 4.5, 5 },
-		gapMax = { 4, 5, 5.5, 6.5, 7 },
-		rise = { 0, 0.8, 1.5, 2, 2.5 }, -- на сколько соседние островки расходятся по высоте
+		size = { 9, 7.5, 6.5, 6, 5.5 }, -- диаметр островка
+		gapMin = { 3, 4, 4.5, 5, 5.5 },
+		gapMax = { 4, 5.5, 6, 6.8, 7.2 },
+		rise = { 0, 1, 1.5, 2, 2.5 }, -- на сколько соседние островки расходятся по высоте
 		count = { 5, 6, 6, 7, 8 },
 	},
 	spinner = {
 		-- Оборот перекладины. Её надо перепрыгнуть, когда она проходит под ногами.
-		period = { 7, 6.2, 5.5, 5, 4.5 },
-		bars = { 1, 1, 2, 2, 2 },
+		-- Одна медленная перекладина на первом уровне проходилась не глядя: уже со второго жара крест.
+		period = { 6.5, 5.5, 5, 4.6, 4.2 },
+		bars = { 1, 2, 2, 3, 3 },
 	},
 	boulders = {
 		speed = { 11, 12, 13, 14, 15 }, -- медленнее бега: от валуна можно убежать к нише

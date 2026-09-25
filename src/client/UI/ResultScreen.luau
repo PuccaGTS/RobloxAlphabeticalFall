@@ -4,22 +4,29 @@
 	См. docs/08-UX-UI.md § 6, пункт 5.
 
 	Экран обязан быть понятен без текста (docs/08 § 1): звёзды считаются глазами,
-	кнопки узнаются по значкам ↻ и 🏠, подписи под ними — для взрослого рядом.
+	кнопки узнаются по значкам 🔁 и 🏠 («↻» в шрифте не рисуется), подписи под ними — для взрослого рядом.
 	Пустых звёзд нет: худший итог — одна звезда, и она горит так же ярко.
 	Проиграть в игре нельзя, и экран итогов этого не должен подсказывать.
 
-	Экран не держит ребёнка: не нажал ничего — через несколько секунд уходит сам.
+	Экран не держит ребёнка: не нажал ничего — через несколько секунд уходит сам,
+	побежал — уходит сразу, а в углу есть крестик. На проверке 24.09.2026 окно
+	с двумя кнопками посреди экрана назвали «не даёт свободно пойти побегать».
 ]]
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+
+local CloseButton = require(script.Parent.CloseButton)
 
 local ResultScreen = {}
 
 local player = Players.LocalPlayer
 
-local AUTO_HIDE_SECONDS = 9
+local AUTO_HIDE_SECONDS = 6
 local STAR_DELAY = 0.35
+-- Столько экран не замечает бега: звёзды успевают вылететь, а случайный шаг не гасит итог.
+local MOVE_GRACE_SECONDS = 1.2
 
 local gui: ScreenGui? = nil
 local stars: { TextLabel } = {}
@@ -27,6 +34,7 @@ local rewardLabel: TextLabel? = nil
 local captionLabel: TextLabel? = nil
 local handlers: { onAgain: () -> (), onHome: () -> (), onStar: () -> () }? = nil
 local token = 0
+local watchMove: RBXScriptConnection? = nil
 
 local function corner(parent: Instance, radius: number)
 	local c = Instance.new("UICorner")
@@ -121,7 +129,7 @@ local function build()
 	caption.Parent = card
 	captionLabel = caption
 
-	bigButton(card, "↻", "Ещё раз", 0.06, Color3.fromRGB(150, 215, 150)).Activated:Connect(function()
+	bigButton(card, "🔁", "Ещё раз", 0.06, Color3.fromRGB(150, 215, 150)).Activated:Connect(function()
 		ResultScreen.hide()
 		if handlers then
 			handlers.onAgain()
@@ -133,6 +141,8 @@ local function build()
 			handlers.onHome()
 		end
 	end)
+
+	CloseButton.make(card, 44, UDim2.new(1, -30, 0, -14)).Activated:Connect(ResultScreen.hide)
 
 	gui = screen
 end
@@ -152,7 +162,7 @@ function ResultScreen.show(count: number, awarded: number, caption: string?)
 	if not gui then
 		build()
 	end
-	token += 1
+	ResultScreen.hide()
 	local mine = token
 
 	local shown = math.clamp(math.floor(count), 1, 3)
@@ -197,10 +207,27 @@ function ResultScreen.show(count: number, awarded: number, caption: string?)
 			ResultScreen.hide()
 		end
 	end)
+
+	-- Побежал — значит, итог увидел и хочет играть: окно уходит с дороги.
+	local shownAt = os.clock()
+	watchMove = RunService.Heartbeat:Connect(function()
+		if os.clock() - shownAt < MOVE_GRACE_SECONDS then
+			return
+		end
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.MoveDirection.Magnitude > 0.1 then
+			ResultScreen.hide()
+		end
+	end)
 end
 
 function ResultScreen.hide()
 	token += 1
+	if watchMove then
+		watchMove:Disconnect()
+		watchMove = nil
+	end
 	if gui then
 		gui.Enabled = false
 	end

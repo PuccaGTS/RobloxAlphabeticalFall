@@ -309,7 +309,7 @@ function MathGates.Validate(state, action)
 		if correct then
 			state.balanceRound = expected
 		else
-			state.balanceBlockedUntil = now + Tunnel.STAIR_MISS_SECONDS
+			state.balanceBlockedUntil = now + Tunnel.SPECIAL_MISS_SECONDS
 		end
 		return {
 			handled = true,
@@ -319,7 +319,7 @@ function MathGates.Validate(state, action)
 			slot = action.slot,
 			value = round.left,
 			tappedValue = choice.count,
-			cooldown = if correct then 0 else Tunnel.STAIR_MISS_SECONDS,
+			cooldown = if correct then 0 else Tunnel.SPECIAL_MISS_SECONDS,
 		}
 	end
 

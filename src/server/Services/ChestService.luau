@@ -52,6 +52,13 @@ end
 	отвечает: «пусто» без ответа выглядело бы поломкой. На касание — молчит:
 	ребёнок, стоящий рядом, иначе слушал бы «уже открыт» каждые две секунды.
 ]]
+local openedHooks: { (player: Player, chestId: string) -> () } = {}
+
+-- Сундук открыт впервые: задания дня (Services/QuestService).
+function ChestService.onOpened(hook: (player: Player, chestId: string) -> ())
+	table.insert(openedHooks, hook)
+end
+
 function ChestService.open(player: Player, chestId: string, byTouch: boolean?): boolean
 	local chest = Chests.get(chestId)
 	local profile = ProfileService.get(player)
@@ -82,6 +89,9 @@ function ChestService.open(player: Player, chestId: string, byTouch: boolean?): 
 	RemoteDefs.event("PlaySfx"):FireClient(player, "reward")
 	RemoteDefs.event("ChestOpened"):FireClient(player, { state = "opened", itemId = item.id })
 	print(`[Chests] {player.Name} открыл {chest.id}: {item.id}`)
+	for _, hook in openedHooks do
+		task.spawn(hook, player, chest.id)
+	end
 	return true
 end
 

@@ -12,6 +12,8 @@ local Players = game:GetService("Players")
 local Shop = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Shop)
 local Chests = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Chests)
 
+local CloseButton = require(script.Parent.CloseButton)
+
 local ShopUI = {}
 
 local player = Players.LocalPlayer
@@ -36,6 +38,19 @@ end
 	Цена показывается и цифрой, и звёздочками: цифру ребёнок ещё не читает,
 	а «сколько звёздочек» считывает по количеству значков.
 ]]
+--[[
+	Наряд буквят без единого буквёнка — покупка «в пустоту»: на проверке
+	24.09.2026 купили скин и спросили, кто такие буквята, — ничего не произошло.
+	Пока буквёнка нет, карточка говорит, откуда он берётся, и не продаёт.
+]]
+local function needsPet(item, snapshot): boolean
+	if item.category ~= "petskin" or not snapshot then
+		return false
+	end
+	local pets = snapshot.equipped and snapshot.equipped.pets
+	return typeof(pets) ~= "table" or #pets == 0
+end
+
 local function priceText(price: number): string
 	local pips = math.clamp(math.ceil(price / 25), 1, 5)
 	return `{price} ` .. string.rep("⭐", pips)
@@ -115,6 +130,9 @@ local function makeCard(item): Frame
 			return
 		end
 		local owned = table.find(lastSnapshot.inventory or {}, item.id) ~= nil
+		if not owned and needsPet(item, lastSnapshot) then
+			return
+		end
 		if owned then
 			handlers.onEquip(item.id)
 		else
@@ -137,13 +155,34 @@ function ShopUI.build(callbacks)
 	screen.ResetOnSpawn = false
 	screen.IgnoreGuiInset = true
 	screen.Enabled = false
+	--[[
+		Выше HUD, ниже экрана родителей. Раньше слой был общий с HUD, и кнопка 🔊
+		рисовалась поверх левой колонки карточек: на проверке 24.09.2026 ребёнок
+		хотел купить очки лётчика, а попал в звук. Подложка на весь экран ловит
+		нажатия мимо окна — сквозь магазин до кнопок HUD они больше не доходят.
+	]]
+	screen.DisplayOrder = 6
 	screen.Parent = player:WaitForChild("PlayerGui")
 	gui = screen
+
+	local dim = Instance.new("TextButton")
+	dim.Name = "Backdrop"
+	dim.Size = UDim2.fromScale(1, 1)
+	dim.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+	dim.BackgroundTransparency = 0.45
+	dim.Text = ""
+	dim.AutoButtonColor = false
+	dim.Parent = screen
+	-- Тап мимо окна закрывает магазин: так закрывают окна на телефоне.
+	dim.Activated:Connect(function()
+		ShopUI.setOpen(false)
+	end)
 
 	local panel = Instance.new("Frame")
 	panel.Size = UDim2.fromScale(0.86, 0.8)
 	panel.Position = UDim2.fromScale(0.07, 0.1)
 	panel.BackgroundColor3 = Color3.fromRGB(28, 30, 40)
+	panel.Active = true
 	panel.Parent = screen
 	corner(panel, 24)
 
@@ -169,16 +208,7 @@ function ShopUI.build(callbacks)
 	balance.Font = Enum.Font.FredokaOne
 	balance.Parent = panel
 
-	local close = Instance.new("TextButton")
-	close.Size = UDim2.fromScale(0.1, 0.09)
-	close.Position = UDim2.fromScale(0.86, 0.025)
-	close.BackgroundColor3 = Color3.fromRGB(220, 90, 80)
-	close.TextColor3 = Color3.fromRGB(255, 255, 255)
-	close.Text = "X" -- «✕» в FredokaOne не рисуется
-	close.TextScaled = true
-	close.Font = Enum.Font.FredokaOne
-	close.Parent = panel
-	corner(close, 14)
+	local close = CloseButton.make(panel, 52, UDim2.new(1, -66, 0, 14))
 	close.Activated:Connect(function()
 		ShopUI.setOpen(false)
 	end)
@@ -247,6 +277,10 @@ function ShopUI.update(snapshot)
 		if owned then
 			action.Text = if isEquipped then "Снять" else "Надеть"
 			action.BackgroundColor3 = if isEquipped then COLOR_EQUIPPED else COLOR_EQUIP
+		elseif needsPet(item, snapshot) then
+			-- Буквёнок прилетает за выученную букву (Logic/Pets.OWNED_AT): это и есть цель.
+			action.Text = "🐾 сначала выучи букву"
+			action.BackgroundColor3 = COLOR_LOCKED
 		elseif item.price and (snapshot.stars or 0) >= item.price then
 			action.Text = "Купить"
 			action.BackgroundColor3 = COLOR_BUY

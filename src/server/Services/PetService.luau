@@ -16,7 +16,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 local Shop = require(Shared.Config.Shop)
-local MasteryRules = require(Shared.Logic.MasteryRules)
 local Pets = require(Shared.Logic.Pets)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
@@ -45,7 +44,18 @@ function PetService.refresh(player: Player)
 	end
 
 	local equipped = Pets.sanitizeEquipped(profile.equipped.pets, profile.letters)
-	if #equipped ~= #profile.equipped.pets then
+	--[[
+		Буквята есть, а не летает никто: так бывает у тех, кто выучил буквы
+		до того, как буквёнок стал прилетать за изученную (Logic/Pets.OWNED_AT).
+		Первый по алфавиту вылетает сам — спутника не надо искать на Башне.
+	]]
+	if #equipped == 0 then
+		local owned = Pets.owned(profile.letters)
+		if #owned > 0 then
+			equipped = { owned[1] }
+		end
+	end
+	if table.concat(equipped, ",") ~= table.concat(profile.equipped.pets, ",") then
 		ProfileService.update(player, function(p)
 			p.equipped.pets = equipped
 		end)
@@ -64,9 +74,9 @@ function PetService.refresh(player: Player)
 end
 
 --[[
-	Буква освоена: буквёнок прилетает. Публичная, чтобы проверить прилёт в Studio
-	из командной строки, не осваивая букву два дня (docs/HOW-TO-CHECK.md § 3.9).
-	Выдаёт только тому, у кого буква и правда освоена: Logic/Pets проверит.
+	Буква изучена: буквёнок прилетает. Публичная, чтобы проверить прилёт в Studio
+	из командной строки (docs/HOW-TO-CHECK.md § 3.9).
+	Выдаёт только тому, у кого буква и правда изучена: Logic/Pets проверит.
 ]]
 function PetService.grant(player: Player, letterId: string)
 	local profile = ProfileService.get(player)
@@ -118,7 +128,8 @@ end
 
 function PetService.start()
 	ProgressService.onTransition(function(player: Player, transition)
-		if transition.to >= MasteryRules.MASTERED then
+		-- Прилетает один раз: освоение изученной буквы второго буквёнка не даёт.
+		if transition.from < Pets.OWNED_AT and transition.to >= Pets.OWNED_AT then
 			PetService.grant(player, transition.letterId)
 		end
 	end)

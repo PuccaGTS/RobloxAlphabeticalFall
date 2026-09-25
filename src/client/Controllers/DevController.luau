@@ -10,6 +10,12 @@
 	на корне. Направление берётся у стандартного управления (клавиатура и стик
 	на планшете одинаково), вверх — Пробел или E, вниз — Shift или Q, на планшете —
 	кнопки ▲ ▼ на панели. Клавиша F включает и выключает полёт.
+
+	Бег ×2, ×3 — тоже здесь. Прежняя кнопка «Скорость» меняла только полёт,
+	и на проверке 24.09.2026 решили, что она не работает. Множитель ложится
+	поверх любой скорости, которую ставит игра (туннель, замедление после
+	неверных ворот, самокат): ходьбу персонажа считает клиент, и сервер
+	свою скорость менять не перестаёт — клиент домножает каждое её изменение.
 ]]
 
 local Players = game:GetService("Players")
@@ -28,6 +34,7 @@ local EveningController = require(script.Parent.EveningController)
 local DevController = {}
 
 local SPEEDS = { 60, 200 }
+local RUN_FACTORS = { 1, 2, 3 }
 
 local player = Players.LocalPlayer
 
@@ -40,6 +47,11 @@ local align: AlignOrientation? = nil
 local attachment: Attachment? = nil
 local flyButton: TextButton? = nil
 local speedButton: TextButton? = nil
+local runButton: TextButton? = nil
+local runIndex = 1
+local baseWalk: number? = nil -- скорость, которую поставила игра, без множителя
+local applying = false
+local walkWatch: RBXScriptConnection? = nil
 local controls = nil
 
 local function getControls()
@@ -95,8 +107,44 @@ local function refreshButtons()
 			else Color3.fromRGB(235, 235, 240)
 	end
 	if speedButton then
-		speedButton.Text = `⚡ Скорость {SPEEDS[speedIndex]}`
+		speedButton.Text = `✈ Скорость полёта {SPEEDS[speedIndex]}`
 	end
+	if runButton then
+		runButton.Text = `🏃 Бег ×{RUN_FACTORS[runIndex]}`
+		runButton.BackgroundColor3 = if runIndex > 1
+			then Color3.fromRGB(120, 210, 140)
+			else Color3.fromRGB(235, 235, 240)
+	end
+end
+
+local function applyRun(humanoid: Humanoid)
+	if not baseWalk then
+		return
+	end
+	applying = true
+	humanoid.WalkSpeed = baseWalk * RUN_FACTORS[runIndex]
+	applying = false
+end
+
+-- Следит за скоростью персонажа: любое изменение от игры — новая основа для множителя.
+local function watchRun(character: Model)
+	if walkWatch then
+		walkWatch:Disconnect()
+		walkWatch = nil
+	end
+	local humanoid = character:WaitForChild("Humanoid", 10) :: Humanoid?
+	if not humanoid then
+		return
+	end
+	baseWalk = humanoid.WalkSpeed
+	applyRun(humanoid)
+	walkWatch = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if applying then
+			return
+		end
+		baseWalk = humanoid.WalkSpeed
+		applyRun(humanoid)
+	end)
 end
 
 local function stopFly()
@@ -265,6 +313,14 @@ local function build()
 		speedIndex = speedIndex % #SPEEDS + 1
 		refreshButtons()
 	end)
+	runButton = button(panel, "", 0, function()
+		runIndex = runIndex % #RUN_FACTORS + 1
+		refreshButtons()
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			applyRun(humanoid)
+		end
+	end)
 
 	-- Вверх и вниз для планшета: кнопка держится, пока её не отпустят.
 	for order, spec in { { "▲ Вверх", 1 }, { "▼ Вниз", -1 } } do
@@ -322,11 +378,15 @@ local function build()
 		end
 	end)
 
-	player.CharacterAdded:Connect(function()
+	player.CharacterAdded:Connect(function(character)
 		if flying then
 			stopFly()
 		end
+		watchRun(character)
 	end)
+	if player.Character then
+		task.spawn(watchRun, player.Character)
+	end
 end
 
 function DevController.init()

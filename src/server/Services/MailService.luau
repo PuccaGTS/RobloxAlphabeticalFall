@@ -15,7 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Mail = require(Shared.Logic.Mail)
-local MasteryRules = require(Shared.Logic.MasteryRules)
+local Pets = require(Shared.Logic.Pets)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
@@ -100,7 +100,7 @@ function MailService.start()
 
 	-- Буква освоена — буквёнок прилетел и заодно прислал открытку.
 	ProgressService.onTransition(function(player: Player, transition)
-		if transition.to >= MasteryRules.MASTERED then
+		if transition.to >= Pets.OWNED_AT then
 			MailService.refresh(player)
 		end
 	end)

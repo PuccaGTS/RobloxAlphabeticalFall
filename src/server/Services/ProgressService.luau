@@ -24,6 +24,8 @@ local Economy = require(Shared.Config.Economy)
 local MasteryRules = require(Shared.Logic.MasteryRules)
 local ReviewScheduler = require(Shared.Logic.ReviewScheduler)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
+local PlayLog = require(Shared.Logic.PlayLog)
+local Variety = require(Shared.Logic.Variety)
 
 local ProfileService = require(script.Parent.ProfileService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -368,7 +370,22 @@ end
 -- Итог испытания: 1..3 звезды, но не меньше гарантированного минимума.
 function ProgressService.finishChallenge(player: Player, challengeId: string, stars: number): number
 	local reward = Economy.rewardForChallenge(stars)
-	return EconomyService.award(player, "challenge_result", reward, challengeId)
+	local awarded = EconomyService.award(player, "challenge_result", reward, challengeId)
+
+	-- Первое за сутки такое занятие — звёзды сверху: платим за разнообразие, а не за повтор.
+	local first = false
+	ProfileService.update(player, function(profile)
+		profile.variety, first = Variety.claim(profile.variety, PlayLog.dayOf(os.time()), challengeId)
+	end)
+	if first then
+		awarded += EconomyService.award(player, "variety_bonus", Economy.REWARDS.varietyBonus, challengeId)
+	end
+	return awarded
+end
+
+-- Первый финиш уровня пути: большая награда один раз. Сколько бы ни было повторов, второй раз её нет.
+function ProgressService.rewardFirstClear(player: Player, index: number): number
+	return EconomyService.award(player, "level_first_clear", Economy.rewardForLevel(index), `level{index}`)
 end
 
 -- ===== Сохранки забегов ==========================================================
@@ -550,15 +567,19 @@ end
 	Уровень пройден до финиша. Пройденный путь назад не двигается: повторное
 	прохождение раннего уровня не отнимает поздних.
 ]]
-function ProgressService.clearLevel(player: Player, index: number)
+-- true — уровень пройден впервые: путь продвинулся.
+function ProgressService.clearLevel(player: Player, index: number): boolean
 	if not Levels.get(index) then
-		return
+		return false
 	end
+	local first = false
 	ProfileService.update(player, function(profile)
 		local levels = Levels.sanitize(profile.levels)
+		first = levels[Levels.WORLD] < index
 		levels[Levels.WORLD] = math.max(levels[Levels.WORLD], index)
 		profile.levels = levels
 	end)
+	return first
 end
 
 -- ===== Уровни мира математики ====================================================
@@ -571,15 +592,18 @@ function ProgressService.mathLevel(player: Player): number
 end
 
 -- Уровень счёта пройден до финиша. Как и в мире букв, путь назад не двигается.
-function ProgressService.clearMathLevel(player: Player, index: number)
+function ProgressService.clearMathLevel(player: Player, index: number): boolean
 	if not MathLevels.get(index) then
-		return
+		return false
 	end
+	local first = false
 	ProfileService.update(player, function(profile)
 		local levels = Levels.sanitize(profile.levels)
+		first = levels[MathLevels.WORLD] < index
 		levels[MathLevels.WORLD] = math.max(levels[MathLevels.WORLD], index)
 		profile.levels = levels
 	end)
+	return first
 end
 
 function ProgressService.start()

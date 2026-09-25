@@ -307,6 +307,16 @@ export type Profile = {
 	daily: DailyLetter,
 	-- Почта от буквят: какие открытки уже открыты (Logic/Mail).
 	mail: { seen: { string } },
+	-- Бонус за разнообразие: какие занятия уже закончены сегодня (Logic/Variety).
+	variety: { day: number, done: { string } },
+	-- Задания дня: какие сегодня и сколько сделано (Logic/Quests).
+	quests: {
+		day: number,
+		list: { string },
+		progress: { [string]: number },
+		played: { string },
+		bonus: boolean,
+	},
 	settings: Settings,
 	parent: ParentData,
 	stats: {

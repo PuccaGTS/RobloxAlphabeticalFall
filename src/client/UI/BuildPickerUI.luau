@@ -18,6 +18,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Base = require(Shared.Config.Base)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
+local CloseButton = require(script.Parent.CloseButton)
+
 local BuildPickerUI = {}
 
 local player = Players.LocalPlayer
@@ -196,17 +198,7 @@ local function render()
 	).TextXAlignment =
 		Enum.TextXAlignment.Left
 
-	local close = Instance.new("TextButton")
-	close.Size = UDim2.fromScale(0.07, 0.2)
-	close.Position = UDim2.fromScale(0.91, 0.03)
-	close.BackgroundColor3 = Color3.fromRGB(220, 90, 80)
-	close.TextColor3 = Color3.new(1, 1, 1)
-	-- «✕» в этом шрифте не рисуется: на кнопке оставался пустой красный квадрат.
-	close.Text = "X"
-	close.TextScaled = true
-	close.Font = Enum.Font.FredokaOne
-	close.Parent = panel
-	corner(close, 14)
+	local close = CloseButton.make(panel, 44, UDim2.new(1, -54, 0, 10))
 	close.Activated:Connect(function()
 		BuildPickerUI.close()
 	end)

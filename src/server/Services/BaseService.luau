@@ -4216,6 +4216,13 @@ end
 	категории. Проверки те же, что в магазине: свой участок, есть следующий
 	уровень, хватает звёздочек.
 ]]
+local upgradeHooks: { (player: Player, categoryId: string) -> () } = {}
+
+-- Кто-то построил что-то у своего дома: задания дня (Services/QuestService).
+function BaseService.onUpgrade(hook: (player: Player, categoryId: string) -> ())
+	table.insert(upgradeHooks, hook)
+end
+
 function BaseService.upgrade(player: Player, categoryId: any): boolean
 	if typeof(categoryId) ~= "string" then
 		return false
@@ -4256,6 +4263,9 @@ function BaseService.upgrade(player: Player, categoryId: any): boolean
 
 	BaseService.refresh(player)
 	print(`[Base] {player.Name}: {categoryId} → уровень {level + 1}`)
+	for _, hook in upgradeHooks do
+		task.spawn(hook, player, categoryId)
+	end
 	return true
 end
 

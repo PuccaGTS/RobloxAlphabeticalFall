@@ -25,6 +25,8 @@ local SoundSettings = require(Shared.Logic.SoundSettings)
 local Letters = require(Shared.Config.Letters)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
+local CloseButton = require(script.Parent.CloseButton)
+
 local ParentUI = {}
 
 local player = Players.LocalPlayer
@@ -763,9 +765,7 @@ function ParentUI.build()
 	header.Position = UDim2.fromOffset(24, 18)
 	header.Size = UDim2.new(1, -120, 0, 0)
 
-	local close = button(panel, "✕", KEY, 48)
-	close.TextColor3 = TEXT
-	close.Position = UDim2.new(1, -66, 0, 12)
+	local close = CloseButton.make(panel, 48, UDim2.new(1, -66, 0, 12))
 	close.Activated:Connect(ParentUI.close)
 
 	--[[

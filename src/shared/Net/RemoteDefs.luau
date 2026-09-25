@@ -61,6 +61,11 @@ local EVENTS: { string } = {
 	"MailOpened",
 	-- C→S  прокат в парке: слезть с самоката, велосипеда или лошадки (Services/RentalService)
 	"RentalOff",
+	--[[
+		S→C  задания дня (Services/QuestService): { day, bonus, items = { { id, icon, title,
+		have, need, done, target = Vector3? } }, justDone = { id }, awarded = ⭐ за них }
+	]]
+	"Quests",
 	-- C→S  инструменты разработчика: { kind = "stars" | "teleport", ... }. Только Studio и владелец места.
 	"DevCommand",
 }

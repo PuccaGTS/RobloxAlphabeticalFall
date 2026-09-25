@@ -42,6 +42,10 @@ local SOURCES: { [string]: boolean } = {
 	daily_streak = true,
 	secret_chest = true,
 	coop_help = true,
+	variety_bonus = true, -- первое за сутки прохождение занятия (Logic/Variety)
+	level_first_clear = true, -- первый финиш уровня пути, один раз на уровень
+	daily_quest = true, -- задание дня выполнено (Services/QuestService)
+	daily_quests_all = true, -- все три задания дня
 }
 
 local function bucketFor(player: Player, now: number): Bucket

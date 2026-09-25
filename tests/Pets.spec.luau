@@ -19,13 +19,16 @@ end
 
 return function()
 	describe("Pets — кто есть", function()
-		it("буквёнок есть только у освоенной буквы", function()
-			local letters = lettersWith({ a = 3, b = 2, v = 1 })
-			expect(Pets.isOwned(letters, "a")).to.equal(true)
-			expect(Pets.isOwned(letters, "b")).to.equal(false)
-			expect(Pets.isOwned(letters, "v")).to.equal(false)
-			expect(Pets.isOwned(letters, "g")).to.equal(false)
-		end)
+		it(
+			"буквёнок есть у изученной и освоенной буквы, у знакомой — нет",
+			function()
+				local letters = lettersWith({ a = 3, b = 2, v = 1 })
+				expect(Pets.isOwned(letters, "a")).to.equal(true)
+				expect(Pets.isOwned(letters, "b")).to.equal(true)
+				expect(Pets.isOwned(letters, "v")).to.equal(false)
+				expect(Pets.isOwned(letters, "g")).to.equal(false)
+			end
+		)
 
 		it("список — по алфавиту, а не по порядку освоения", function()
 			local letters = lettersWith({ m = 3, a = 3, ya = 3, b = 1 })
@@ -73,7 +76,7 @@ return function()
 		end)
 
 		it("выбрать можно только своего", function()
-			local letters = lettersWith({ a = 3, b = 2 })
+			local letters = lettersWith({ a = 3, b = 1 })
 			expect(Pets.choose(letters, "a")[1]).to.equal("a")
 			expect(Pets.choose(letters, "b")).to.equal(nil)
 			expect(Pets.choose(letters, nil)).to.equal(nil)

@@ -26,7 +26,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Letters = require(Shared.Config.Letters)
 local Base = require(Shared.Config.Base)
-local MasteryRules = require(Shared.Logic.MasteryRules)
+local Pets = require(Shared.Logic.Pets)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local AudioController = require(script.Parent.AudioController)
@@ -211,7 +211,7 @@ local function buildSegment(letterId: string, index: number, parent: Instance): 
 			а не ищет её в списке. Сервер проверит, что буква и правда освоена.
 		]]
 		local mastery = if lastSnapshot then lastSnapshot.mastery[letterId] or 0 else 0
-		if mastery >= MasteryRules.MASTERED then
+		if mastery >= Pets.OWNED_AT then
 			RemoteDefs.event("EquipPet"):FireServer(letterId)
 		end
 		--[[

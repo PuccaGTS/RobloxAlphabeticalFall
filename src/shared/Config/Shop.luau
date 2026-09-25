@@ -120,15 +120,6 @@ local function hat(
 	}
 end
 
---[[
-	Прежний предмет получает настоящий аксессуар, а рецепт из деталей остаётся
-	запасным: если вещь каталога не загрузилась, ребёнок всё равно в кепке.
-]]
-local function withAccessory(item: ShopItem, accessory: number): ShopItem
-	item.accessory = accessory
-	return item
-end
-
 -- Предмет-аксессуар каталога: вместо рецепта из деталей — номер вещи Roblox.
 local function worn(
 	id: string,
@@ -156,18 +147,10 @@ local GOLD = Color3.fromRGB(255, 214, 102)
 local Items: { [string]: ShopItem } = {
 	-- === Головные уборы ===
 	-- Кепка = тулья + козырёк
-	hat_cap = withAccessory(
-		hat("hat_cap", "Кепка", 10, 0, "🧢", {
-			piece("Block", Color3.fromRGB(220, 90, 80), Vector3.new(2.1, 0.7, 2.1), CFrame.new(0, 0.85, 0)),
-			piece(
-				"Block",
-				Color3.fromRGB(190, 70, 62),
-				Vector3.new(2.1, 0.2, 1.2),
-				CFrame.new(0, 0.55, -1.4)
-			),
-		}),
-		607702162
-	),
+	hat_cap = hat("hat_cap", "Кепка", 10, 0, "🧢", {
+		piece("Block", Color3.fromRGB(220, 90, 80), Vector3.new(2.1, 0.7, 2.1), CFrame.new(0, 0.85, 0)),
+		piece("Block", Color3.fromRGB(190, 70, 62), Vector3.new(2.1, 0.2, 1.2), CFrame.new(0, 0.55, -1.4)),
+	}),
 	-- Бантик = две петли + узелок
 	hat_bow = hat("hat_bow", "Бантик", 15, 0, "🎀", {
 		piece(
@@ -1406,6 +1389,53 @@ for id, effect in EFFECTS do
 	local item = Items[id]
 	assert(item, `Shop: эффект у неизвестного предмета "{id}"`)
 	item.effect = effect
+end
+
+--[[
+	Настоящие вещи вместо рецептов из деталей. На проверке 24.09.2026 венок назвали
+	«диск и шары», бантик — «два кубика и шар», колпак — «кубики друг на друге»,
+	а кепку не было видно из-за волос. Каждая вещь здесь примерена на аватаре
+	с пышной причёской (сценарий стенда tryon) и видна поверх волос.
+
+	Номер предмета и деньги ребёнка не меняются: купленное остаётся купленным,
+	только выглядит теперь как вещь. Где смысл вещи другой, другое и название:
+	котёнок с бантиком, шляпа-лягушка, шлем-пчёлка. Рецепт из деталей остаётся
+	запасным — если Roblox вещь не выдал, ребёнок всё равно не с пустой головой.
+]]
+local CATALOG_LOOKS: { [string]: { accessory: number, title: string?, icon: string? } } = {
+	hat_cap = { accessory = 17895835574 }, -- светлая кепка-тракер, козырёк поверх чёлки
+	hat_bow = { accessory = 86732225534172, title = "Котёнок с бантиком", icon = "🐱" },
+	hat_flower = { accessory = 111804776065213, icon = "🌹" }, -- венок из красных роз
+	hat_stargazer = { accessory = 18997207632, icon = "🧙" }, -- розовый колпак со звездой и искрами
+	hat_beanie = { accessory = 113370715265938, title = "Вязаная шапка" },
+	hat_ears = { accessory = 136388222545618, title = "Кошачьи ушки", icon = "🐱" },
+	hat_helmet = { accessory = 120932533807756, title = "Шлем-пчёлка", icon = "🐝" },
+	hat_crown = { accessory = 14943768260 }, -- золотая корона с зубцами
+	hat_chef = { accessory = 90744205836468, title = "Шляпа-лягушка", icon = "🐸" },
+	hat_starcrown = { accessory = 139398905874156 },
+	hat_sun = { accessory = 137899557081532 }, -- белая панама путешественника
+	hat_cloud = { accessory = 101884624083489 }, -- тучка с месяцем и звёздочками
+	hat_crystal = { accessory = 98309642235565 },
+	back_cape = { accessory = 15495472290 }, -- тёмно-синий плащ до пят
+	back_turtle = { accessory = 118223758771060 },
+	back_book = { accessory = 14614524189, title = "Школьный рюкзак", icon = "🎒" },
+	back_wings = { accessory = 80631944181023, title = "Крылья феи", icon = "🧚" },
+	back_balloon = { accessory = 15251317166, title = "Воздушные шарики", icon = "🎈" },
+	back_satchel = { accessory = 101934260265989 }, -- зелёный ранец с бантом
+	-- 🥸 и 🎩 в витрине рисовались пустым квадратом и тёмным пятном: значки поновее шрифта.
+	face_mustache = { accessory = 73502059591702, icon = "🧔" },
+	face_glasses = { accessory = 100708494276937 }, -- круглые очки в тонкой оправе
+	face_stars = { accessory = 139675453532820 },
+	face_bandana = { accessory = 14895882271 },
+	face_mask = { accessory = 15736791518, title = "Тёмные очки", icon = "🕶" },
+}
+
+for id, look in CATALOG_LOOKS do
+	local item = Items[id]
+	assert(item, `Shop: вещь каталога у неизвестного предмета "{id}"`)
+	item.accessory = look.accessory
+	item.title = look.title or item.title
+	item.icon = look.icon or item.icon
 end
 Items.trail_rainbow.trail = { color = RAINBOW, lifetime = 1.6, width = 2.6 }
 

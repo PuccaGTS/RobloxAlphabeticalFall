@@ -14,6 +14,8 @@ local Levels = require(script.Parent.Levels)
 local Tutorial = require(script.Parent.Parent.Logic.Tutorial)
 local DailyLetter = require(script.Parent.Parent.Logic.DailyLetter)
 local Mail = require(script.Parent.Parent.Logic.Mail)
+local Variety = require(script.Parent.Parent.Logic.Variety)
+local Quests = require(script.Parent.Parent.Logic.Quests)
 
 local ProfileTemplate = {}
 
@@ -57,8 +59,12 @@ local ProfileTemplate = {}
 
 	Версия 12: почта от буквят — поле `mail` с открытыми открытками (Logic/Mail).
 	Кто уже осваивал буквы, найдёт в ящике открытки от всех своих буквят сразу.
+
+	Версия 13: бонус за разнообразие — поле `variety`, какие занятия уже закончены
+	сегодня (Logic/Variety). Первое за сутки каждое занятие приносит звёзды сверху.
+	И задания дня — поле `quests` (Logic/Quests): три дела на сутки со стрелкой к месту.
 ]]
-ProfileTemplate.VERSION = 12
+ProfileTemplate.VERSION = 13
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
@@ -97,6 +103,8 @@ function ProfileTemplate.new(now: number): Types.Profile
 		playLog = {},
 		daily = DailyLetter.new(),
 		mail = Mail.new(),
+		variety = Variety.new(),
+		quests = Quests.new(),
 		settings = ProfileTemplate.defaultSettings(),
 		parent = { pinHash = nil, dailyLimitMin = nil, restReminder = true },
 		stats = { totalPlayMin = 0, sessionsCount = 0, firstJoin = now },

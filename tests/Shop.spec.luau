@@ -177,6 +177,29 @@ return function()
 			end
 		)
 
+		-- Проверка 24.09.2026: эти вещи из кубиков назвали «полная хрень» поимённо.
+		it(
+			"вещи, которые ругали на проверке, теперь из каталога",
+			function()
+				for _, id in
+					{
+						"hat_cap",
+						"hat_bow",
+						"hat_flower",
+						"hat_stargazer",
+						"hat_beanie",
+						"hat_ears",
+						"back_cape",
+						"face_mustache",
+						"face_glasses",
+						"face_bandana",
+					}
+				do
+					expect(Shop.expect(id).accessory).to.be.ok()
+				end
+			end
+		)
+
 		it("в магазине не меньше шестидесяти вещей", function()
 			expect(Shop.count() >= 60).to.equal(true)
 		end)

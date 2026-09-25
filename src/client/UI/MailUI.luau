@@ -23,6 +23,7 @@ local Pets = require(Shared.Logic.Pets)
 local StrokeGlyphs = require(Shared.Logic.StrokeGlyphs)
 
 local Glyph = require(script.Parent.Glyph)
+local CloseButton = require(script.Parent.CloseButton)
 local AudioController = require(script.Parent.Parent.Controllers.AudioController)
 
 local MailUI = {}
@@ -389,15 +390,7 @@ function MailUI.show(fresh: { string }, all: { string })
 	fit.Scale = if size.Y > 0 then math.min(size.Y * 0.88 / DESIGN.Y, size.X * 0.92 / DESIGN.X) else 1
 	fit.Parent = panel
 
-	local close = roundButton(
-		panel,
-		"Close",
-		"✖",
-		Color3.fromRGB(240, 90, 100),
-		UDim2.fromOffset(DESIGN.X - 6, 6),
-		46
-	)
-	close.ZIndex = 5
+	local close = CloseButton.make(panel, 46, UDim2.fromOffset(DESIGN.X - 29, -17))
 	close.Activated:Connect(MailUI.close)
 
 	if #fresh > 0 then

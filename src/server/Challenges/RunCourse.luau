@@ -28,74 +28,12 @@ local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 local CourseLayout = require(script.Parent.CourseLayout)
 local TrackShape = require(Shared.Logic.TrackShape)
 
---[[
-	Лестница особого участка: ступени по алфавиту из букв, уже открытых на этом уровне.
-
-	Подъём подряд, как на Горе Алфавита: А → Б → В. На каждой ступени верная буква
-	и одна-две отвлекающие из тех же открытых букв; на первом уровне открыто всего
-	три буквы, и ступеней будет две. Плиты разложены по дорожкам в случайном порядке
-	своим генератором — сдвинуть ворота уже сохранённых забегов он не может.
-]]
-local function buildStairs(special, levelIndex: number, random: Random)
-	local available: { string } = {}
-	for _, id in Letters.ordered() do
-		if Letters.expect(id).stage <= levelIndex then
-			table.insert(available, id)
-		end
-	end
-
-	local count = math.min(Tunnel.STAIR_STEPS, #available - 1)
-	local start = random:NextInteger(1, #available - count)
-
-	local steps = {}
-	for index = 1, count do
-		local fromId = available[start + index - 1]
-		local targetId = available[start + index]
-
-		local ids = { targetId }
-		local others: { string } = {}
-		for _, id in available do
-			if id ~= fromId and id ~= targetId then
-				table.insert(others, id)
-			end
-		end
-		for _, id in CourseLayout.shuffled(others, random) do
-			if #ids >= Tunnel.LANE_COUNT then
-				break
-			end
-			table.insert(ids, id)
-		end
-
-		local lanes = CourseLayout.lanes(random)
-		local choices = {}
-		for order, id in CourseLayout.shuffled(ids, random) do
-			local letter = Letters.expect(id)
-			table.insert(
-				choices,
-				{ letterId = id, glyph = letter.glyph, color = letter.color, lane = lanes[order] }
-			)
-		end
-
-		table.insert(steps, {
-			index = index,
-			fromId = fromId,
-			fromGlyph = Letters.expect(fromId).glyph,
-			targetId = targetId,
-			targetGlyph = Letters.expect(targetId).glyph,
-			choices = choices,
-		})
-	end
-
-	return { segment = special.segment, z = special.z, steps = steps }
-end
-
 local RunCourse = {}
 
 -- Соль генератора секрета уровня: у него свой Random, чтобы не сдвигать ворота и препятствия.
 local SECRET_SEED_SALT = 104729
 -- Свой генератор у формы трассы: иначе сдвинулись бы ворота уже сохранённых забегов.
 local TRACK_SEED_SALT = 15485863
-local SPECIAL_SEED_SALT = 32452843
 local ATTRACTION_SEED_SALT = 49979687
 
 --[[
@@ -216,14 +154,6 @@ function RunCourse.new(id: string, params)
 		local secretRandom = Random.new(seed + SECRET_SEED_SALT)
 		local secretSegment = secretRandom:NextInteger(1, gateCount)
 
-		--[[
-			Особый участок уровня: лестница по алфавиту на одном из средних отрезков.
-			Не на первом — там ребёнок только разбегается, и не на последнем —
-			перед финишем ему нужен ровный ритм. Уровню в два отрезка её не хватит места.
-		]]
-		local specialRandom = if gateCount >= 3 then Random.new(seed + SPECIAL_SEED_SALT) else nil
-		local specialSegment = if specialRandom then specialRandom:NextInteger(2, gateCount - 1) else nil
-
 		-- Аттракционы: у уровня сила и число — свои (Config/Levels).
 		local heat, perSegment = Levels.attractions(level.index)
 
@@ -233,7 +163,6 @@ function RunCourse.new(id: string, params)
 			obstacleTier = obstacleTier,
 			secretSegment = secretSegment,
 			secretRandom = secretRandom,
-			specialSegment = specialSegment,
 			stations = true,
 			attractions = {
 				unlocked = Attractions.unlocked(level.index),
@@ -262,7 +191,7 @@ function RunCourse.new(id: string, params)
 			end,
 		})
 
-		local gates, secret, special = course.gates, course.secret, course.special
+		local gates, secret = course.gates, course.secret
 
 		-- Станция показывает и называет букву своего отрезка — ту, что спросят ворота.
 		for _, station in course.stations do
@@ -308,11 +237,6 @@ function RunCourse.new(id: string, params)
 				secret = secret,
 				length = course.length,
 				track = TrackShape.plan(course.runs, seed + TRACK_SEED_SALT),
-				stairs = if special
-						and specialRandom
-						and level
-					then buildStairs(special, level.index, specialRandom)
-					else nil,
 				slowSeconds = slowSeconds,
 				slowFactor = slowFactor,
 			},
@@ -398,57 +322,6 @@ function RunCourse.new(id: string, params)
 			end
 			state.secretTaken = true
 			return { handled = true, secret = true, letterId = secret.letterId }
-		end
-
-		--[[
-			Плита на лестнице особого участка. Ступени берутся строго по порядку:
-			плита следующей ступени не засчитывается, пока не взята эта. Ошибка
-			стоит короткой паузы и замедления, но не закрывает путь: сервис
-			туннеля после неё подсвечивает верную плиту.
-
-			Это не ответ в статистику освоения: лестница здесь — разнообразие
-			пути, а знание порядка букв меряет своё испытание на Горе Алфавита.
-		]]
-		if action.kind == "stair" then
-			local stairs = state.spec.params.stairs
-			if
-				not stairs
-				or stairs.segment <= (state.spec.params.resumeFrom or 0)
-				or typeof(action.step) ~= "number"
-				or typeof(action.slot) ~= "number"
-			then
-				return { handled = false }
-			end
-			local expected = (state.stairStep or 0) + 1
-			local step = stairs.steps[expected]
-			if action.step ~= expected or not step then
-				return { handled = false }
-			end
-			local choice = step.choices[action.slot]
-			if not choice then
-				return { handled = false }
-			end
-			local now = os.clock()
-			if state.stairBlockedUntil and now < state.stairBlockedUntil then
-				return { handled = false }
-			end
-
-			local correct = choice.letterId == step.targetId
-			if correct then
-				state.stairStep = expected
-			else
-				state.stairBlockedUntil = now + Tunnel.STAIR_MISS_SECONDS
-			end
-			return {
-				handled = true,
-				stair = true,
-				correct = correct,
-				step = expected,
-				slot = action.slot,
-				letterId = step.targetId,
-				tappedLetterId = choice.letterId,
-				cooldown = if correct then 0 else Tunnel.STAIR_MISS_SECONDS,
-			}
 		end
 
 		if action.kind ~= "gate" or typeof(action.gateIndex) ~= "number" then

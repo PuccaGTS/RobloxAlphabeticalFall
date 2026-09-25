@@ -20,14 +20,18 @@ end
 
 return function()
 	describe("Logic/Mail", function()
-		it("открытка приходит только за освоенную букву", function()
-			local letters = mastered("a", "v")
-			letters.b = { mastery = MasteryRules.MASTERED - 1 }
-			expect(#Mail.received(letters)).to.equal(2)
-			local unread = Mail.unread(letters, Mail.new())
-			expect(unread[1]).to.equal("a")
-			expect(unread[2]).to.equal("v")
-		end)
+		-- Открытку шлёт буквёнок, а он прилетает за изученную букву (Logic/Pets.OWNED_AT).
+		it(
+			"открытка приходит только за букву, у которой есть буквёнок",
+			function()
+				local letters = mastered("a", "v")
+				letters.b = { mastery = Pets.OWNED_AT - 1 }
+				expect(#Mail.received(letters)).to.equal(2)
+				local unread = Mail.unread(letters, Mail.new())
+				expect(unread[1]).to.equal("a")
+				expect(unread[2]).to.equal("v")
+			end
+		)
 
 		it("прочитанная открытка больше не ждёт в ящике", function()
 			local letters = mastered("a", "b")

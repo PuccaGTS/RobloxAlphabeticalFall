@@ -31,6 +31,7 @@ local FountainController = require(Controllers.FountainController)
 local EmoteController = require(Controllers.EmoteController)
 local DetailLodController = require(Controllers.DetailLodController)
 local RunHazardController = require(Controllers.RunHazardController)
+local QuestController = require(Controllers.QuestController)
 local SkateController = require(Controllers.SkateController)
 local SplashController = require(Controllers.SplashController)
 local EveningController = require(Controllers.EveningController)
@@ -79,6 +80,7 @@ SplashController.init()
 EveningController.init()
 RentalController.init()
 MailController.init()
+QuestController.init()
 DevController.init() -- панель появится только в Studio и у владельца места
 
 ShopUI.build({

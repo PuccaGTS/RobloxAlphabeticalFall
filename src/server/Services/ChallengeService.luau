@@ -154,13 +154,11 @@ local function finish(player: Player, reason: string)
 		вернутся к нему повторением на следующих уровнях.
 	]]
 	local levelCleared = if reason == "completed" then state.spec.level else nil
-	if levelCleared then
-		ProgressService.clearLevel(player, levelCleared)
-	end
+	local firstClear = levelCleared ~= nil and ProgressService.clearLevel(player, levelCleared)
 	-- То же для пути мира математики: финиш уровня счёта открывает следующий.
 	local mathLevelCleared = if reason == "completed" then state.spec.params.mathLevel else nil
 	if mathLevelCleared then
-		ProgressService.clearMathLevel(player, mathLevelCleared)
+		firstClear = ProgressService.clearMathLevel(player, mathLevelCleared) or firstClear
 	end
 
 	local result = state.module.Finish(state)
@@ -173,6 +171,14 @@ local function finish(player: Player, reason: string)
 	local awarded = 0
 	if #state.answers > 0 then
 		awarded = ProgressService.finishChallenge(player, state.module.id, result.stars)
+		--[[
+			Первый финиш уровня пути — главная награда игры: уровень трудный,
+			на нём падают и возвращаются к флажку. Повтор уровня платит как
+			обычное занятие.
+		]]
+		if firstClear then
+			awarded += ProgressService.rewardFirstClear(player, levelCleared or mathLevelCleared)
+		end
 	end
 
 	RemoteDefs.event("ChallengeEnd"):FireClient(player, {
@@ -462,11 +468,6 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 	end
 
 	--[[
-		Плита на лестнице особого участка. Верная — звёздочка и название взятой
-		буквы; неверная — голос называет букву под ногами, и только. Как и подбор
-		букв на дорожке, в статистику освоения это не идёт.
-	]]
-	--[[
 		Кучка на весах особого участка мира математики: верная — звёздочка
 		и число голосом («три»), неверная — число той кучки, что выбрал.
 	]]
@@ -476,25 +477,6 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 			ProgressService.awardCollect(player, "balance")
 		end
 		playVO(player, `num_{if result.correct then result.value else result.tappedValue}`)
-		fire(answerHooks, player, state.spec, result)
-		return
-	end
-
-	if result.stair then
-		if result.correct then
-			ProgressService.awardCollect(player, result.letterId)
-			RemoteDefs.event("PlaySfx"):FireClient(player, "correct")
-			local letter = Letters.get(result.letterId)
-			if letter then
-				playVO(player, letter.vo.name)
-			end
-		else
-			RemoteDefs.event("PlaySfx"):FireClient(player, "miss")
-			local tapped = Letters.get(result.tappedLetterId)
-			if tapped then
-				playVO(player, tapped.vo.name)
-			end
-		end
 		fire(answerHooks, player, state.spec, result)
 		return
 	end

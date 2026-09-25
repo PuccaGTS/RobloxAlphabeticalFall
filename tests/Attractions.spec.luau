@@ -660,16 +660,24 @@ return function()
 		)
 
 		--[[
-			«Бежать очень много» — было на первой живой проверке. Отрезок первого
-			уровня теперь короче трёхсот студов, и пустой пробежки на нём одна клетка.
+			«Бежать очень много» — было на обеих живых проверках. Длина отрезка
+			теперь уходит на аттракционы, где можно упасть, а не на ровный пол:
+			всё, что не аттракцион (станция, мелочь, горка, зона ворот), вместе
+			короче двухсот студов, и пустой пробежки на отрезке одна клетка.
 		]]
 		it(
 			"отрезок первого уровня не превращается в долгую пробежку",
 			function()
 				local spec = TunnelRun.Build(nil, Letters.ordered(), 3, 1)
 				local previous = 0
-				for _, gate in spec.params.gates do
-					expect(gate.z - previous < 300).to.equal(true)
+				for index, gate in spec.params.gates do
+					local rides = 0
+					for _, ride in spec.params.attractions do
+						if ride.segment == index then
+							rides += ride.z + ride.length - ride.flagZ
+						end
+					end
+					expect(gate.z - previous - rides < 200).to.equal(true)
 					previous = gate.z
 				end
 				expect(#spec.params.track).to.equal(#spec.params.gates * Tunnel.RUN_CELLS)

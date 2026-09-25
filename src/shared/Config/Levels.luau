@@ -61,33 +61,46 @@ export type Level = {
 
 local Levels = {}
 
+--[[
+	Раскладка после проверки 24.09.2026: «первые полосы однообразные, скучные,
+	долго бежать, препятствий никаких — можно просто бежать прямо», «А-Б-В и Г-Д-Е
+	абсолютно одинаковые». Поэтому:
+	  · первые уровни короче: три отрезка — по одному на каждую новую букву;
+	  · на каждом отрезке два аттракциона во всю ширину трассы, а не один:
+	    бежать прямо нельзя, между станцией и воротами всегда есть где упасть;
+	  · жар с двух: островки на первом уровне уже требуют прыжка, а не шага;
+	  · мелких элементов меньше — их обходят соседней дорожкой, трудности они
+	    не дают, только удлиняют путь;
+	  · новые аттракционы открываются почти на каждом уровне (Config/Attractions),
+	    и самый новый встречает первым — уровни не похожи друг на друга.
+]]
 Levels.all = {
-	{ index = 1, segments = 4, maxChoices = 2, obstacles = { 2, 3 }, maxTier = 1, heat = 1, attractions = 1 },
-	{ index = 2, segments = 4, maxChoices = 3, obstacles = { 2, 3 }, maxTier = 1, heat = 1, attractions = 1 },
-	{ index = 3, segments = 5, maxChoices = 3, obstacles = { 2, 4 }, maxTier = 1, heat = 2, attractions = 1 },
-	{ index = 4, segments = 5, maxChoices = 3, obstacles = { 2, 4 }, maxTier = 1, heat = 2, attractions = 1 },
-	{ index = 5, segments = 5, maxChoices = 3, obstacles = { 3, 4 }, maxTier = 2, heat = 3, attractions = 1 },
-	{ index = 6, segments = 5, maxChoices = 3, obstacles = { 3, 4 }, maxTier = 2, heat = 3, attractions = 2 },
-	{ index = 7, segments = 5, maxChoices = 3, obstacles = { 3, 5 }, maxTier = 3, heat = 4, attractions = 2 },
-	{ index = 8, segments = 5, maxChoices = 3, obstacles = { 3, 5 }, maxTier = 3, heat = 4, attractions = 2 },
-	{ index = 9, segments = 6, maxChoices = 3, obstacles = { 4, 5 }, maxTier = 3, heat = 5, attractions = 2 },
+	{ index = 1, segments = 3, maxChoices = 2, obstacles = { 1, 2 }, maxTier = 1, heat = 2, attractions = 2 },
+	{ index = 2, segments = 3, maxChoices = 3, obstacles = { 1, 2 }, maxTier = 1, heat = 2, attractions = 2 },
+	{ index = 3, segments = 3, maxChoices = 3, obstacles = { 1, 2 }, maxTier = 1, heat = 3, attractions = 2 },
+	{ index = 4, segments = 4, maxChoices = 3, obstacles = { 1, 2 }, maxTier = 1, heat = 3, attractions = 2 },
+	{ index = 5, segments = 4, maxChoices = 3, obstacles = { 1, 3 }, maxTier = 2, heat = 3, attractions = 2 },
+	{ index = 6, segments = 4, maxChoices = 3, obstacles = { 1, 3 }, maxTier = 2, heat = 4, attractions = 2 },
+	{ index = 7, segments = 4, maxChoices = 3, obstacles = { 2, 3 }, maxTier = 3, heat = 4, attractions = 2 },
+	{ index = 8, segments = 5, maxChoices = 3, obstacles = { 2, 3 }, maxTier = 3, heat = 4, attractions = 2 },
+	{ index = 9, segments = 5, maxChoices = 3, obstacles = { 2, 4 }, maxTier = 3, heat = 5, attractions = 2 },
 	{
 		index = 10,
-		segments = 6,
+		segments = 5,
 		maxChoices = 3,
-		obstacles = { 4, 6 },
+		obstacles = { 2, 4 },
 		maxTier = 3,
 		heat = 5,
-		attractions = 2,
+		attractions = 3,
 	},
 	{
 		index = 11,
-		segments = 6,
+		segments = 5,
 		maxChoices = 3,
-		obstacles = { 4, 6 },
+		obstacles = { 2, 4 },
 		maxTier = 3,
 		heat = 5,
-		attractions = 2,
+		attractions = 3,
 	},
 } :: { Level }
 
