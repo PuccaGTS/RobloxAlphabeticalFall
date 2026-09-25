@@ -270,9 +270,9 @@ function ShopUI.update(snapshot)
 
 	for id, card in cards do
 		local item = Shop.expect(id)
-		card.Visible = not (hideRobux and item.robuxProduct)
-		local action = card:FindFirstChild("Action") :: TextButton
 		local owned = table.find(inventory, id) ~= nil
+		card.Visible = not (hideRobux and item.robuxProduct) and (owned or not item.retired)
+		local action = card:FindFirstChild("Action") :: TextButton
 		local isEquipped = equipped[item.category] == id
 
 		if owned then

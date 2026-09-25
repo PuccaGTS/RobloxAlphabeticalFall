@@ -59,8 +59,8 @@ local function onBuy(player: Player, itemId: any)
 		return
 	end
 
-	if not item.price then
-		-- предмет выдаётся за прогресс или продаётся за Robux — здесь его не купить
+	if not item.price or item.retired then
+		-- предмет выдаётся за прогресс, продаётся за Robux или снят с продажи — здесь его не купить
 		return
 	end
 

@@ -200,6 +200,23 @@ return function()
 			end
 		)
 
+		-- Проверка 25.09.2026: «либо убираешь вещи из фигур, либо заменяешь настоящими».
+		it(
+			"шапки, рюкзаки и очки — только из каталога или сняты с продажи",
+			function()
+				for id, item in Shop.all do
+					if item.category == "hat" or item.category == "back" or item.category == "face" then
+						expect(item.accessory ~= nil or item.retired == true).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it("снятое с продажи не купить за звёздочки", function()
+			local item = Shop.expect("hat_astronaut")
+			expect(item.retired).to.equal(true)
+		end)
+
 		it("в магазине не меньше шестидесяти вещей", function()
 			expect(Shop.count() >= 60).to.equal(true)
 		end)

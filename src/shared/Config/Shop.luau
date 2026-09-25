@@ -81,6 +81,8 @@ export type ShopItem = {
 	effect: ItemEffect?, -- шлейф редкой вещи, надевается вместе с ней
 	-- Аксессуар каталога Roblox: надевается через HumanoidDescription (CosmeticsService).
 	accessory: number?,
+	-- Снят с продажи: в витрине только у того, кто уже купил, — купленное не отнимаем.
+	retired: boolean?,
 	icon: string, -- пока эмодзи, потом rbxassetid
 }
 
@@ -1460,6 +1462,18 @@ local CATALOG_LOOKS: { [string]: { accessory: number, title: string?, icon: stri
 	face_stars = { accessory = 139675453532820 },
 	face_bandana = { accessory = 14895882271 },
 	face_mask = { accessory = 15736791518, title = "Тёмные очки", icon = "🕶" },
+	--[[
+		Последние вещи из деталей. На проверке 25.09.2026 рюкзак-ёжик назвали
+		«нелепо, непонятно что это ёжик»: ёжика в каталоге нет, поэтому в
+		сундуке у пруда теперь плюшевый котёнок. Фонарик светлячков стал
+		крыльями светлячка — искры-светлячки остались, — ракета стала
+		реактивным ранцем с тем же огнём, мухомор — цветком-ростком.
+	]]
+	hat_tophat = { accessory = 18987826111 }, -- чёрный цилиндр с красной лентой
+	hat_mushroom = { accessory = 15529427786, title = "Цветок-росток", icon = "🌼" },
+	back_hedgehog = { accessory = 117304949593457, title = "Рюкзак-котёнок", icon = "🐱" },
+	back_rocket = { accessory = 14751932277, title = "Реактивный ранец" },
+	back_firefly_jar = { accessory = 98927447898825, title = "Крылья светлячка", icon = "✨" },
 }
 
 for id, look in CATALOG_LOOKS do
@@ -1470,6 +1484,12 @@ for id, look in CATALOG_LOOKS do
 	item.icon = look.icon or item.icon
 end
 Items.trail_rainbow.trail = { color = RAINBOW, lifetime = 1.6, width = 2.6 }
+
+--[[
+	Шлем космонавта из деталей был кубиком со стеклом, а настоящего детского
+	шлема в бесплатном каталоге нет: вещь снята с продажи.
+]]
+Items.hat_astronaut.retired = true
 
 local Module = {}
 
