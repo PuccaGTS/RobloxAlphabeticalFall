@@ -55,6 +55,9 @@ if os.environ.get("ZZ_ONLY"):
 # ZZ_RIDE=bounce,cookies — сценарий run смотрит только эти аттракционы.
 if os.environ.get("ZZ_RIDE"):
     attrs["ZZ_Ride"] = os.environ["ZZ_RIDE"]
+# Долгий прогон: сценарий в Studio обрывается сам за 20 с до ZZ_WAIT, чтобы отчёт успел дойти.
+if os.environ.get("ZZ_WAIT") and int(os.environ["ZZ_WAIT"]) > 260:
+    attrs["ZZ_Limit"] = int(os.environ["ZZ_WAIT"]) - 20
 if scenario == "perf":
     attrs["ZZ_Perf"] = True
 if os.environ.get("ZZ_YARD"):

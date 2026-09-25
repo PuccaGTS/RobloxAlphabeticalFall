@@ -300,6 +300,33 @@ workspace:GetAttributeChangedSignal("ZZ_Inspect"):Connect(function()
 				)
 			end
 		end
+		-- Метки и атрибуты: движущиеся детали забега живут по ним (RunHazardController).
+		local tags = game:GetService("CollectionService"):GetTags(node)
+		if #tags > 0 then
+			table.insert(lines, "tags " .. table.concat(tags, ","))
+		end
+		local attributes = {}
+		for key, value in node:GetAttributes() do
+			local shown = if typeof(value) == "CFrame" then tostring(value.Position) else tostring(value)
+			table.insert(attributes, `{key}={shown}`)
+		end
+		if #attributes > 0 then
+			table.insert(lines, "attr " .. table.concat(attributes, " "))
+		end
+		-- Где деталь должна быть по часам сервера — сравнить с тем, где она стоит.
+		if node:GetAttribute("Mover") then
+			local ok, controller = pcall(function()
+				return require(player.PlayerScripts.Client.Controllers.RunHazardController)
+			end)
+			local wanted = ok and controller.positionFor(node, workspace:GetServerTimeNow())
+			if wanted then
+				local _, yaw = wanted:ToOrientation()
+				table.insert(
+					lines,
+					string.format("wanted yaw %.1f pos %s", math.deg(yaw), tostring(wanted.Position))
+				)
+			end
+		end
 		report:FireServer("INSPECT " .. path .. ": " .. table.concat(lines, " | "))
 	end
 end)

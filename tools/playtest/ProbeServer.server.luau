@@ -61,7 +61,8 @@ local function finish()
 	finished = true
 	StudioTestService:EndTest(table.concat(lines, "\n"))
 end
-task.delay(240, function()
+-- Предел прогона: ZZ_WAIT у run.py (минус запас на отчёт), по умолчанию четыре минуты.
+task.delay(workspace:GetAttribute("ZZ_Limit") or 240, function()
 	note("TIMEOUT")
 	finish()
 end)
