@@ -48,14 +48,16 @@ return function(player, note)
 	note(string.format("wheel after lap: root %s", tostring(root.Position)))
 
 	-- Поезд: дождаться стоянки и встать на круг станции.
-	local board = workspace.Hub.Railway.Station.BoardPad
+	local stoppedAt = 1
 	for _ = 1, 140 do
-		local _, standing = Rides.trainAt(workspace:GetServerTimeNow())
+		local _, standing, at = Rides.trainAt(workspace:GetServerTimeNow())
 		if standing then
+			stoppedAt = at
 			break
 		end
 		task.wait(1)
 	end
+	local board = workspace.Hub.Railway[`Station_{stoppedAt}`].BoardPad
 	_G.ZZ_Shot(
 		player,
 		"ride_station",

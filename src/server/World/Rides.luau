@@ -245,11 +245,22 @@ local function buildTrack(parent: Instance)
 		local to = Vector3.new(math.cos(b) * spec.radius, spec.height, math.sin(b) * spec.radius)
 		local length = (to - from).Magnitude + 0.4
 		local at = CFrame.lookAt((from + to) / 2, to)
-		-- Полотно: деревянная балка, поверх — тёмная колея. Край колеи виден снизу.
-		part(track, "Beam", Vector3.new(5.2, 1.2, length), at * CFrame.new(0, -0.6, 0), WOOD).CanCollide =
-			false
-		part(track, "Rail", Vector3.new(4.2, 0.2, length), at * CFrame.new(0, 0.1, 0), WOOD_DARK).CanCollide =
-			false
+		--[[
+			Полотно: твёрдая деревянная балка — по ней можно пройтись, и голова
+			в неё не проваливается, — поверх два тёмных рельса. Поезд едет
+			сквозь того, кто стоит на пути: вагоны без столкновений.
+		]]
+		part(track, "Beam", Vector3.new(5.2, 1.2, length), at * CFrame.new(0, -0.6, 0), WOOD)
+		for _, side in { -1, 1 } do
+			part(
+				track,
+				"Rail",
+				Vector3.new(0.4, 0.3, length),
+				at * CFrame.new(side * 1.6, 0.15, 0),
+				WOOD_DARK
+			).CanCollide =
+				false
+		end
 	end
 
 	--[[
@@ -282,12 +293,12 @@ local function buildTrack(parent: Instance)
 	end
 end
 
-local function buildStation(parent: Instance)
+local function buildStation(parent: Instance, index: number)
 	local station = Instance.new("Model")
-	station.Name = "Station"
+	station.Name = `Station_{index}`
 	station.Parent = parent
 	local spec = Rides.STATION
-	local frame = Rides.stationFrame()
+	local frame = Rides.stationFrame(index)
 	local top = Rides.TRAIN.height + 0.4
 	local base = CFrame.new(frame.Position.X, 0, frame.Position.Z) * frame.Rotation
 
@@ -331,23 +342,21 @@ local function buildStation(parent: Instance)
 		rampAt,
 		WOOD
 	)
-	-- Навес: четыре столбика и крыша в полоску.
+	-- Навес: столбики по дальнему от пути краю и крыша в полоску.
 	for _, z in { -1, 1 } do
-		for _, x in { 1 } do
-			part(
-				station,
-				"Post",
-				Vector3.new(0.5, 6, 0.5),
-				base
-					* CFrame.new(
-						x * (spec.platformWidth / 2 - 0.6),
-						top + 3,
-						z * (spec.platformLength / 2 - 3)
-					),
-				WOOD_DARK
-			).CanCollide =
-				false
-		end
+		part(
+			station,
+			"Post",
+			Vector3.new(0.5, spec.roofHeight, 0.5),
+			base
+				* CFrame.new(
+					spec.platformWidth / 2 - 0.6,
+					top + spec.roofHeight / 2,
+					z * (spec.platformLength / 2 - 3)
+				),
+			WOOD_DARK
+		).CanCollide =
+			false
 	end
 	for stripe = 1, 5 do
 		local z = (stripe - 3) * (spec.platformLength - 6) / 5
@@ -355,7 +364,7 @@ local function buildStation(parent: Instance)
 			station,
 			"Roof",
 			Vector3.new(spec.platformWidth + 1, 0.4, (spec.platformLength - 6) / 5),
-			base * CFrame.new(0, top + 6.2, z),
+			base * CFrame.new(0, top + spec.roofHeight + 0.2, z),
 			if stripe % 2 == 0 then CREAM else RED
 		).CanCollide =
 			false
@@ -372,13 +381,36 @@ local function buildStation(parent: Instance)
 	pad.Shape = Enum.PartType.Cylinder
 	pad.Material = Enum.Material.Neon
 	pad.CanCollide = false
+	pad:SetAttribute("Station", index)
 	CollectionService:AddTag(pad, "AF_TrainBoard")
+	-- Табло над кругом: «Садись!» или через сколько секунд придёт поезд (пишет клиент).
+	local anchor =
+		part(station, "TimerAnchor", Vector3.new(0.2, 0.2, 0.2), base * CFrame.new(0, top + 6.5, 0), CREAM)
+	anchor.Transparency = 1
+	anchor.CanCollide = false
+	anchor.Parent = pad
+	local board = Instance.new("BillboardGui")
+	board.Name = "Timer"
+	board.Size = UDim2.fromScale(9, 2.2)
+	board.MaxDistance = 80
+	board.LightInfluence = 0
+	board.Parent = anchor
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0.3
+	label.Text = "🚂"
+	label.Parent = board
 
 	local sign = part(
 		station,
 		"Sign",
 		Vector3.new(0.4, 2, 8),
-		base * CFrame.new(spec.platformWidth / 2, top + 5, 0),
+		base * CFrame.new(spec.platformWidth / 2, top + spec.roofHeight - 1.2, 0),
 		CREAM
 	)
 	sign.CanCollide = false
@@ -391,7 +423,9 @@ function RidesBuilder.buildRailway(parent: Instance)
 	folder.Name = "Railway"
 	folder.Parent = parent
 	buildTrack(folder)
-	buildStation(folder)
+	for index = 1, Rides.TRAIN.stations do
+		buildStation(folder, index)
+	end
 	buildTrain(folder)
 end
 

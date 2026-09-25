@@ -96,9 +96,11 @@ local function whistle(at: BasePart?)
 	end
 	local sound = Instance.new("Sound")
 	sound.SoundId = id
-	sound.Volume = 0.8
-	sound.RollOffMaxDistance = 220
-	sound.RollOffMinDistance = 20
+	-- Свисток был слышен за 220 студов и перекрикивал музыку мест (Config/Ambient, зоны).
+	sound.Volume = 0.5
+	sound.RollOffMode = Enum.RollOffMode.InverseTapered
+	sound.RollOffMaxDistance = 90
+	sound.RollOffMinDistance = 12
 	sound.SoundGroup = AudioController.group("SFX")
 	sound.Parent = at
 	sound:Play()
@@ -387,7 +389,7 @@ local function stepShips(now: number, camera: Vector3)
 			-- Скрип тем громче, чем выше раскачка; на стоянке тихо.
 			local creak = current.creak
 			if creak and creak.SoundId ~= "" then
-				creak.Volume = 0.45 * envelope
+				creak.Volume = 0.3 * envelope
 				if envelope > 0.05 and not creak.IsPlaying then
 					creak:Play()
 				elseif envelope <= 0.05 and creak.IsPlaying then
@@ -469,6 +471,7 @@ type Ride = {
 	zip: Zip?,
 	started: number,
 	departed: boolean,
+	stops: number?, -- паровозик: сколько станций проехали; круг — все станции, и домой
 	exit: CFrame,
 }
 local ride: Ride? = nil
@@ -716,12 +719,17 @@ local function stepRide(now: number)
 			return
 		end
 		if current.kind == "train" then
+			-- На каждой станции можно сойти прыжком; проехал весь круг — высадка там, где садился.
 			local _, standing = Rides.trainAt(now)
 			if not standing then
 				current.departed = true
 			elseif current.departed then
-				finish(true) -- круг проехали, поезд снова у платформы
-				return
+				current.departed = false
+				current.stops = (current.stops or 0) + 1
+				if current.stops >= Rides.TRAIN.stations then
+					finish(true)
+					return
+				end
 			end
 		elseif current.kind == "balloon" then
 			local balloon = current.balloon
@@ -774,12 +782,21 @@ local function stepRide(now: number)
 		return
 	end
 
-	local _, standing = Rides.trainAt(now)
+	local _, _, stoppedAt = Rides.trainAt(now)
 	for _, pad in CollectionService:GetTagged("AF_TrainBoard") do
 		if pad:IsA("BasePart") then
-			pad.Color = if standing then PAD_READY else PAD_WAIT
+			-- Поезд у этой станции — круг зелёный; нет — жёлтый, и табло считает секунды.
+			local station = pad:GetAttribute("Station") or 1
+			local here = stoppedAt == station
+			pad.Color = if here then PAD_READY else PAD_WAIT
+			local label = pad:FindFirstChild("Text", true)
+			if label and label:IsA("TextLabel") then
+				label.Text = if here
+					then "Садись! 🚂"
+					else `🚂 через {math.ceil(Rides.trainArrival(now, station))} с`
+			end
 			if onPad(root, pad) then
-				if pad ~= blockedPad and standing then
+				if pad ~= blockedPad and here then
 					start("train", pad, now, nil)
 					return
 				end

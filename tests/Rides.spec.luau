@@ -42,6 +42,52 @@ return function()
 		)
 
 		it(
+			"поезд встаёт у каждой станции по очереди, табло считает до его прихода",
+			function()
+				local step = Rides.TRAIN.dwell + Rides.trainLeg()
+				for index = 1, Rides.TRAIN.stations do
+					local at = (index - 1) * step + 1
+					local angle, standing, station = Rides.trainAt(at)
+					expect(standing).to.equal(true)
+					expect(station).to.equal(index)
+					expect(math.abs(angle - Rides.stationAngle(index)) < 1e-6).to.equal(true)
+					expect(Rides.trainArrival(at, index)).to.equal(0)
+					-- Следующая станция ждёт стоянку и перегон.
+					local following = index % Rides.TRAIN.stations + 1
+					expect(math.abs(Rides.trainArrival(at, following) - (step - 1)) < 1e-6).to.equal(true)
+					local _, moving, none = Rides.trainAt(at + Rides.TRAIN.dwell)
+					expect(moving).to.equal(false)
+					expect(none).to.equal(nil)
+				end
+				-- Ждать поезда не дольше одного перегона со стоянкой.
+				for t = 0, Rides.trainCycle(), 0.7 do
+					for index = 1, Rides.TRAIN.stations do
+						expect(Rides.trainArrival(t, index) < Rides.trainCycle()).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it(
+			"все станции стоят между участками, навес выше взрослого аватара",
+			function()
+				expect(Rides.STATION.roofHeight >= 9).to.equal(true)
+				for index = 2, Rides.TRAIN.stations do
+					local station = Rides.stationFrame(index)
+					for plot = 1, Base.PLOT_COUNT do
+						local position = Base.plotPosition(plot)
+						expect(
+							(Vector2.new(position.X, position.Z) - Vector2.new(
+								station.Position.X,
+								station.Position.Z
+							)).Magnitude > Base.PLOT_SIZE / 2 + 20
+						).to.equal(true)
+					end
+				end
+			end
+		)
+
+		it(
 			"поезд стоит у платформы в начале цикла и возвращается к ней после круга",
 			function()
 				local cycle = Rides.trainCycle()

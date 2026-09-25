@@ -20,47 +20,77 @@ local Rides = {}
 
 --[[
 	Паровозик. Эстакада идёт кольцом между опушкой парка и домами — в этой
-	полосе нет ни декора (Config/Decor.MAX_RADIUS), ни участков. Высота —
-	чтобы ребёнок проходил под ней по дорожкам к домам, не пригибаясь.
+	полосе нет ни декора (Config/Decor.MAX_RADIUS), ни участков.
+
+	На проверке 25.09.2026: полотно было «прозрачным» (без столкновений, голова
+	проваливалась), поезд не поймать — стоял у единственной станции 10 секунд
+	из 94, — а навес задевал макушку. Теперь эстакада твёрдая и вдвое выше —
+	под ней свободно, по ней можно пройтись, — а станций четыре, по одной
+	между дорожками к домам: поезд стоит на каждой, и ждать его недолго.
 ]]
 Rides.TRAIN = {
 	radius = 268,
-	height = 7, -- верх полотна над землёй
+	height = 14, -- верх полотна над землёй
 	segments = 72, -- полотно из прямых отрезков: 72 — круга не отличить от многоугольника
 	pillarStep = 40, -- через сколько студов столб
-	speed = 20, -- студов в секунду в среднем: у станции вдвое медленнее, на дальней стороне быстрее
+	speed = 20, -- студов в секунду в среднем: трогается и тормозит плавно, в середине перегона вдвое быстрее
 	dwell = 10, -- сколько стоит на станции: сесть успевает и не торопящийся
-	stationAngle = 45, -- в градусах: между дорожками к домам и между участками
+	stationAngle = 45, -- в градусах: первая станция, между дорожками к домам и между участками
+	stations = 4, -- станций по кольцу, поровну: вторая через четверть круга
 	cars = 4, -- паровоз и три вагончика
 	carGap = 8.5, -- от центра до центра вагона вдоль пути
 }
 
--- Длина круга и полный цикл расписания: круг плюс стоянка.
+-- Длина круга без стоянок, перегон между станциями и полный цикл расписания.
 function Rides.trainLap(): number
 	return 2 * math.pi * Rides.TRAIN.radius / Rides.TRAIN.speed
 end
 
+function Rides.trainLeg(): number
+	return Rides.trainLap() / Rides.TRAIN.stations
+end
+
 function Rides.trainCycle(): number
-	return Rides.trainLap() + Rides.TRAIN.dwell
+	return Rides.trainLap() + Rides.TRAIN.dwell * Rides.TRAIN.stations
+end
+
+-- Угол станции index (1..stations) на кольце, в радианах.
+function Rides.stationAngle(index: number): number
+	return math.rad(Rides.TRAIN.stationAngle) + (index - 1) / Rides.TRAIN.stations * math.pi * 2
 end
 
 --[[
-	Где голова поезда в момент now (серверные часы): угол на кольце в радианах
-	и стоит ли он на станции. Цикл начинается со стоянки: пока идёт посадка,
-	поезд у платформы, потом круг против часовой стрелки и снова станция.
+	Где голова поезда в момент now (серверные часы): угол на кольце в радианах,
+	стоит ли он и у какой станции (номер — только на стоянке). Цикл начинается
+	со стоянки у первой станции, потом перегон против часовой стрелки ко второй,
+	стоянка — и так по кругу.
 ]]
-function Rides.trainAt(now: number): (number, boolean)
+function Rides.trainAt(now: number): (number, boolean, number?)
+	local spec = Rides.TRAIN
+	local step = spec.dwell + Rides.trainLeg()
+	local t = now % Rides.trainCycle()
+	local leg = math.floor(t / step)
+	local within = t - leg * step
+	local from = Rides.stationAngle(leg + 1)
+	if within < spec.dwell then
+		return from, true, leg + 1
+	end
+	local travelled = (within - spec.dwell) / Rides.trainLeg()
+	-- Разгон и торможение: у станции скорость ноль, в середине перегона — вдвое выше средней.
+	local eased = travelled - math.sin(travelled * math.pi * 2) / (math.pi * 2)
+	return from + eased * math.pi * 2 / spec.stations, false, nil
+end
+
+-- Через сколько секунд поезд встанет у станции index: 0 — стоит там сейчас.
+function Rides.trainArrival(now: number, index: number): number
+	local step = Rides.TRAIN.dwell + Rides.trainLeg()
 	local cycle = Rides.trainCycle()
 	local t = now % cycle
-	local station = math.rad(Rides.TRAIN.stationAngle)
-	if t < Rides.TRAIN.dwell then
-		return station, true
+	local arrive = (index - 1) * step
+	if t >= arrive and t < arrive + Rides.TRAIN.dwell then
+		return 0
 	end
-	local travelled = (t - Rides.TRAIN.dwell) / Rides.trainLap()
-	-- Разгон и торможение: без них поезд трогается и встаёт рывком. Скорость
-	-- у станции 0,4 от средней, напротив неё — 1,6.
-	local eased = travelled - 0.6 * math.sin(travelled * math.pi * 2) / (math.pi * 2)
-	return station + eased * math.pi * 2, false
+	return (arrive - t) % cycle
 end
 
 -- Угол вагона на кольце: вагоны идут за головой.
@@ -80,11 +110,12 @@ end
 Rides.STATION = {
 	platformLength = 34,
 	platformWidth = 7,
-	rampLength = 24,
+	rampLength = 38,
+	roofHeight = 10, -- от платформы до навеса: взрослый аватар в шляпе проходит
 }
 
-function Rides.stationFrame(): CFrame
-	local angle = math.rad(Rides.TRAIN.stationAngle)
+function Rides.stationFrame(index: number?): CFrame
+	local angle = Rides.stationAngle(index or 1)
 	-- Платформа стоит по центру поезда, который встал на стоянку: голова впереди.
 	local middle = angle - (Rides.TRAIN.cars - 1) / 2 * Rides.TRAIN.carGap / Rides.TRAIN.radius
 	local frame = Rides.trackFrame(middle)
