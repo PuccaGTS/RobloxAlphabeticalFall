@@ -286,6 +286,23 @@ RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string, argume
 		local awarded = tonumber(argument.awarded) or 0
 		local reward = if awarded > 0 then `  +{awarded} ⭐` else ""
 		HUD.toast(`✨ Секрет {argument.found} из {argument.total}!{reward}`, 4)
+	elseif screen == "garden" and typeof(argument) == "table" then
+		local letter = typeof(argument.letterId) == "string" and Letters.get(argument.letterId)
+		local glyph = if letter then letter.glyph else ""
+		if argument.state == "planted" then
+			HUD.toast(
+				`🌱 Посадил букву {glyph}! Цветок вырастет через {argument.minutes} мин`,
+				4
+			)
+		elseif argument.state == "wait" then
+			HUD.toast(
+				`🌱 Буква {glyph} ещё растёт: подожди {argument.minutes} мин`,
+				3
+			)
+		elseif argument.state == "harvest" and letter then
+			HUD.showIntro(letter.glyph)
+			HUD.toast(`🌸 Урожай! {letter.picture or ""} {glyph}  +{argument.awarded or 0} ⭐`, 4)
+		end
 	elseif screen == "secrets_done" then
 		HUD.toast("✨ Все секреты найдены! Ты настоящий сыщик!", 4)
 	elseif screen == "locked_stage" then

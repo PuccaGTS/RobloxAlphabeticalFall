@@ -316,6 +316,13 @@ export type Profile = {
 		progress: { [string]: number },
 		played: { string },
 		bonus: boolean,
+		week: any?,
+	},
+	-- Азбучная грядка у калитки (Logic/LetterGarden).
+	garden: {
+		beds: { { letterId: string?, plantedAt: number? } },
+		harvested: number,
+		next: number,
 	},
 	settings: Settings,
 	parent: ParentData,

@@ -22,6 +22,7 @@ local PlayLimit = require(script.Parent.PlayLimit)
 local DailyLetter = require(script.Parent.DailyLetter)
 local Mail = require(script.Parent.Mail)
 local Variety = require(script.Parent.Variety)
+local LetterGarden = require(script.Parent.LetterGarden)
 local Quests = require(script.Parent.Quests)
 local MathLevels = require(script.Parent.Parent.Config.MathLevels)
 
@@ -199,6 +200,10 @@ local STEPS: { [number]: Step } = {
 	[12] = function(profile)
 		profile.variety = Variety.sanitize(profile.variety)
 		profile.quests = Quests.sanitize(profile.quests)
+	end,
+	-- 13 → 14: азбучная грядка у калитки, все лунки пустые.
+	[13] = function(profile)
+		profile.garden = LetterGarden.sanitize(profile.garden)
 	end,
 }
 

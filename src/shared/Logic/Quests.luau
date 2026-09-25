@@ -143,6 +143,14 @@ Quests.POOL = {
 		target = "ShopPad",
 	},
 	{
+		id = "plant",
+		icon = "🌱",
+		title = "Посади букву на грядке у дома",
+		event = "plant",
+		need = 1,
+		target = "garden",
+	},
+	{
 		id = "chest",
 		icon = "🗝",
 		title = "Найди сундук в парке",

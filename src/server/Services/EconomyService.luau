@@ -46,6 +46,7 @@ local SOURCES: { [string]: boolean } = {
 	level_first_clear = true, -- первый финиш уровня пути, один раз на уровень
 	daily_quest = true, -- задание дня выполнено (Services/QuestService)
 	daily_quests_all = true, -- все три задания дня
+	garden_harvest = true, -- урожай азбучной грядки (Services/GardenService)
 	weekly_quest = true, -- задание недели (Logic/Quests.WEEKLY)
 }
 

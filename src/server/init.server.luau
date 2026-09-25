@@ -41,6 +41,7 @@ local DecorService = require(Services.DecorService)
 local RentalService = require(Services.RentalService)
 local MailService = require(Services.MailService)
 local QuestService = require(Services.QuestService)
+local GardenService = require(Services.GardenService)
 local Teleport = require(script:WaitForChild("World").Teleport)
 
 -- Порядок важен: сначала Remote-объекты, потом сервисы, потом приём игроков.
@@ -120,6 +121,7 @@ start("DevService", DevService.start) -- полёт и звёзды для пр�
 start("TutorialService", TutorialService.start) -- подписывается на хуки испытаний и магазина
 start("PlayLimitService", PlayLimitService.start) -- сторож старта испытаний: время на сегодня
 start("PetService", PetService.start) -- подписывается на смену статусов букв
+start("GardenService", GardenService.start) -- грядка букв у калитки: участки уже расставлены
 start("MailService", MailService.start) -- открытки от буквят: тоже по смене статусов букв
 start("DailyLetterService", DailyLetterService.start) -- подписывается на хуки испытаний
 start("QuestService", QuestService.start) -- задания дня: хуки испытаний, стройки, магазина, сундуков

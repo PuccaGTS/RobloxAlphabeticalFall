@@ -16,6 +16,7 @@ local DailyLetter = require(script.Parent.Parent.Logic.DailyLetter)
 local Mail = require(script.Parent.Parent.Logic.Mail)
 local Variety = require(script.Parent.Parent.Logic.Variety)
 local Quests = require(script.Parent.Parent.Logic.Quests)
+local LetterGarden = require(script.Parent.Parent.Logic.LetterGarden)
 local Secrets = require(script.Parent.Parent.Logic.Secrets)
 
 local ProfileTemplate = {}
@@ -64,8 +65,11 @@ local ProfileTemplate = {}
 	Версия 13: бонус за разнообразие — поле `variety`, какие занятия уже закончены
 	сегодня (Logic/Variety). Первое за сутки каждое занятие приносит звёзды сверху.
 	И задания дня — поле `quests` (Logic/Quests): три дела на сутки со стрелкой к месту.
+
+	Версия 14: азбучная грядка у калитки — поле `garden` (Logic/LetterGarden):
+	три лунки, что в них посажено и когда, сколько собрано.
 ]]
-ProfileTemplate.VERSION = 13
+ProfileTemplate.VERSION = 14
 
 function ProfileTemplate.defaultSettings(): Types.Settings
 	return {
@@ -106,6 +110,7 @@ function ProfileTemplate.new(now: number): Types.Profile
 		mail = Mail.new(),
 		variety = Variety.new(),
 		quests = Quests.new(),
+		garden = LetterGarden.new(),
 		settings = ProfileTemplate.defaultSettings(),
 		parent = { pinHash = nil, dailyLimitMin = nil, restReminder = true },
 		stats = { totalPlayMin = 0, sessionsCount = 0, firstJoin = now },

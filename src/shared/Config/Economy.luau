@@ -42,6 +42,7 @@ Economy.REWARDS = {
 	varietyBonus = 15, -- первое за сутки прохождение каждого занятия
 	dailyQuest = 25, -- одно из трёх заданий дня (Logic/Quests)
 	dailyQuestsAll = 40, -- все три задания дня, сверху
+	gardenHarvest = 15, -- цветок с азбучной грядки (Logic/LetterGarden), три лунки на два часа
 	weeklyQuest = 100, -- задание недели: вместе с вещью; когда все вещи собраны — 150
 	weeklyQuestNoItem = 150,
 	levelFirstClear = 40, -- плюс 10 за номер уровня, один раз на уровень каждого мира

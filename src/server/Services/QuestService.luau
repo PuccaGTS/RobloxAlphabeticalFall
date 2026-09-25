@@ -20,6 +20,7 @@ local Playground = require(Shared.Config.Playground)
 local Shop = require(Shared.Config.Shop)
 local PlayLog = require(Shared.Logic.PlayLog)
 local Quests = require(Shared.Logic.Quests)
+local LetterGarden = require(Shared.Logic.LetterGarden)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
@@ -30,6 +31,7 @@ local BaseService = require(script.Parent.BaseService)
 local ChestService = require(script.Parent.ChestService)
 local RentalService = require(script.Parent.RentalService)
 local CosmeticsService = require(script.Parent.CosmeticsService)
+local GardenService = require(script.Parent.GardenService)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 --[[
@@ -90,13 +92,21 @@ local function available(profile): { string }
 		if quest.id == "build" and not canBuild(profile) then
 			continue
 		end
+		if
+			quest.id == "plant"
+			and not LetterGarden.hasEmpty(LetterGarden.sanitize(profile.garden), os.time())
+		then
+			continue
+		end
 		table.insert(ids, quest.id)
 	end
 	return ids
 end
 
 local function targetOf(player: Player, profile, quest): Vector3?
-	if quest.target == "home" then
+	if quest.target == "garden" then
+		return GardenService.position(player)
+	elseif quest.target == "home" then
 		local home = BaseService.homeCFrame(player)
 		return home and home.Position
 	elseif quest.target == "chest" then
@@ -290,6 +300,9 @@ function QuestService.start()
 		if typeof(result) == "table" and result.secret then
 			QuestService.record(player, "secret")
 		end
+	end)
+	GardenService.onAction(function(player: Player, action: string)
+		QuestService.record(player, action)
 	end)
 	RentalService.onMount(function(player: Player)
 		QuestService.record(player, "park:rental")
