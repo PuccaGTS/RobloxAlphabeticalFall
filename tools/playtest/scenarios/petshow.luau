@@ -11,7 +11,14 @@ return function(player, note)
 	game:GetService("Lighting").ClockTime = 13
 	local prefix = workspace:GetAttribute("ZZ_Only")
 	local rows = {}
-	if prefix then
+	if prefix and string.find(prefix, ",") then
+		-- Список имён моделей декора через запятую — один ряд.
+		rows.list = {}
+		for _, name in string.split(prefix, ",") do
+			table.insert(rows.list, ReplicatedStorage.Assets.decor[name])
+		end
+		prefix = ""
+	elseif prefix then
 		for _, model in ReplicatedStorage.Assets.decor:GetChildren() do
 			if string.sub(model.Name, 1, #prefix) == prefix then
 				local kind = string.split(string.sub(model.Name, #prefix + 1), "_")[1]
@@ -52,7 +59,7 @@ return function(player, note)
 			local _, size = model:GetBoundingBox()
 			model:ScaleTo(model:GetScale() * 3 / math.max(size.X, size.Y, size.Z))
 			local box, scaled = model:GetBoundingBox()
-			local spot = base + Vector3.new((index - 1) * 5 - 6, 0, 0)
+			local spot = base + Vector3.new((index - 1) * 4.2 - 10, 0, 0)
 			model:PivotTo(
 				model:GetPivot()
 					+ (spot - Vector3.new(box.Position.X, box.Position.Y - scaled.Y / 2, box.Position.Z))

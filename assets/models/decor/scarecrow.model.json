@@ -1,0 +1,1939 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Scarecrow",
+   "children": [
+    {
+     "className": "Model",
+     "name": "Scarecrow",
+     "children": [
+      {
+       "className": "Part",
+       "name": "LowerTorso",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.4941176474094391,
+          0.40784314274787903,
+          0.24705882370471954
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -1,
+            0,
+            0
+           ],
+           [
+            0,
+            1,
+            0
+           ],
+           [
+            0,
+            0,
+            -1
+           ]
+          ],
+          "position": [
+           38.96003723144531,
+           4.1409454345703125,
+           -5.119476318359375
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          1.9630342721939087,
+          0.6551952362060547,
+          1.1022669076919556
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746739009"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "UpperTorso",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.33725491166114807,
+          0.25882354378700256,
+          0.21176470816135406
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -1,
+            0,
+            0
+           ],
+           [
+            0,
+            1,
+            0
+           ],
+           [
+            0,
+            0,
+            -1
+           ]
+          ],
+          "position": [
+           38.96003723144531,
+           5.100645065307617,
+           -5.183942794799805
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          2.1009724140167236,
+          2.0520849227905273,
+          1.284847378730774
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738948"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "RightHand",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.4619300067424774,
+            -0.047400154173374176,
+            -0.8856489062309265
+           ],
+           [
+            0.37284600734710693,
+            0.8956711292266846,
+            -0.24240274727344513
+           ],
+           [
+            0.8047400116920471,
+            -0.4421837329864502,
+            -0.396064430475235
+           ]
+          ],
+          "position": [
+           36.56697082519531,
+           4.966752529144287,
+           -4.90825891494751
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 800
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.8685733079910278,
+          1.2188961505889893,
+          0.8989753127098083
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=552850848"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "RightLowerArm",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.33725491166114807,
+          0.25882354378700256,
+          0.21176470816135406
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.5198351740837097,
+            0.7424054741859436,
+            -0.42261752486228943
+           ],
+           [
+            0.8191533088684082,
+            0.5735746622085571,
+            5.443977784125309e-07
+           ],
+           [
+            0.2424030900001526,
+            -0.3461882472038269,
+            -0.906308114528656
+           ]
+          ],
+          "position": [
+           36.759315490722656,
+           5.559330463409424,
+           -5.312334060668945
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.7257342338562012,
+          1.096763253211975,
+          0.7136068344116211
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738940"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "RightUpperArm",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6274510025978088,
+          0.5176470875740051,
+          0.30980393290519714
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.17364700138568878,
+            0.9848079681396484,
+            0
+           ],
+           [
+            0.9848079681396484,
+            0.17364700138568878,
+            0
+           ],
+           [
+            0,
+            0,
+            -1
+           ]
+          ],
+          "position": [
+           37.555198669433594,
+           5.754021167755127,
+           -5.2572021484375
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.6594946384429932,
+          1.2670552730560303,
+          0.9059191346168518
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738945"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "RightFoot",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.33725491166114807,
+          0.25882354378700256,
+          0.21176470816135406
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.973493218421936,
+            -0.17232662439346313,
+            0.15038129687309265
+           ],
+           [
+            0.09929202497005463,
+            0.2738870680332184,
+            0.9566227197647095
+           ],
+           [
+            -0.20603904128074646,
+            0.9461974501609802,
+            -0.24951651692390442
+           ]
+          ],
+          "position": [
+           38.601707458496094,
+           1.6174216270446777,
+           -5.231742858886719
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.9677048921585083,
+          0.7266998291015625,
+          1.437886118888855
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738980"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "RightLowerLeg",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.5921568870544434,
+          0.27450981736183167,
+          0.27450981736183167
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.9734933376312256,
+            -0.1723247617483139,
+            0.15038274228572845
+           ],
+           [
+            -0.07547903060913086,
+            0.8627299070358276,
+            0.5000001192092896
+           ],
+           [
+            -0.21590207517147064,
+            0.4753960072994232,
+            -0.8528687357902527
+           ]
+          ],
+          "position": [
+           38.561309814453125,
+           2.456345319747925,
+           -5.120603561401367
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.8587131500244141,
+          1.3242701292037964,
+          0.9505177140235901
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738988"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "RightUpperLeg",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.5921568870544434,
+          0.27450981736183167,
+          0.27450981736183167
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.9961947798728943,
+            -0.08715573698282242,
+            1.1066488241340267e-06
+           ],
+           [
+            -0.0818999782204628,
+            0.9361167550086975,
+            -0.34202027320861816
+           ],
+           [
+            0.02980799227952957,
+            -0.3407188951969147,
+            -0.9396926164627075
+           ]
+          ],
+          "position": [
+           38.478668212890625,
+           3.209508180618286,
+           -5.029888153076172
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.8791439533233643,
+          1.710475206375122,
+          0.8903709053993225
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738998"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "LeftHand",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.9921568632125854,
+          0.9176470637321472,
+          0.5529412031173706
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.16317607462406158,
+            -0.0593910850584507,
+            0.9848077893257141
+           ],
+           [
+            0.08111903816461563,
+            0.993999183177948,
+            0.07338626682758331
+           ],
+           [
+            -0.983256459236145,
+            0.0918615460395813,
+            -0.1573791354894638
+           ]
+          ],
+          "position": [
+           41.14720153808594,
+           4.562458038330078,
+           -4.939542293548584
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 800
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.8685733079910278,
+          1.2188961505889893,
+          0.8989753127098083
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=552850837"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "LeftLowerArm",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6274510025978088,
+          0.5176470875740051,
+          0.30980393290519714
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.6040223240852356,
+            -0.2198491394519806,
+            0.7660440802574158
+           ],
+           [
+            -0.3420231342315674,
+            0.9396915435791016,
+            1.0197119308941183e-06
+           ],
+           [
+            -0.7198453545570374,
+            -0.26200413703918457,
+            -0.6427881717681885
+           ]
+          ],
+          "position": [
+           41.00811004638672,
+           5.289917945861816,
+           -5.285592079162598
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.7257343530654907,
+          1.096763253211975,
+          0.7136068344116211
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738921"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "LeftUpperArm",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.4941176474094391,
+          0.40784314274787903,
+          0.24705882370471954
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.3420190215110779,
+            -0.9396930932998657,
+            0
+           ],
+           [
+            -0.9396930932998657,
+            0.3420189917087555,
+            0
+           ],
+           [
+            0,
+            0,
+            -1
+           ]
+          ],
+          "position": [
+           40.370033264160156,
+           5.68265438079834,
+           -5.2572021484375
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.6594947576522827,
+          1.2670552730560303,
+          0.9059191346168518
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738925"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "LeftFoot",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.33725491166114807,
+          0.25882354378700256,
+          0.21176470816135406
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.7944151163101196,
+            0.5122796893119812,
+            -0.32630398869514465
+           ],
+           [
+            -0.04739900678396225,
+            0.483308881521225,
+            0.8741657733917236
+           ],
+           [
+            0.6055230498313904,
+            0.7099169492721558,
+            -0.35966628789901733
+           ]
+          ],
+          "position": [
+           39.46479797363281,
+           1.6419422626495361,
+           -5.024553298950195
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.9677048921585083,
+          0.7266998291015625,
+          1.437886118888855
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738955"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "LeftLowerLeg",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.4588235318660736,
+          0.26274511218070984,
+          0.26274511218070984
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.8860697150230408,
+            0.1733984649181366,
+            -0.42989930510520935
+           ],
+           [
+            0.09763196110725403,
+            0.9764081835746765,
+            0.1926008015871048
+           ],
+           [
+            0.4531538486480713,
+            0.1286858171224594,
+            -0.8820950388908386
+           ]
+          ],
+          "position": [
+           39.52674102783203,
+           2.1384024620056152,
+           -5.039175033569336
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.8587131500244141,
+          1.3242701292037964,
+          0.9505177140235901
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738962"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "LeftUpperLeg",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.5921568870544434,
+          0.27450981736183167,
+          0.27450981736183167
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.8660253882408142,
+            -0.1710096299648285,
+            -0.4698467254638672
+           ],
+           [
+            0,
+            0.9396929740905762,
+            -0.3420191705226898
+           ],
+           [
+            0.5000002384185791,
+            -0.29619720578193665,
+            -0.8137979507446289
+           ]
+          ],
+          "position": [
+           39.522804260253906,
+           3.208489179611206,
+           -5.060338020324707
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Material": {
+         "Enum": 1312
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.8791439533233643,
+          1.710474967956543,
+          0.8903709053993225
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Scale": {
+           "Vector3": [
+            1.1572953462600708,
+            1.1572953462600708,
+            1.1572953462600708
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=746738972"
+          },
+          "MeshType": {
+           "Enum": 5
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Hat",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": false
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.9869590997695923,
+            0.045966725796461105,
+            -0.15426912903785706
+           ],
+           [
+            -0.017570002004504204,
+            0.9218735694885254,
+            0.387092262506485
+           ],
+           [
+            0.16001001000404358,
+            0.3847546875476837,
+            -0.9090437889099121
+           ]
+          ],
+          "position": [
+           39.08094787597656,
+           7.440722465515137,
+           -4.638344764709473
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          2.3999993801116943,
+          1.600001335144043,
+          2.8000004291534424
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "SpecialMesh",
+         "name": "Mesh",
+         "properties": {
+          "Offset": {
+           "Vector3": [
+            0,
+            0,
+            0
+           ]
+          },
+          "VertexColor": {
+           "Vector3": [
+            1,
+            1,
+            1
+           ]
+          },
+          "MeshType": {
+           "Enum": 5
+          },
+          "Scale": {
+           "Vector3": [
+            1.2000000476837158,
+            1.2000000476837158,
+            1.2000000476837158
+           ]
+          },
+          "MeshId": {
+           "ContentId": "http://www.roblox.com/asset/?id=96076066"
+          },
+          "TextureId": {
+           "ContentId": "http://www.roblox.com/asset/?id=95956050"
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Light",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.8352941274642944,
+          0.45098039507865906,
+          0.239215686917305
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            1,
+            0,
+            0
+           ],
+           [
+            0,
+            1,
+            0
+           ],
+           [
+            0,
+            0,
+            1
+           ]
+          ],
+          "position": [
+           38.999969482421875,
+           6.45001220703125,
+           -4.94499397277832
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 0
+        },
+        "Material": {
+         "Enum": 288
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          1.19000244140625,
+          1.19000244140625,
+          1.19000244140625
+         ]
+        }
+       },
+       "children": [
+        {
+         "className": "PointLight",
+         "name": "PointLight",
+         "properties": {
+          "Color": {
+           "Color3": [
+            1,
+            1,
+            0.45098042488098145
+           ]
+          },
+          "Brightness": {
+           "Float32": 1.9500000476837158
+          },
+          "Range": {
+           "Float32": 9
+          },
+          "Shadows": {
+           "Bool": false
+          }
+         }
+        }
+       ]
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            0.5414780378341675,
+            0.8209213018417358,
+            0.18135486543178558
+           ],
+           [
+            -0.7238123416900635,
+            0.5649416446685791,
+            -0.3961523175239563
+           ],
+           [
+            -0.42766478657722473,
+            0.08324102312326431,
+            0.9000965356826782
+           ]
+          ],
+          "position": [
+           39.1454963684082,
+           6.044234752655029,
+           -4.504492282867432
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.059999920427799225,
+          0.39599987864494324,
+          0.0599999837577343
+         ]
+        }
+       }
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.5080548524856567,
+            0.4195321202278137,
+            0.752245306968689
+           ],
+           [
+            -0.7939972877502441,
+            -0.5666221380233765,
+            -0.22024470567703247
+           ],
+           [
+            0.3338390290737152,
+            -0.7091770172119141,
+            0.6209825873374939
+           ]
+          ],
+          "position": [
+           39.439720153808594,
+           6.113940238952637,
+           -4.674274921417236
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.04999995231628418,
+          0.34249991178512573,
+          0.04999997839331627
+         ]
+        }
+       }
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            0.7264499068260193,
+            0.47887489199638367,
+            -0.4928988814353943
+           ],
+           [
+            -0.6595407128334045,
+            0.6873283982276917,
+            -0.30427923798561096
+           ],
+           [
+            0.1930716633796692,
+            0.5461305975914001,
+            0.8151471018791199
+           ]
+          ],
+          "position": [
+           38.698516845703125,
+           6.098952293395996,
+           -4.500341415405273
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.04999994859099388,
+          0.32999998331069946,
+          0.049999985843896866
+         ]
+        }
+       }
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            0.2986120581626892,
+            0.5873311758041382,
+            0.752245306968689
+           ],
+           [
+            -0.7261675596237183,
+            0.6512857675552368,
+            -0.22024470567703247
+           ],
+           [
+            -0.619283139705658,
+            -0.48048827052116394,
+            0.6209825873374939
+           ]
+          ],
+          "position": [
+           39.4520378112793,
+           6.109073638916016,
+           -4.690921783447266
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.04999994859099388,
+          0.3299999535083771,
+          0.04999997839331627
+         ]
+        }
+       }
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.3088890314102173,
+            0.8134113550186157,
+            -0.4928988814353943
+           ],
+           [
+            -0.8146392107009888,
+            -0.49373793601989746,
+            -0.30427923798561096
+           ],
+           [
+            -0.49086710810661316,
+            0.3075462579727173,
+            0.8151471018791199
+           ]
+          ],
+          "position": [
+           38.68001174926758,
+           6.102216720581055,
+           -4.510312080383301
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.04999995231628418,
+          0.34249991178512573,
+          0.049999985843896866
+         ]
+        }
+       }
+      },
+      {
+       "className": "Part",
+       "name": "Part",
+       "properties": {
+        "Reflectance": {
+         "Float32": 0
+        },
+        "CanCollide": {
+         "Bool": true
+        },
+        "Color": {
+         "Color3": [
+          0.6392157077789307,
+          0.6352941393852234,
+          0.6470588445663452
+         ]
+        },
+        "CFrame": {
+         "CFrame": {
+          "orientation": [
+           [
+            -0.6830460429191589,
+            0.7075016498565674,
+            0.18135486543178558
+           ],
+           [
+            -0.7092185020446777,
+            -0.5831572413444519,
+            -0.3961523175239563
+           ],
+           [
+            -0.1745200902223587,
+            -0.3992103934288025,
+            0.9000965356826782
+           ]
+          ],
+          "position": [
+           39.122230529785156,
+           6.05127477645874,
+           -4.496705532073975
+          ]
+         }
+        },
+        "Transparency": {
+         "Float32": 0
+        },
+        "Anchored": {
+         "Bool": true
+        },
+        "Shape": {
+         "Enum": 1
+        },
+        "Material": {
+         "Enum": 256
+        },
+        "CastShadow": {
+         "Bool": true
+        },
+        "Size": {
+         "Vector3": [
+          0.05999992787837982,
+          0.4109998047351837,
+          0.0599999837577343
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.6392157077789307,
+        0.6352941393852234,
+        0.6470588445663452
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -0.9999999403953552,
+          0,
+          0
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          0,
+          0,
+          -1
+         ]
+        ],
+        "position": [
+         38.860008239746094,
+         5.47667121887207,
+         -6.009992599487305
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        5.466667652130127,
+        0.9111112356185913,
+        0.9111112356185913
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.6392157077789307,
+        0.6352941393852234,
+        0.6470588445663452
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0,
+          -1,
+          0
+         ],
+         [
+          -1,
+          0,
+          0
+         ],
+         [
+          0,
+          0,
+          -1
+         ]
+        ],
+        "position": [
+         38.860008239746094,
+         4.110004425048828,
+         -6.009992599487305
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 256
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        8.20000171661377,
+        0.9111112356185913,
+        0.9111112356185913
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

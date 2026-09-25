@@ -1,0 +1,1554 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Model",
+   "name": "Model",
+   "children": [
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.4588235318660736,
+        0,
+        0
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.9999994039535522,
+          -8.940696716308594e-08,
+          1.810191285755991e-08
+         ],
+         [
+          8.940696716308594e-08,
+          0.9999994039535522,
+          4.367856831777317e-08
+         ],
+         [
+          -1.807466176728667e-08,
+          -4.369773165535662e-08,
+          0.9999999403953552
+         ]
+        ],
+        "position": [
+         56.586856842041016,
+         10.438584327697754,
+         -52.74456787109375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 0
+      },
+      "Material": {
+       "Enum": 288
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.20000000298023224,
+        0.20000000298023224
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.452267050743103,
+          0.45226749777793884,
+          0.45226749777793884
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 3
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "WedgePart",
+     "name": "Wedge",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.7686274647712708,
+        0.1568627506494522,
+        0.10980392247438431
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1.198129029944539e-05,
+          -0.9668822884559631,
+          -0.25522133708000183
+         ],
+         [
+          -2.1210516365499643e-07,
+          -0.25522133708000183,
+          0.9668822884559631
+         ],
+         [
+          -1,
+          1.1638656360446475e-05,
+          2.852804300346179e-06
+         ]
+        ],
+        "position": [
+         56.999366760253906,
+         8.30257511138916,
+         -52.74354553222656
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.3291199505329132,
+        0.7127299308776855
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.8064520359039307,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 2
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          4.3711395392165286e-08,
+          -1,
+          4.3711395392165286e-08
+         ],
+         [
+          1,
+          4.3711395392165286e-08,
+          1.3113415775478643e-07
+         ],
+         [
+          -1.3113417196564114e-07,
+          4.371138118131057e-08,
+          1
+         ]
+        ],
+        "position": [
+         56.59485626220703,
+         8.452961921691895,
+         -52.74627685546875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1056
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.845685601234436,
+        0.4718838632106781
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.7192680835723877,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 4
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          4.3711395392165286e-08,
+          -1,
+          4.3711395392165286e-08
+         ],
+         [
+          1,
+          4.3711395392165286e-08,
+          1.3113415775478643e-07
+         ],
+         [
+          -1.3113417196564114e-07,
+          4.371138118131057e-08,
+          1
+         ]
+        ],
+        "position": [
+         56.59267044067383,
+         8.29603385925293,
+         -52.74627685546875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1056
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.29206663370132446,
+        0.4718838632106781
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.7192680835723877,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 4
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "WedgePart",
+     "name": "Wedge",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.7686274647712708,
+        0.1568627506494522,
+        0.10980392247438431
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          5.259682438918389e-06,
+          0.9649561047554016,
+          0.26241055130958557
+         ],
+         [
+          4.4494463509181514e-06,
+          -0.2624099850654602,
+          0.9649561047554016
+         ],
+         [
+          1,
+          -3.9078031477401964e-06,
+          -5.673754003510112e-06
+         ]
+        ],
+        "position": [
+         56.215797424316406,
+         8.30257511138916,
+         -52.74354553222656
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.3291199505329132,
+        0.7127299308776855
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.8064520359039307,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 2
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          4.3711395392165286e-08,
+          -1,
+          4.3711395392165286e-08
+         ],
+         [
+          1,
+          4.3711395392165286e-08,
+          1.3113415775478643e-07
+         ],
+         [
+          -1.3113417196564114e-07,
+          4.371138118131057e-08,
+          1
+         ]
+        ],
+        "position": [
+         56.595394134521484,
+         8.373412132263184,
+         -52.74627685546875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1056
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.39777737855911255,
+        0.4718838632106781
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.7192680835723877,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 4
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.7686274647712708,
+        0.1568627506494522,
+        0.10980392247438431
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          4.3711395392165286e-08,
+          -1,
+          4.3711395392165286e-08
+         ],
+         [
+          1,
+          4.3711395392165286e-08,
+          1.3113415775478643e-07
+         ],
+         [
+          -1.3113417196564114e-07,
+          4.371138118131057e-08,
+          1
+         ]
+        ],
+        "position": [
+         56.59485626220703,
+         8.52161979675293,
+         -52.746826171875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.845685601234436,
+        0.7018318176269531
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.7192680835723877,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 4
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.6392157077789307,
+        0.6352941393852234,
+        0.6470588445663452
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1.3113415775478643e-07,
+          8.742277657347586e-08,
+          1
+         ],
+         [
+          -8.742279078433057e-08,
+          1,
+          -8.742277657347586e-08
+         ],
+         [
+          -0.9999999403953552,
+          -8.742279078433057e-08,
+          -1.3113417196564114e-07
+         ]
+        ],
+        "position": [
+         56.58613204956055,
+         8.956452369689941,
+         -52.75433349609375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.8086315393447876,
+        0.2702707052230835,
+        0.7018318772315979
+       ]
+      }
+     }
+    },
+    {
+     "className": "WedgePart",
+     "name": "Wedge",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.7686274647712708,
+        0.1568627506494522,
+        0.10980392247438431
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -0.996183454990387,
+          -0.08515246212482452,
+          -0.018986422568559647
+         ],
+         [
+          0.0036862529814243317,
+          -0.2584993243217468,
+          0.9660040140151978
+         ],
+         [
+          -0.08717257529497147,
+          0.9622488617897034,
+          0.25782763957977295
+         ]
+        ],
+        "position": [
+         56.59831619262695,
+         8.30257511138916,
+         -53.15113830566406
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.3291199505329132,
+        0.7127299308776855
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.8064520359039307,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 2
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.686274528503418,
+        0.8666666746139526,
+        1
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1.3113415775478643e-07,
+          8.742277657347586e-08,
+          1
+         ],
+         [
+          -8.742279078433057e-08,
+          1,
+          -8.742277657347586e-08
+         ],
+         [
+          -1,
+          -8.742279788975793e-08,
+          -1.3113415775478643e-07
+         ]
+        ],
+        "position": [
+         56.587223052978516,
+         8.959721565246582,
+         -52.7537841796875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1536
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.7966437339782715,
+        0.2702706754207611,
+        0.20706216990947723
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.38823530077934265,
+        0.37254902720451355,
+        0.3843137323856354
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -4.371139183945161e-08,
+          8.742277657347586e-08,
+          1
+         ],
+         [
+          1,
+          4.371138473402425e-08,
+          4.371139183945161e-08
+         ],
+         [
+          -4.3711370523169535e-08,
+          1,
+          -8.742279078433057e-08
+         ]
+        ],
+        "position": [
+         56.58849334716797,
+         10.268030166625977,
+         -52.74456787109375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1056
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.31059300899505615,
+        0.20000000298023224,
+        0.20000000298023224
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          1,
+          0.19071520864963531,
+          0.19071519374847412
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 4
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "WedgePart",
+     "name": "Wedge",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.7686274647712708,
+        0.1568627506494522,
+        0.10980392247438431
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0.9961870312690735,
+          0.083234041929245,
+          0.02613346092402935
+         ],
+         [
+          -0.003685607109218836,
+          -0.259136825799942,
+          0.9658335447311401
+         ],
+         [
+          0.08716243505477905,
+          -0.9622477889060974,
+          -0.2578420639038086
+         ]
+        ],
+        "position": [
+         56.59831619262695,
+         8.30257511138916,
+         -52.34904479980469
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.3291199505329132,
+        0.7127299308776855
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.8064520359039307,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 2
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Smooth Block Model",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.929411768913269,
+        0.9176470637321472,
+        0.9176470637321472
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0,
+          0,
+          1
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          -1,
+          0,
+          0
+         ]
+        ],
+        "position": [
+         56.59103775024414,
+         9.148801803588867,
+         -52.74505615234375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.7770280838012695,
+        2.2373616695404053,
+        0.8467745184898376
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 3
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.686274528503418,
+        0.8666666746139526,
+        1
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1.3113415775478643e-07,
+          8.742277657347586e-08,
+          1
+         ],
+         [
+          -8.742279078433057e-08,
+          1,
+          -8.742277657347586e-08
+         ],
+         [
+          -1,
+          -8.742279788975793e-08,
+          -1.3113415775478643e-07
+         ]
+        ],
+        "position": [
+         56.587223052978516,
+         9.373844146728516,
+         -52.7537841796875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1536
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.7966437339782715,
+        0.2702706754207611,
+        0.20706216990947723
+       ]
+      }
+     }
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": false
+      },
+      "Color": {
+       "Color3": [
+        0.06666667014360428,
+        0.06666667014360428,
+        0.06666667014360428
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          4.3711395392165286e-08,
+          -1,
+          4.3711395392165286e-08
+         ],
+         [
+          1,
+          4.3711395392165286e-08,
+          1.3113415775478643e-07
+         ],
+         [
+          -1.3113417196564114e-07,
+          4.371138118131057e-08,
+          1
+         ]
+        ],
+        "position": [
+         56.595943450927734,
+         8.294944763183594,
+         -52.74627685546875
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 272
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.20000000298023224,
+        0.2724502384662628,
+        0.4718838632106781
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          0.7192680835723877,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 4
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Smooth Block Model",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.7686274647712708,
+        0.1568627506494522,
+        0.10980392247438431
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          0,
+          0,
+          1
+         ],
+         [
+          0,
+          1,
+          0
+         ],
+         [
+          -1,
+          0,
+          0
+         ]
+        ],
+        "position": [
+         56.59103012084961,
+         9.1488037109375,
+         -52.74505615234375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 1
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.7770273685455322,
+        2.2373616695404053,
+        0.846775472164154
+       ]
+      }
+     },
+     "children": [
+      {
+       "className": "SpecialMesh",
+       "name": "Mesh",
+       "properties": {
+        "Scale": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "VertexColor": {
+         "Vector3": [
+          1,
+          1,
+          1
+         ]
+        },
+        "MeshType": {
+         "Enum": 3
+        },
+        "Offset": {
+         "Vector3": [
+          0,
+          0,
+          0
+         ]
+        }
+       }
+      }
+     ]
+    },
+    {
+     "className": "Part",
+     "name": "Part",
+     "properties": {
+      "Reflectance": {
+       "Float32": 0
+      },
+      "CanCollide": {
+       "Bool": true
+      },
+      "Color": {
+       "Color3": [
+        0.6392157077789307,
+        0.6352941393852234,
+        0.6470588445663452
+       ]
+      },
+      "CFrame": {
+       "CFrame": {
+        "orientation": [
+         [
+          -1.3113415775478643e-07,
+          8.742277657347586e-08,
+          1
+         ],
+         [
+          -8.742279078433057e-08,
+          1,
+          -8.742277657347586e-08
+         ],
+         [
+          -0.9999999403953552,
+          -8.742279078433057e-08,
+          -1.3113417196564114e-07
+         ]
+        ],
+        "position": [
+         56.58613204956055,
+         9.370577812194824,
+         -52.75433349609375
+        ]
+       }
+      },
+      "Transparency": {
+       "Float32": 0
+      },
+      "Anchored": {
+       "Bool": true
+      },
+      "Shape": {
+       "Enum": 2
+      },
+      "Material": {
+       "Enum": 1088
+      },
+      "CastShadow": {
+       "Bool": true
+      },
+      "Size": {
+       "Vector3": [
+        0.8086315393447876,
+        0.2702707052230835,
+        0.7018318772315979
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

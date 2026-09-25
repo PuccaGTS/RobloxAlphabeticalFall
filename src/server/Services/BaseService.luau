@@ -3330,6 +3330,51 @@ local TRANSPORT_ALT = {
 	end,
 }
 
+--[[
+	Вещи из Creator Store — ещё одна форма каждого набора. На проверках 24–25.09.2026
+	вещи из кубиков назвали «полная хрень», а выбор в покупках ребёнок любит: теперь
+	рядом с нарисованными деталями есть настоящие модели — клумба и пугало, надувной
+	замок, плюшевый мишка, деревянный паровозик. Модель сжимается, чтобы влезть
+	в круг своего места (Config/Base spots), и не выше STORE_MAX_HEIGHT: воздушный
+	шар в 34 студа над двором закрыл бы дом. Краска их не трогает — текстуру
+	одной краской не перекрасить, вышло бы пятно.
+]]
+local STORE_MAX_HEIGHT = 11
+
+local function fromStore(setId: string, level: number, decorId: string, yaw: number?): (Model, CFrame) -> ()
+	return function(plot: Model, at: CFrame)
+		local model = DecorService.modelFor(decorId)
+		if not model then
+			return
+		end
+		local spot = Base.expect(setId).spots[level]
+		local _, size = model:GetBoundingBox()
+		local fit = math.min(spot.r * 1.9 / math.max(size.X, size.Z), STORE_MAX_HEIGHT / size.Y)
+		model:ScaleTo(model:GetScale() * fit)
+		local box, scaled = model:GetBoundingBox()
+		local pivotInBox = box:ToObjectSpace(model:GetPivot())
+		model:PivotTo(
+			at * CFrame.Angles(0, math.rad(yaw or 0), 0) * CFrame.new(0, scaled.Y / 2, 0) * pivotInBox
+		)
+		for _, part in model:GetDescendants() do
+			if part:IsA("BasePart") then
+				part.Anchored = true
+				part:SetAttribute("NoPaint", true)
+			end
+		end
+		model.Name = `Store_{decorId}`
+		model.Parent = plot
+	end
+end
+
+local function storeSet(setId: string, items: { { any } }): { (Model, CFrame) -> () }
+	local builders = {}
+	for level, entry in items do
+		builders[level] = fromStore(setId, level, entry[1], entry[2])
+	end
+	return builders
+end
+
 local SETS: { [string]: { (Model, CFrame) -> () } } = {
 	garden = GARDEN,
 	playground = PLAYGROUND,
@@ -3339,8 +3384,23 @@ local SETS: { [string]: { (Model, CFrame) -> () } } = {
 
 -- Вещи второй формы набора (Config/Base: shapes); первая форма — SETS.
 local SET_SHAPES: { [string]: { [number]: { (Model, CFrame) -> () } } } = {
-	playground = { [2] = PLAYGROUND_ALT },
-	transport = { [2] = TRANSPORT_ALT },
+	garden = {
+		[2] = storeSet("garden", { { "flower_bed" }, { "mushroom" }, { "scarecrow" }, { "tree_blossom" } }),
+	},
+	playground = {
+		[2] = PLAYGROUND_ALT,
+		[3] = storeSet(
+			"playground",
+			{ { "swing" }, { "bouncy_castle" }, { "sand_castle" }, { "merry_wheel" } }
+		),
+	},
+	pets = {
+		[2] = storeSet("pets", { { "dog_house" }, { "teddy_bear" }, { "rubber_duck" }, { "toy_dino" } }),
+	},
+	transport = {
+		[2] = TRANSPORT_ALT,
+		[3] = storeSet("transport", { { "toy_car" }, { "toy_train" }, { "toy_plane" }, { "toy_rocket" } }),
+	},
 }
 
 -- ===== Заработанное учёбой =======================================================
@@ -3814,7 +3874,10 @@ end
 	Неон, стекло и полупрозрачное не красим: лампочки и окна остаются собой.
 ]]
 local function paintable(p: BasePart): boolean
-	return p.Material ~= Enum.Material.Neon and p.Material ~= Enum.Material.Glass and p.Transparency < 0.5
+	return p.Material ~= Enum.Material.Neon
+		and p.Material ~= Enum.Material.Glass
+		and p.Transparency < 0.5
+		and p:GetAttribute("NoPaint") ~= true
 end
 
 local function applyPaint(model: Model, color: Color3?)

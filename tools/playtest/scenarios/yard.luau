@@ -19,13 +19,23 @@ return function(player, note)
 		task.wait(0.5)
 	end
 	task.wait(3)
+	-- ZZ_ONLY=store — уровень 4 и формы наборов из Creator Store.
+	local store = workspace:GetAttribute("ZZ_Only") == "store"
 	local level = tonumber(workspace:GetAttribute("ZZ_Only")) or 4
+	game:GetService("Lighting").ClockTime = 13
 	ProfileService.update(player, function(p)
 		for _, id in Base.ids() do
 			p.base[id] = level
 		end
 	end)
 	BaseService.refresh(player)
+	if store then
+		for id, shape in { garden = 2, pets = 2, playground = 3, transport = 3 } do
+			if not BaseService.setStyle(player, id, shape, 1) then
+				note(`setStyle {id} refused`)
+			end
+		end
+	end
 	ProfileService.pushSnapshot(player)
 	BaseService.sendHome(player)
 	task.wait(5)
