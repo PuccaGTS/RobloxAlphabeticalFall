@@ -1,0 +1,90 @@
+{
+ "className": "Model",
+ "children": [
+  {
+   "className": "Part",
+   "name": "Meshes/watering can",
+   "properties": {
+    "Reflectance": {
+     "Float32": 0
+    },
+    "CanCollide": {
+     "Bool": true
+    },
+    "Color": {
+     "Color3": [
+      0.9137254953384399,
+      0.8549019694328308,
+      0.8549019694328308
+     ]
+    },
+    "CFrame": {
+     "CFrame": {
+      "orientation": [
+       [
+        1.1649304181903178e-31,
+        -1.0492760394548942e-15,
+        1
+       ],
+       [
+        -4.440892098500626e-16,
+        1,
+        -1.0492760394548942e-15
+       ],
+       [
+        -1,
+        4.440892098500626e-16,
+        -1.1649299479925774e-31
+       ]
+      ],
+      "position": [
+       -62.68338394165039,
+       0.6538906097412109,
+       -78.4743423461914
+      ]
+     }
+    },
+    "Transparency": {
+     "Float32": 0
+    },
+    "Anchored": {
+     "Bool": true
+    },
+    "Material": {
+     "Enum": 272
+    },
+    "CastShadow": {
+     "Bool": true
+    },
+    "Size": {
+     "Vector3": [
+      1.2286843061447144,
+      1.3077811002731323,
+      1.4532464742660522
+     ]
+    }
+   },
+   "children": [
+    {
+     "className": "SpecialMesh",
+     "name": "Mesh",
+     "properties": {
+      "Scale": {
+       "Vector3": [
+        0.5619357228279114,
+        0.5618144869804382,
+        0.5630837678909302
+       ]
+      },
+      "MeshId": {
+       "ContentId": "rbxassetid://4480988076"
+      },
+      "MeshType": {
+       "Enum": 5
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

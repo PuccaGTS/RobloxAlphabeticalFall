@@ -2496,6 +2496,30 @@ end
 	у каждого ребёнка свой улов, и сети это ничего не стоит.
 ]]
 local POND_WATER = Color3.fromRGB(70, 165, 215)
+
+--[[
+	Модель каталога (Config/Decor) в масштабе scale, стоящая нижней гранью в точке at.
+	Нет модели — ничего не ставим: это украшение, а не часть игры.
+]]
+local function placeDecor(model: Model, id: string, scale: number, at: CFrame, name: string?)
+	local DecorService = require(script.Parent.DecorService)
+	local decor = DecorService.modelFor(id, scale)
+	if not decor then
+		return
+	end
+	decor.Name = name or id
+	decor:PivotTo(at)
+	local box, extent = decor:GetBoundingBox()
+	decor:PivotTo(
+		decor:GetPivot()
+			+ Vector3.new(
+				at.X - box.Position.X,
+				at.Y - (box.Position.Y - extent.Y / 2),
+				at.Z - box.Position.Z
+			)
+	)
+	decor.Parent = model
+end
 local POND_SAND = Color3.fromRGB(230, 210, 160)
 local PIER_WOOD = Color3.fromRGB(165, 118, 72)
 
@@ -2553,8 +2577,17 @@ function BUILDERS.pond(model: Model, origin: CFrame)
 		tip.CFrame = tip.CFrame * CFrame.Angles(0, 0, math.pi / 2)
 		tip.CanCollide = false
 	end
-	-- Кувшинки: зелёные листья с розовым цветком.
+	-- Кувшинки: зелёные листья с розовым цветком, на двух сидят лягушата (Creator Store).
 	for index, spot in { { 5, 4 }, { -6, 3 }, { -3, 7 }, { 6.5, -1 } } do
+		if index <= 2 then
+			placeDecor(
+				model,
+				"frog",
+				0.45,
+				origin * CFrame.new(spot[1], 0.64, spot[2]) * CFrame.Angles(0, math.rad(150 + index * 70), 0),
+				`PondFrog_{index}`
+			)
+		end
 		local at = origin * CFrame.new(spot[1], 0.6, spot[2])
 		local pad = cylinder(model, `LilyPad_{index}`, 0.06, 2.4, at, Color3.fromRGB(90, 170, 80))
 		pad.CanCollide = false
@@ -2568,6 +2601,25 @@ function BUILDERS.pond(model: Model, origin: CFrame)
 		bloom.Shape = Enum.PartType.Ball
 		bloom.CanCollide = false
 	end
+
+	-- Рогоз пучками у дальнего берега и резиновая уточка на воде.
+	for index, angle in { 20, 65, 115, 160 } do
+		local a = math.rad(angle)
+		placeDecor(
+			model,
+			"cattail",
+			0.5,
+			origin * CFrame.new(math.cos(a) * (radius + 0.8), 0.3, math.sin(a) * (radius + 0.8)),
+			`PondCattail_{index}`
+		)
+	end
+	placeDecor(
+		model,
+		"rubber_duck",
+		0.2,
+		origin * CFrame.new(-4, 0.45, -2) * CFrame.Angles(0, math.rad(40), 0),
+		"PondDuck"
+	)
 
 	-- Мостки: от берега у площади к середине пруда, на сваях.
 	local from = radius + spec.shore + 1
@@ -2773,6 +2825,29 @@ function BUILDERS.gallery(model: Model, origin: CFrame)
 	mark.Material = Enum.Material.Neon
 	mark.Transparency = 0.2
 	CollectionService:AddTag(mark, "AF_GalleryMark")
+
+	-- Призы на прилавке: плюшевые мишки и уточка (Creator Store) — то, ради чего стреляют.
+	placeDecor(
+		model,
+		"teddy_bear",
+		0.22,
+		origin * CFrame.new(3.2, 3.62, -3) * CFrame.Angles(0, math.rad(180), 0),
+		"PrizeBear_1"
+	)
+	placeDecor(
+		model,
+		"teddy_bear",
+		0.18,
+		origin * CFrame.new(5.2, 3.62, -3) * CFrame.Angles(0, math.rad(160), 0),
+		"PrizeBear_2"
+	)
+	placeDecor(
+		model,
+		"rubber_duck",
+		0.16,
+		origin * CFrame.new(1.4, 3.62, -3) * CFrame.Angles(0, math.rad(200), 0),
+		"PrizeDuck"
+	)
 
 	sign(model, origin * CFrame.new(width / 2 + 2, 0, -5), "🎯 Тир")
 end

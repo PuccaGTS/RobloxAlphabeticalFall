@@ -26,6 +26,7 @@ local RemoteDefs = require(Shared.Net.RemoteDefs)
 local ProfileService = require(script.Parent.ProfileService)
 local EconomyService = require(script.Parent.EconomyService)
 local BaseService = require(script.Parent.BaseService)
+local DecorService = require(script.Parent.DecorService)
 
 local GardenService = {}
 
@@ -328,6 +329,27 @@ local function render(player: Player, force: boolean?)
 
 	for index, bed in state.beds do
 		renderSlot(model, slotFrame(plot.cframe, index) * CFrame.new(0, 0.87, 0), bed, now, index)
+	end
+	-- Лейка у ящика (Creator Store): сразу видно, что это огород.
+	local can = DecorService.modelFor("watering_can", 1.05)
+	if can then
+		can.Name = "WateringCan"
+		can:PivotTo(
+			at
+				* CFrame.new(-(LetterGarden.BEDS * SLOT_STEP / 2 + 1.3), 0, -0.6)
+				* CFrame.Angles(0, math.rad(-30), 0)
+		)
+		local bounds, extent = can:GetBoundingBox()
+		local base = (at * CFrame.new(-(LetterGarden.BEDS * SLOT_STEP / 2 + 1.3), 0, -0.6)).Position
+		can:PivotTo(
+			can:GetPivot()
+				+ Vector3.new(
+					base.X - bounds.Position.X,
+					base.Y - (bounds.Position.Y - extent.Y / 2),
+					base.Z - bounds.Position.Z
+				)
+		)
+		can.Parent = model
 	end
 	CollectionService:AddTag(model, "AF_LetterGarden")
 	model.Parent = folder

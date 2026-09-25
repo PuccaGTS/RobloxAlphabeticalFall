@@ -317,6 +317,42 @@ local ITEMS: { Item } = {
 		color = Color3.fromRGB(255, 220, 60),
 		collide = true,
 	},
+	--[[
+		Модели для уголков парка 25.09.2026 (Creator Store, без скриптов, импорт
+		tools/models/import.py): лягушки на кувшинках и рогоз у пруда с рыбками,
+		лейка у азбучной грядки. Размер — как у самой модели: мельче её ставит
+		тот, кто зовёт DecorService.modelFor с масштабом.
+	]]
+	{
+		id = "frog",
+		assetId = 2173099952,
+		file = true,
+		title = "Лягушонок",
+		kind = "toy",
+		size = Vector3.new(2.5, 3.8, 2.5),
+		color = Color3.fromRGB(110, 190, 90),
+		collide = false,
+	},
+	{
+		id = "cattail",
+		assetId = 216373354,
+		file = true,
+		title = "Рогоз",
+		kind = "flower",
+		size = Vector3.new(2, 8.5, 2.3),
+		color = Color3.fromRGB(120, 90, 60),
+		collide = false,
+	},
+	{
+		id = "watering_can",
+		assetId = 6132007002,
+		file = true,
+		title = "Лейка",
+		kind = "toy",
+		size = Vector3.new(1.2, 1.3, 1.5),
+		color = Color3.fromRGB(90, 160, 220),
+		collide = false,
+	},
 	{
 		id = "teddy_bear",
 		assetId = 12549476788,
