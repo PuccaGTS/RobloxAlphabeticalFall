@@ -45,7 +45,7 @@ setup_console()
 SRC = REPO / "music" / "Реплики"
 OUT = REPO / "music" / "Готовое" / "vo"
 MANIFEST = REPO / "assets" / "audio" / "MANIFEST.csv"
-SCRIPT = REPO / "docs" / "VO-SCRIPT.md"
+SCRIPT = REPO / "docs" / "VO-RECORD.md"  # лист записи: 43 реплики голосом (docs/05-AUDIO-VO.md § 0)
 
 # Цель по громкости. -20 LUFS — компромисс: речь остаётся разборчивой на слабом
 # динамике планшета, но не требует лимитирования файлов с резкими взрывными.
@@ -138,7 +138,7 @@ def limit(x: np.ndarray, sr: int, ceiling: float) -> tuple[np.ndarray, float]:
 
 
 def expected_keys() -> list[str]:
-    """Ключи из docs/VO-SCRIPT.md — источник правды по составу озвучки."""
+    """Ключи из docs/VO-RECORD.md — что записывается голосом (буквы и числа)."""
     if not SCRIPT.exists():
         return []
     keys: list[str] = []
