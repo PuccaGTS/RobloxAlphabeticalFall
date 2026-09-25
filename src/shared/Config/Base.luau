@@ -73,6 +73,12 @@ end
 ]]
 Base.DAILY_LETTER_POSITION = Vector3.new(0, 0, -18)
 
+--[[
+	Доска-карта «Куда пойти?»: слева впереди от точки появления, между порталом
+	мира букв и полукругом падов. Её видно сразу, но к порталу она не мешает.
+]]
+Base.MAP_BOARD_POSITION = Vector3.new(-25, 0, 13)
+
 Base.GROUND_SIZE = (Base.RING_RADIUS + Base.PLOT_SIZE) * 2
 
 --[[

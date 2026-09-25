@@ -22,6 +22,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Rides = require(Shared.Config.Rides)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 local AudioController = require(script.Parent.AudioController)
+local ParkReport = require(script.Parent.ParkReport)
 
 local RideController = {}
 
@@ -581,6 +582,8 @@ local function start(kind: Kind, pad: BasePart, now: number, wheel: Wheel?): Rid
 	ride = current
 	blockedPad = pad
 	humanoid.Sit = true
+	-- Катание — задание дня про уголок парка (паровозик в парк не входит — у него нет места).
+	ParkReport.done(ParkReport.spotOf(pad))
 	return current
 end
 

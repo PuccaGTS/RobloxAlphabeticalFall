@@ -148,11 +148,16 @@ local function showWay(item)
 	end)
 end
 
+local listeners: { (any) -> () } = {}
+
 local function onQuests(payload)
 	if typeof(payload) ~= "table" then
 		return
 	end
 	QuestsUI.update(payload)
+	for _, listener in listeners do
+		task.spawn(listener, payload)
+	end
 
 	-- Задание выполнено: дорога к нему больше не нужна, а награду надо увидеть.
 	if #(payload.justDone or {}) > 0 then
@@ -181,6 +186,22 @@ end
 function QuestController.init()
 	QuestsUI.build({ onPick = showWay })
 	RemoteDefs.event("Quests").OnClientEvent:Connect(onQuests)
+end
+
+--[[
+	Та же дорога не к заданию, а к любому месту: карта «Куда пойти?»
+	(Controllers/MapController). item = { id, icon, target = Vector3 }.
+]]
+function QuestController.guide(item)
+	if way and way.questId == item.id then
+		return -- уже ведём туда: второй выбор того же места дорогу не прячет
+	end
+	showWay(item)
+end
+
+-- Пришёл новый список заданий (для карты: какие места сегодня горят золотом).
+function QuestController.onUpdate(listener: (any) -> ())
+	table.insert(listeners, listener)
 end
 
 return QuestController

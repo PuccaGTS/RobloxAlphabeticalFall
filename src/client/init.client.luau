@@ -32,6 +32,7 @@ local EmoteController = require(Controllers.EmoteController)
 local DetailLodController = require(Controllers.DetailLodController)
 local RunHazardController = require(Controllers.RunHazardController)
 local QuestController = require(Controllers.QuestController)
+local MapController = require(Controllers.MapController)
 local SkateController = require(Controllers.SkateController)
 local SplashController = require(Controllers.SplashController)
 local EveningController = require(Controllers.EveningController)
@@ -81,6 +82,7 @@ EveningController.init()
 RentalController.init()
 MailController.init()
 QuestController.init()
+MapController.init()
 DevController.init() -- панель появится только в Studio и у владельца места
 
 ShopUI.build({
@@ -108,6 +110,10 @@ HUD.build({
 	onParent = function()
 		SfxController.play("tap")
 		ParentUI.open()
+	end,
+	onMap = function()
+		SfxController.play("tap")
+		MapController.toggle()
 	end,
 })
 
@@ -268,6 +274,8 @@ RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string, argume
 		ShopUI.setOpen(true)
 	elseif screen == "build" and typeof(argument) == "string" then
 		BuildPickerUI.open(argument)
+	elseif screen == "map" then
+		MapController.open()
 	elseif screen == "locked_stage" then
 		HUD.toast("Эти буквы ещё спят. Поучись ещё немножко!", 3)
 	elseif screen == "need_stars" then
@@ -285,6 +293,7 @@ end)
 ]]
 RemoteDefs.event("BaseAssigned").OnClientEvent:Connect(function(position: Vector3)
 	TowerController.placeAt(position)
+	MapController.setHome(position)
 end)
 
 -- Сервер просит проиграть реплику: единственный канал озвучки между сервером и клиентом.

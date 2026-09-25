@@ -20,6 +20,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Playground = require(Shared.Config.Playground)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 local AudioController = require(script.Parent.AudioController)
+local ParkReport = require(script.Parent.ParkReport)
 
 local SkateController = {}
 
@@ -78,6 +79,7 @@ local function start(root: BasePart)
 	constraint.PlaneVelocity = Vector2.new(momentum.X, momentum.Z)
 	constraint.Parent = root
 	glide = constraint
+	ParkReport.done("winter")
 
 	local id = AudioRegistry.ids.sfx_skate
 	if id and id ~= "" then

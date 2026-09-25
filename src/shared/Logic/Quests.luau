@@ -10,7 +10,9 @@
 	решаются одним и тем же.
 
 	Первое задание дня — всегда уровень пути (мир букв и мир чисел через день):
-	это главное занятие игры. Два других — из остального, по сиду дня, так что
+	это главное занятие игры. Второе — уголок парка, каждый день новый: так парк
+	находится сам (docs/17-CONTENT-PLAN.md § 7.3). Третье — из остального
+	(занятия площади, стройка, покупка, сундук). Всё по сиду дня, так что
 	у всех детей на сервере сегодня одни и те же задания и им есть что обсудить.
 	Задание, которое нельзя выполнить (все сундуки найдены, дом достроен),
 	в выборку не попадает.
@@ -30,11 +32,14 @@ export type Quest = {
 	--[[
 		Куда ведёт стрелка: имя детали в workspace.Hub (пады, порталы, магазин)
 		или особая цель, которую знает только сервер: "home" — свой участок,
-		"chest" — ближайший ненайденный сундук. nil — дороги нет, дело везде.
+		"chest" — ближайший ненайденный сундук, "spot:<id>" — место парка
+		(Config/Playground). nil — дороги нет, дело везде.
 	]]
 	target: string?,
 	-- true — главное задание дня: уровень одного из миров.
 	main: boolean?,
+	-- true — задание про уголок парка: его выполняет само место (событие ParkDone).
+	park: boolean?,
 }
 
 Quests.PER_DAY = 3
@@ -145,6 +150,146 @@ Quests.POOL = {
 		need = 1,
 		target = "chest",
 	},
+	--[[
+		Уголки парка. Их выполняет само место: сел на шар, дошёл по азбуке до Я,
+		позвонил в кристалл, — клиент сообщает серверу (ParkDone), сервер
+		проверяет, что ребёнок и правда стоит там (Services/QuestService).
+	]]
+	{
+		id = "park_balloon",
+		icon = "🎈",
+		title = "Прокатись на воздушном шаре",
+		event = "park:balloon",
+		need = 1,
+		target = "spot:balloon",
+		park = true,
+	},
+	{
+		id = "park_ferris",
+		icon = "🎡",
+		title = "Прокатись на колесе обозрения",
+		event = "park:ferris",
+		need = 1,
+		target = "spot:ferris",
+		park = true,
+	},
+	{
+		id = "park_carousel",
+		icon = "🎠",
+		title = "Покатайся на карусели",
+		event = "park:carousel",
+		need = 1,
+		target = "spot:carousel",
+		park = true,
+	},
+	{
+		id = "park_ship",
+		icon = "🏴‍☠️",
+		title = "Покачайся на корабле",
+		event = "park:ship",
+		need = 1,
+		target = "spot:ship",
+		park = true,
+	},
+	{
+		id = "park_lake",
+		icon = "🦢",
+		title = "Проплыви по озеру на лебеде",
+		event = "park:lake",
+		need = 1,
+		target = "spot:lake",
+		park = true,
+	},
+	{
+		id = "park_slide",
+		icon = "🌀",
+		title = "Скатись с горки-спирали",
+		event = "park:slide",
+		need = 1,
+		target = "spot:slide",
+		park = true,
+	},
+	{
+		id = "park_abc",
+		icon = "🔤",
+		title = "Пройди азбуку-дорожку от А до Я",
+		event = "park:abcpath",
+		need = 1,
+		target = "spot:abcpath",
+		park = true,
+	},
+	{
+		id = "park_photo",
+		icon = "📸",
+		title = "Сфотографируйся в фото-зоне",
+		event = "park:photo",
+		need = 1,
+		target = "spot:photo",
+		park = true,
+	},
+	{
+		id = "park_beanstalk",
+		icon = "🌱",
+		title = "Заберись по стеблю до облаков",
+		event = "park:beanstalk",
+		need = 1,
+		target = "spot:beanstalk",
+		park = true,
+	},
+	{
+		id = "park_grotto",
+		icon = "💎",
+		title = "Позвони в кристаллы грота",
+		event = "park:grotto",
+		need = 1,
+		target = "spot:grotto",
+		park = true,
+	},
+	{
+		id = "park_zip",
+		icon = "🌳",
+		title = "Съедь на тарзанке с домика на дереве",
+		event = "park:treehouse",
+		need = 1,
+		target = "spot:treehouse",
+		park = true,
+	},
+	{
+		id = "park_maze",
+		icon = "🌿",
+		title = "Найди флажок в лабиринте",
+		event = "park:maze",
+		need = 1,
+		target = "spot:maze",
+		park = true,
+	},
+	{
+		id = "park_obby",
+		icon = "🧗",
+		title = "Позвони в колокол на паркур-горе",
+		event = "park:obby",
+		need = 1,
+		target = "spot:obby",
+		park = true,
+	},
+	{
+		id = "park_skate",
+		icon = "⛸",
+		title = "Прокатись по катку",
+		event = "park:winter",
+		need = 1,
+		target = "spot:winter",
+		park = true,
+	},
+	{
+		id = "park_rental",
+		icon = "🛴",
+		title = "Прокатись на самокате или лошадке",
+		event = "park:rental",
+		need = 1,
+		target = "spot:rental",
+		park = true,
+	},
 } :: { Quest }
 
 local byId: { [string]: Quest } = {}
@@ -216,16 +361,22 @@ end
 function Quests.pick(day: number, available: { string }): { string }
 	local random = Random.new(day * 7919 + 17)
 	local mains: { string } = {}
+	local parks: { string } = {}
 	local others: { string } = {}
 	for _, quest in Quests.POOL do
 		if table.find(available, quest.id) then
-			table.insert(if quest.main then mains else others, quest.id)
+			local bucket = if quest.main then mains elseif quest.park then parks else others
+			table.insert(bucket, quest.id)
 		end
 	end
 
 	local list: { string } = {}
 	if #mains > 0 then
 		table.insert(list, mains[day % #mains + 1])
+	end
+	-- Уголки парка идут по кругу с шагом 7: соседние дни ведут в разные концы парка.
+	if #parks > 0 then
+		table.insert(list, parks[(day * 7) % #parks + 1])
 	end
 	for i = #others, 2, -1 do
 		local j = random:NextInteger(1, i)

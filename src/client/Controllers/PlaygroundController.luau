@@ -29,6 +29,7 @@ local Playground = require(Shared.Config.Playground)
 
 local AudioController = require(script.Parent.AudioController)
 local EmoteController = require(script.Parent.EmoteController)
+local ParkReport = require(script.Parent.ParkReport)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 local Letters = require(Shared.Config.Letters)
 
@@ -147,6 +148,7 @@ HANDLERS.AF_Crystal = function(crystal: BasePart)
 			:Create(crystal, TweenInfo.new(1.2, Enum.EasingStyle.Quad), { Color = color, Size = size })
 			:Play()
 		burst(crystal, color, 10)
+		ParkReport.done("grotto")
 	end)
 end
 
@@ -210,6 +212,7 @@ HANDLERS.AF_PhotoMark = function(mark: BasePart)
 		root.CFrame =
 			CFrame.lookAt(root.Position, Vector3.new(pose.Position.X, root.Position.Y, pose.Position.Z))
 		EmoteController.play("cheer")
+		ParkReport.done("photo")
 
 		local previousType = camera.CameraType
 		local previousFov = camera.FieldOfView
@@ -286,6 +289,7 @@ end
 
 local function abcCelebrate()
 	abcParty = true
+	ParkReport.done("abcpath")
 	playSound(CHEER_SOUND, 1, 0.6, abcTiles[#abcTiles] or abcTiles[1])
 	-- Волна от А до Я: каждая плитка вспыхивает белым и сыплет искры.
 	for order = 1, #abcTiles do
@@ -391,6 +395,8 @@ HANDLERS.AF_MazeFlag = function(flag: BasePart)
 			if root and (root.Position - flag.Position).Magnitude < 7 and ready(flag, 8) then
 				playSound(CHEER_SOUND, 1, 0.5, flag)
 				burst(flag, flag.Color, 40)
+				-- Та же метка у флажка лабиринта и у колокола паркур-горы.
+				ParkReport.done(ParkReport.spotOf(flag))
 			end
 		end
 	end)
@@ -693,6 +699,7 @@ HANDLERS.AF_BeanTop = function(island: BasePart)
 			return
 		end
 		dropNest()
+		ParkReport.done("beanstalk")
 		burst(island, Color3.fromRGB(255, 220, 110), 40)
 		local magic = AudioRegistry.ids.sfx_magic
 		if magic and magic ~= "" then

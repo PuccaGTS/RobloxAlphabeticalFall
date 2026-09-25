@@ -43,6 +43,12 @@ type Ride = {
 local rides: { [Player]: Ride } = {}
 -- На каком круге ребёнок стоял в прошлую проверку: садимся, только когда на круг ВОШЁЛ.
 local standing: { [Player]: Instance? } = {}
+local mountListeners: { (Player, string) -> () } = {}
+
+-- Ребёнок сел на вещь с круга проката (для заданий дня).
+function RentalService.onMount(listener: (Player, string) -> ())
+	table.insert(mountListeners, listener)
+end
 
 function RentalService.riding(player: Player): string?
 	local ride = rides[player]
@@ -161,8 +167,10 @@ local function checkPads()
 		end
 		if on and on ~= standing[player] then
 			local id = on:GetAttribute("Vehicle")
-			if RentalService.riding(player) ~= id then
-				RentalService.mount(player, id)
+			if RentalService.riding(player) ~= id and RentalService.mount(player, id) then
+				for _, listener in mountListeners do
+					task.spawn(listener, player, id)
+				end
 			end
 		end
 		standing[player] = on

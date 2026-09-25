@@ -14,7 +14,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Base = require(Shared.Config.Base)
 local Chests = require(Shared.Config.Chests)
+local Decor = require(Shared.Config.Decor)
 local Economy = require(Shared.Config.Economy)
+local Playground = require(Shared.Config.Playground)
 local PlayLog = require(Shared.Logic.PlayLog)
 local Quests = require(Shared.Logic.Quests)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
@@ -25,6 +27,30 @@ local ChallengeService = require(script.Parent.ChallengeService)
 local ShopService = require(script.Parent.ShopService)
 local BaseService = require(script.Parent.BaseService)
 local ChestService = require(script.Parent.ChestService)
+local RentalService = require(script.Parent.RentalService)
+local RateLimiter = require(script.Parent.RateLimiter)
+
+--[[
+	Сколько студов сверх радиуса места ребёнок может стоять от его середины, когда
+	клиент сообщает «сделано»: посадочные круги и тарзанка — у края места, остров
+	на стебле шире самого стебля.
+]]
+local PARK_REACH = 25
+
+local spotById = {}
+for _, spot in Playground.spots do
+	spotById[spot.id] = spot
+end
+
+-- Середина места парка на земле: сюда ведёт стрелка заданий и доска «Куда пойти».
+local function spotPosition(id: string): Vector3?
+	local spot = spotById[id]
+	if not spot then
+		return nil
+	end
+	local position = Playground.position(spot)
+	return Vector3.new(position.X, Decor.groundY(position.X, position.Z), position.Z)
+end
 
 local QuestService = {}
 
@@ -76,6 +102,8 @@ local function targetOf(player: Player, profile, quest): Vector3?
 		local folder = workspace:FindFirstChild("Chests")
 		local model = chest and folder and folder:FindFirstChild(chest.id)
 		return if model and model:IsA("Model") then model:GetPivot().Position else nil
+	elseif quest.target and string.sub(quest.target, 1, 5) == "spot:" then
+		return spotPosition(string.sub(quest.target, 6))
 	elseif quest.target then
 		local hub = workspace:FindFirstChild("Hub")
 		local part = hub and hub:FindFirstChild(quest.target)
@@ -193,6 +221,35 @@ function QuestService.start()
 	ChestService.onOpened(function(player: Player)
 		QuestService.record(player, "chest")
 	end)
+	RentalService.onMount(function(player: Player)
+		QuestService.record(player, "park:rental")
+	end)
+
+	--[[
+		Уголок парка: катание, фото, азбука-дорожка — всё это живёт на клиенте,
+		и сообщает о себе клиент. Верим, только если ребёнок стоит у этого места:
+		из дальнего угла карты задание не выполнить.
+	]]
+	RemoteDefs.event("ParkDone").OnServerEvent:Connect(function(player: Player, spotId: any)
+		if not RateLimiter.allow(player, "ParkDone", RemoteDefs.RATE_LIMITS.ParkDone) then
+			return
+		end
+		if typeof(spotId) ~= "string" or #spotId > 32 then
+			return
+		end
+		local spot = spotById[spotId]
+		local center = spotPosition(spotId)
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not spot or not center or not root then
+			return
+		end
+		local flat = (root.Position - center) * Vector3.new(1, 0, 1)
+		if flat.Magnitude > spot.radius + PARK_REACH then
+			return
+		end
+		QuestService.record(player, `park:{spotId}`)
+	end)
 
 	Players.PlayerAdded:Connect(function(player: Player)
 		task.spawn(function()
@@ -208,5 +265,6 @@ end
 
 -- Для панели разработчика и стенда: прислать список заново.
 QuestService.push = push
+QuestService.spotPosition = spotPosition
 
 return QuestService

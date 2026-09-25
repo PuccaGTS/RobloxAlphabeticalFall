@@ -66,6 +66,12 @@ local EVENTS: { string } = {
 		have, need, done, target = Vector3? } }, justDone = { id }, awarded = ⭐ за них }
 	]]
 	"Quests",
+	--[[
+		C→S  в парке сделано дело: id места из Config/Playground ("balloon" — сел на шар,
+		"abcpath" — прошёл азбуку до Я). Сервер проверяет, что ребёнок у этого места,
+		и двигает задание дня (Services/QuestService).
+	]]
+	"ParkDone",
 	-- C→S  инструменты разработчика: { kind = "stars" | "teleport", ... }. Только Studio и владелец места.
 	"DevCommand",
 }
@@ -87,6 +93,7 @@ local RATE_LIMITS: { [string]: number } = {
 	GoHome = 1,
 	RunHazard = 2,
 	RentalOff = 2,
+	ParkDone = 2,
 	DevCommand = 4,
 	-- Родительский режим: вызовы редкие, лимит против перебора PIN скриптом.
 	-- Настоящая защита от перебора — пауза после пяти ошибок (Logic/ParentGate).

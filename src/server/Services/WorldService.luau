@@ -23,6 +23,7 @@
 	клиент на участке хозяина — src/client/Controllers/TowerController.luau.
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -32,6 +33,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Challenges = require(Shared.Config.Challenges)
 local Letters = require(Shared.Config.Letters)
 local Base = require(Shared.Config.Base)
+local Decor = require(Shared.Config.Decor)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
@@ -702,6 +704,50 @@ local function buildDailyStone(hub: Folder)
 end
 
 --[[
+	Доска «Куда пойти?» слева от точки появления, лицом к ней: большая карта
+	парка на деревянном щите (рисует клиент, Controllers/MapController). Встал
+	на золотой круг перед ней — открывается та же карта во весь экран, и тап
+	по картинке места даёт стрелку до него (docs/17-CONTENT-PLAN.md § 7.3).
+]]
+local function buildMapBoard(hub: Folder)
+	local wood = Color3.fromRGB(150, 104, 66)
+	local ground = Decor.groundY(Base.MAP_BOARD_POSITION.X, Base.MAP_BOARD_POSITION.Z)
+	local foot = Vector3.new(Base.MAP_BOARD_POSITION.X, ground, Base.MAP_BOARD_POSITION.Z)
+	local facing = CFrame.lookAt(foot, Vector3.new(0, ground, 26))
+
+	local folder = Instance.new("Model")
+	folder.Name = "MapBoard"
+	folder.Parent = hub
+
+	for _, side in { -1, 1 } do
+		part("Post", Vector3.new(0.9, 12, 0.9), facing * CFrame.new(side * 6.6, 6, 0), wood, folder).Material =
+			Enum.Material.Wood
+	end
+	local board = part("Board", Vector3.new(12.4, 10.4, 0.6), facing * CFrame.new(0, 6.9, 0), wood, folder)
+	board.Material = Enum.Material.Wood
+	CollectionService:AddTag(board, "AF_MapBoard")
+	local roof = part(
+		"Roof",
+		Vector3.new(14.4, 0.8, 2),
+		facing * CFrame.new(0, 12.4, 0),
+		Color3.fromRGB(210, 80, 70),
+		folder
+	)
+	roof.Material = Enum.Material.SmoothPlastic
+
+	local mat = part(
+		"MapPad",
+		Vector3.new(7, 0.4, 7),
+		facing * CFrame.new(0, 0.2, -5.5),
+		Color3.fromRGB(255, 205, 90),
+		folder
+	)
+	makeActivator(mat, "Открыть", "Карта", function(player: Player)
+		RemoteDefs.event("OpenUI"):FireClient(player, "map")
+	end, nil, SHOP_ACTIVATE_SECONDS)
+end
+
+--[[
 	Декор: деревья, фонари, клумбы. Мир должен выглядеть местом, а не полигоном.
 
 	Предметы на земле расставляет DecorService по каталогу Config/Decor: там же лежит
@@ -1085,6 +1131,7 @@ function WorldService.build()
 	end, nil, SHOP_ACTIVATE_SECONDS)
 
 	buildDailyStone(hub)
+	buildMapBoard(hub)
 	buildDecor(hub)
 	Horizon.build(hub)
 

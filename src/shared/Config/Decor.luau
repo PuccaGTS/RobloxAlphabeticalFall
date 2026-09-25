@@ -511,6 +511,11 @@ local ZONES: { Zone } = {
 		radius = 6,
 		why = "камень буквы дня",
 	},
+	{
+		center = Vector2.new(Base.MAP_BOARD_POSITION.X, Base.MAP_BOARD_POSITION.Z),
+		radius = 10,
+		why = "доска-карта «Куда пойти?»",
+	},
 }
 
 --[[

@@ -2,6 +2,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Quests = require(ReplicatedStorage.Shared.Logic.Quests)
 local Challenges = require(ReplicatedStorage.Shared.Config.Challenges)
+local Playground = require(ReplicatedStorage.Shared.Config.Playground)
 
 local function allIds()
 	local ids = {}
@@ -28,9 +29,47 @@ return function()
 					for index = 2, #list do
 						expect(Quests.get(list[index]).main).never.to.equal(true)
 					end
+					-- Второе — уголок парка, третье — не парк: парк каждый день, но не весь список.
+					expect(Quests.get(list[2]).park).to.equal(true)
+					expect(Quests.get(list[3]).park).never.to.equal(true)
 				end
 			end
 		)
+
+		it(
+			"соседние дни ведут в разные уголки парка, за круг — во все",
+			function()
+				local seen = {}
+				local parks = 0
+				for _, quest in Quests.POOL do
+					if quest.park then
+						parks += 1
+					end
+				end
+				for day = 1, parks do
+					local today = Quests.pick(day, allIds())[2]
+					local tomorrow = Quests.pick(day + 1, allIds())[2]
+					expect(today).never.to.equal(tomorrow)
+					seen[today] = true
+				end
+				local count = 0
+				for _ in seen do
+					count += 1
+				end
+				expect(count).to.equal(parks)
+			end
+		)
+
+		it("задание про парк ведёт к своему месту парка", function()
+			for _, quest in Quests.POOL do
+				if quest.park then
+					local spot = string.match(quest.event, "^park:(.+)$")
+					expect(spot).to.be.ok()
+					expect(Playground.expect(spot)).to.be.ok()
+					expect(quest.target).to.equal(`spot:{spot}`)
+				end
+			end
+		end)
 
 		it("миры чередуются по дням", function()
 			local first = Quests.pick(10, allIds())[1]

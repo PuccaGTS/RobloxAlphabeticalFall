@@ -168,6 +168,15 @@ function HUD.build(callbacks: { [string]: () -> () })
 	homeRatio.AspectRatio = 1
 	homeRatio.Parent = homeButton
 
+	-- Карта «Куда пойти?» (UI/MapUI): весь парк картинками, тап — стрелка до места.
+	local mapButton = makeButton("Map", "🗺", UDim2.fromScale(0.09, 0.11), UDim2.fromScale(0.89, 0.26))
+	mapButton.BackgroundColor3 = Color3.fromRGB(150, 215, 130)
+	mapButton.Parent = screen
+	mapButton.Activated:Connect(callbacks.onMap)
+	local mapRatio = Instance.new("UIAspectRatioConstraint")
+	mapRatio.AspectRatio = 1
+	mapRatio.Parent = mapButton
+
 	--[[
 		Вход для родителей: маленький и в углу, чтобы ребёнок не тыкал в него
 		первым делом. Ребёнку он всё равно ничего не откроет — дальше взрослый
