@@ -1142,6 +1142,30 @@ end
 	Без дома мебель не ставится совсем: купленное не пропадает, а ждёт дом,
 	как и крыша.
 ]]
+--[[
+	Модель Creator Store (Config/Decor) на месте: высотой height, основанием в точке at.
+	Если модели нет, возвращает false — тогда ставится старый рисунок из деталей.
+]]
+local function standModel(plot: Model, decorId: string, at: CFrame, height: number): boolean
+	local model = DecorService.modelFor(decorId)
+	if not model then
+		return false
+	end
+	local _, size = model:GetBoundingBox()
+	model:ScaleTo(model:GetScale() * height / size.Y)
+	local box, scaled = model:GetBoundingBox()
+	model:PivotTo(at * CFrame.new(0, scaled.Y / 2, 0) * box:ToObjectSpace(model:GetPivot()))
+	for _, part in model:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.Anchored = true
+			part:SetAttribute("NoPaint", true)
+		end
+	end
+	model.Name = `Store_{decorId}`
+	model.Parent = plot
+	return true
+end
+
 local function buildFurniture(plot: Model, at: CFrame, level: number, houseLevel: number)
 	if level <= 0 or houseLevel <= 0 then
 		return
@@ -1149,7 +1173,8 @@ local function buildFurniture(plot: Model, at: CFrame, level: number, houseLevel
 
 	local x = 12
 
-	if level >= 1 then
+	-- Стол и лавочка — модели Store: стол из двух брусков на проверке выглядел заготовкой.
+	if level >= 1 and not standModel(plot, "picnic_table", at * CFrame.new(x, FLOOR, -4), 3) then
 		local top = part(
 			"TableTop",
 			Vector3.new(4, 0.4, 3),
@@ -1161,7 +1186,15 @@ local function buildFurniture(plot: Model, at: CFrame, level: number, houseLevel
 		part("TableLeg", Vector3.new(0.6, 2, 0.6), at * CFrame.new(x, FLOOR + 1, -4), SOIL, plot)
 	end
 
-	if level >= 2 then
+	if
+		level >= 2
+		and not standModel(
+			plot,
+			"bench",
+			at * CFrame.new(x, FLOOR, 3) * CFrame.Angles(0, math.rad(90), 0),
+			2.6
+		)
+	then
 		part(
 			"BedFrame",
 			Vector3.new(3.4, 1, 6),
@@ -1304,6 +1337,10 @@ local function buildDecor(plot: Model, at: CFrame, level: number)
 		local spots =
 			{ Vector2.new(-5.5, -12), Vector2.new(5.5, -12), Vector2.new(-5.5, -22), Vector2.new(5.5, -22) }
 		for index, spot in spots do
+			-- Фонарь из парка (модель Store); белые светящиеся кубы на палке назвали нелепыми.
+			if standModel(plot, "lamp", at * CFrame.new(spot.X, FLOOR, spot.Y), 6) then
+				continue
+			end
 			local post = part(
 				`LanternPost_{index}`,
 				Vector3.new(0.4, 4, 0.4),
@@ -1324,7 +1361,7 @@ local function buildDecor(plot: Model, at: CFrame, level: number)
 		end
 	end
 
-	if level >= 4 then
+	if level >= 4 and not standModel(plot, "swing", at * CFrame.new(-13, FLOOR, 6), 7.5) then
 		local x = -13
 		for _, side in { -1, 1 } do
 			part(
