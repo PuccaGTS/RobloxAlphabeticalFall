@@ -1636,6 +1636,58 @@ function BUILDERS.winter(model: Model, origin: CFrame)
 end
 
 --[[
+	Картинки: мягкий круг, мольберт с доской-картинкой лицом к площади и три
+	круга-буквы перед ним. Что нарисовано и какие буквы на кругах, решает
+	клиент (Controllers/PictureController): у каждого ребёнка своя загадка.
+]]
+local EASEL_WOOD = Color3.fromRGB(170, 120, 75)
+
+function BUILDERS.pictures(model: Model, origin: CFrame)
+	local mat = cylinder(
+		model,
+		"PicturesMat",
+		0.3,
+		26,
+		origin * CFrame.new(0, 0.15, 0),
+		Color3.fromRGB(250, 230, 170)
+	)
+	mat.Material = Enum.Material.Fabric
+
+	-- Мольберт: две ноги, доска с рамкой. Лицом (−Z) к площади и к кругам.
+	local boardAt = origin * CFrame.new(0, 6.5, 5)
+	for _, side in { -1, 1 } do
+		part(
+			model,
+			`EaselLeg_{side}`,
+			Vector3.new(0.6, 9, 0.6),
+			origin * CFrame.new(side * 5.5, 4.5, 5.4),
+			EASEL_WOOD
+		)
+	end
+	part(model, "EaselFrame", Vector3.new(10.4, 8.4, 0.5), boardAt * CFrame.new(0, 0, 0.3), EASEL_WOOD)
+	local board =
+		part(model, "PictureBoard", Vector3.new(9.6, 7.6, 0.3), boardAt, Color3.fromRGB(255, 252, 240))
+	CollectionService:AddTag(board, "AF_PictureBoard")
+
+	local spec = Playground.PICTURES
+	for slot = 1, spec.pads do
+		local x = (slot - (spec.pads + 1) / 2) * spec.spacing
+		local pad = cylinder(
+			model,
+			`PicturePad_{slot}`,
+			0.4,
+			spec.padRadius * 2,
+			origin * CFrame.new(x, 0.35, -4),
+			Color3.fromRGB(255, 255, 255)
+		)
+		pad.Material = Enum.Material.SmoothPlastic
+		pad:SetAttribute("Slot", slot)
+		CollectionService:AddTag(pad, "AF_PicturePad")
+	end
+	sign(model, origin * CFrame.new(-11, 0.3, -8), "🖼")
+end
+
+--[[
 	Подсолнуховое поле: грядки, на них подсолнухи разного роста — многие
 	выше ребёнка. Голова подсолнуха — отдельная модель с меткой AF_Sunflower
 	и опорной точкой Pivot на макушке стебля: её поворачивает клиент

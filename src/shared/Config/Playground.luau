@@ -81,6 +81,14 @@ Playground.spots = {
 		только над полянкой. Рядом тихо играет «Jingle Bells» (APM, без загрузки).
 	]]
 	{ id = "winter", title = "⛄ Зимняя полянка", angle = 99, distance = 222, radius = 22 },
+	--[[
+		Картинки (docs/17-CONTENT-PLAN.md § 7.4, «картинка → буква»): на месте
+		убранных брызгалок мольберт с картинкой — арбуз, банан, волк, — перед
+		ним три большие буквы на земле. Встал на ту, с которой начинается
+		слово, — голос называет букву, картинка сменяется. Связь буквы и
+		слова без чтения. Звёзд не даёт, как всё в парке.
+	]]
+	{ id = "pictures", title = "🖼 Картинки", angle = 172, distance = 226, radius = 16 },
 	-- Озеро с лодочками-лебедями (Config/Rides.SWANS): видно с дорожки к домам.
 	{ id = "lake", title = "🦢 Лебеди", angle = 10, distance = 218, radius = 26 },
 	--[[
@@ -162,6 +170,15 @@ Playground.ICE_RADIUS = 10 -- каток посередине
 ]]
 Playground.SKATE_GRIP = 0.9
 Playground.SKATE_SPEED = 24
+
+-- Картинки: три буквы-круга перед мольбертом; три верных подряд — задание дня.
+Playground.PICTURES = {
+	pads = 3,
+	padRadius = 3.2,
+	spacing = 8, -- от центра до центра круга
+	goal = 3,
+	next = 1.6, -- через сколько после верного ответа новая картинка
+}
 
 Playground.SUNFLOWER_ROWS = 4
 Playground.SUNFLOWER_PER_ROW = 5

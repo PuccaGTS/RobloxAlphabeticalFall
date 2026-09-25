@@ -309,6 +309,15 @@ Quests.POOL = {
 		park = true,
 	},
 	{
+		id = "park_pictures",
+		icon = "🖼",
+		title = "Угадай три буквы по картинкам",
+		event = "park:pictures",
+		need = 1,
+		target = "spot:pictures",
+		park = true,
+	},
+	{
 		id = "park_rental",
 		icon = "🛴",
 		title = "Прокатись на самокате или лошадке",

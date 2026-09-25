@@ -508,6 +508,36 @@ workspace:GetAttributeChangedSignal("ZZ_Fish"):Connect(function()
 	)
 end)
 
+-- Картинки (Controllers/PictureController): ZZ_Pictures = "right" | "wrong" — встать на круг.
+workspace:GetAttributeChangedSignal("ZZ_Pictures"):Connect(function()
+	local want = workspace:GetAttribute("ZZ_Pictures")
+	if want == nil then
+		return
+	end
+	local client = player:WaitForChild("PlayerScripts"):WaitForChild("Client")
+	local Pictures = require(client.Controllers.PictureController)
+	local before = Pictures.debug()
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local stepped = "none"
+	for _, pad in before.pads do
+		if root and ((want == "right") == (pad.letterId == before.target)) then
+			root.CFrame = CFrame.new(pad.position + Vector3.new(0, 3.2, 0))
+			stepped = tostring(pad.letterId)
+			break
+		end
+	end
+	task.wait(2.5)
+	local after = Pictures.debug()
+	report:FireServer(
+		`PICTURES {want}: target={before.target} stepped={stepped} hits {before.hits}->{after.hits} next={after.target}`
+	)
+	-- Сойти с круга к площади, прочь от мольберта: следующий шаг снова засчитается.
+	if root and after.board then
+		local away = ((root.Position - after.board) * Vector3.new(1, 0, 1)).Unit
+		root.CFrame = CFrame.new(root.Position + away * 8)
+	end
+end)
+
 -- Тир (Controllers/GalleryController): ZZ_Gallery = "right" | "wrong" — «тап» по шарику.
 workspace:GetAttributeChangedSignal("ZZ_Gallery"):Connect(function()
 	local want = workspace:GetAttribute("ZZ_Gallery")
