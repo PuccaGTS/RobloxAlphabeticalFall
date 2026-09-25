@@ -16,6 +16,7 @@ local DailyLetter = require(script.Parent.Parent.Logic.DailyLetter)
 local Mail = require(script.Parent.Parent.Logic.Mail)
 local Variety = require(script.Parent.Parent.Logic.Variety)
 local Quests = require(script.Parent.Parent.Logic.Quests)
+local Secrets = require(script.Parent.Parent.Logic.Secrets)
 
 local ProfileTemplate = {}
 
@@ -127,6 +128,8 @@ export type Snapshot = {
 	stages: { [number]: boolean },
 	-- Пройденные уровни каждого мира: по ним клиент подписывает портал.
 	levels: { [string]: number },
+	-- Найдено секретов на каждом уровне мира букв, по порядку (Logic/Secrets).
+	secrets: { number },
 	-- Текущий шаг обучения ("catch", "shop", "run") или nil, если пройдено.
 	tutorial: string?,
 	base: { [string]: number },
@@ -182,6 +185,8 @@ function ProfileTemplate.toSnapshot(profile: Types.Profile): Snapshot
 		math = math_,
 		stages = stages,
 		levels = Levels.sanitize(profile.levels),
+		-- Сколько секретов найдено на каждом уровне: табличка портала и пад охоты за ними.
+		secrets = Secrets.counts(profile.stages),
 		tutorial = tutorialStep(profile),
 		base = table.clone(profile.base),
 		baseStyle = Base.sanitizeStyle(profile.baseStyle),

@@ -148,11 +148,22 @@ function RunCourse.new(id: string, params)
 		local random = Random.new(seed)
 
 		--[[
-			Секрет уровня (docs/18-CONTENT-BACKLOG.md § 8): золотая буква ступени
-			на постаменте в стороне от пути.
+			Секреты уровня (docs/18-CONTENT-BACKLOG.md § 8): золотые буквы ступени
+			на постаментах в стороне от пути, по одной на трёх разных отрезках.
 		]]
 		local secretRandom = Random.new(seed + SECRET_SEED_SALT)
-		local secretSegment = secretRandom:NextInteger(1, gateCount)
+		local segmentOrder = {}
+		for index = 1, gateCount do
+			segmentOrder[index] = index
+		end
+		for i = #segmentOrder, 2, -1 do
+			local j = secretRandom:NextInteger(1, i)
+			segmentOrder[i], segmentOrder[j] = segmentOrder[j], segmentOrder[i]
+		end
+		local secretSegments = {}
+		for index = 1, math.min(Tunnel.SECRETS, gateCount) do
+			table.insert(secretSegments, segmentOrder[index])
+		end
 
 		-- Аттракционы: у уровня сила и число — свои (Config/Levels).
 		local heat, perSegment = Levels.attractions(level.index)
@@ -161,7 +172,7 @@ function RunCourse.new(id: string, params)
 			gateCount = gateCount,
 			obstacleCount = obstacleCount,
 			obstacleTier = obstacleTier,
-			secretSegment = secretSegment,
+			secretSegments = secretSegments,
 			secretRandom = secretRandom,
 			stations = true,
 			attractions = {
@@ -191,7 +202,7 @@ function RunCourse.new(id: string, params)
 			end,
 		})
 
-		local gates, secret = course.gates, course.secret
+		local gates, secrets = course.gates, course.secrets
 
 		-- Станция показывает и называет букву своего отрезка — ту, что спросят ворота.
 		for _, station in course.stations do
@@ -202,9 +213,14 @@ function RunCourse.new(id: string, params)
 			station.vo = letter.vo.name
 		end
 
-		if secret then
-			local fresh = Levels.stage(level.index).letters
-			local letter = Letters.expect(fresh[secretRandom:NextInteger(1, #fresh)])
+		-- Каждому секрету — своя новая буква ступени: три секрета — три буквы уровня.
+		local fresh = table.clone(Levels.stage(level.index).letters)
+		for i = #fresh, 2, -1 do
+			local j = secretRandom:NextInteger(1, i)
+			fresh[i], fresh[j] = fresh[j], fresh[i]
+		end
+		for _, secret in secrets do
+			local letter = Letters.expect(fresh[(secret.index - 1) % #fresh + 1])
 			secret.letterId = letter.id
 			secret.glyph = letter.glyph
 		end
@@ -234,7 +250,7 @@ function RunCourse.new(id: string, params)
 				checkpoints = course.checkpoints,
 				stations = course.stations,
 				attractions = course.attractions,
-				secret = secret,
+				secrets = secrets,
 				length = course.length,
 				track = TrackShape.plan(course.runs, seed + TRACK_SEED_SALT),
 				slowSeconds = slowSeconds,
@@ -306,22 +322,24 @@ function RunCourse.new(id: string, params)
 		end
 
 		--[[
-			Секрет уровня: коснулся золотой буквы на постаменте. Один раз за забег;
-			один раз навсегда — это уже забота ProgressService, он помнит найденные.
-			В пройденном до выхода отрезке секрета нет: туда ребёнок не вернётся.
+			Секрет уровня: коснулся золотой буквы на постаменте. Каждый — один раз
+			за забег; один раз навсегда — это уже забота ProgressService, он помнит
+			найденные. В пройденном до выхода отрезке секрета нет: туда ребёнок не вернётся.
 		]]
 		if action.kind == "secret" then
-			local secret = state.spec.params.secret
+			local secrets = state.spec.params.secrets or {}
+			local secret = typeof(action.index) == "number" and secrets[action.index] or nil
+			state.secretsTaken = state.secretsTaken or {}
 			if
 				not secret
 				or secret.found
-				or state.secretTaken
+				or state.secretsTaken[secret.index]
 				or secret.segment <= (state.spec.params.resumeFrom or 0)
 			then
 				return { handled = false }
 			end
-			state.secretTaken = true
-			return { handled = true, secret = true, letterId = secret.letterId }
+			state.secretsTaken[secret.index] = true
+			return { handled = true, secret = true, index = secret.index, letterId = secret.letterId }
 		end
 
 		if action.kind ~= "gate" or typeof(action.gateIndex) ~= "number" then

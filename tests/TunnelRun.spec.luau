@@ -7,6 +7,7 @@ local Letters = require(ReplicatedStorage.Shared.Config.Letters)
 local Obstacles = require(ReplicatedStorage.Shared.Config.Obstacles)
 local Levels = require(ReplicatedStorage.Shared.Config.Levels)
 local DifficultyCurve = require(ReplicatedStorage.Shared.Logic.DifficultyCurve)
+local Secrets = require(ReplicatedStorage.Shared.Logic.Secrets)
 
 local DIFFICULTY = 2
 local LEVEL = 5
@@ -721,51 +722,66 @@ return function()
 		в стороне от пути. Проверяем, что он есть у каждого уровня, стоит на своём
 		месте никому не мешая и засчитывается один раз.
 	]]
-	describe("TunnelRun — секрет уровня", function()
+	describe("TunnelRun — секреты уровня", function()
 		it(
-			"у каждого уровня один секрет с буквой своей ступени",
+			"у каждого уровня три секрета на разных отрезках, по букве ступени каждому",
 			function()
 				for _, level in Levels.all do
 					for difficulty = 1, 5, 2 do
 						local spec = build(Letters.ordered(), difficulty, level.index)
-						local secret = spec.params.secret
-						expect(secret).to.be.ok()
-						expect(table.find(Levels.stage(level.index).letters, secret.letterId)).to.be.ok()
-						expect(secret.lane == 1 or secret.lane == Tunnel.LANE_COUNT).to.equal(true)
-						expect(secret.segment >= 1 and secret.segment <= spec.targetCount).to.equal(true)
+						local secrets = spec.params.secrets
+						expect(#secrets).to.equal(Secrets.perLevel(level.index))
+						local segments, letters = {}, {}
+						for index, secret in secrets do
+							expect(secret.index).to.equal(index)
+							expect(table.find(Levels.stage(level.index).letters, secret.letterId)).to.be.ok()
+							expect(secret.lane == 1 or secret.lane == Tunnel.LANE_COUNT).to.equal(true)
+							expect(secret.segment >= 1 and secret.segment <= spec.targetCount).to.equal(true)
+							expect(segments[secret.segment]).to.equal(nil)
+							segments[secret.segment] = true
+							letters[secret.letterId] = true
+						end
+						local distinct = 0
+						for _ in letters do
+							distinct += 1
+						end
+						expect(distinct).to.equal(math.min(#secrets, #Levels.stage(level.index).letters))
 					end
 				end
 			end
 		)
 
 		it(
-			"постамент никому не мешает: ни элементам, ни аттракционам, ни воротам",
+			"постаменты никому не мешают: ни элементам, ни аттракционам, ни воротам",
 			function()
 				local half = Tunnel.SECRET_PEDESTAL.Z / 2
 				for _, level in Levels.all do
 					for difficulty = 1, 5 do
 						local spec = build(Letters.ordered(), difficulty, level.index)
-						local secret = spec.params.secret
-						local from, to = secret.z - half, secret.z + half
-						for _, obstacle in spec.params.obstacles do
-							local oFrom = obstacle.z - Tunnel.obstacleLead(obstacle.kind)
-							local oTo = obstacle.z + Tunnel.obstacleLength(obstacle.kind)
-							expect(to < oFrom or from > oTo).to.equal(true)
+						for _, secret in spec.params.secrets do
+							local from, to = secret.z - half, secret.z + half
+							for _, obstacle in spec.params.obstacles do
+								local oFrom = obstacle.z - Tunnel.obstacleLead(obstacle.kind)
+								local oTo = obstacle.z + Tunnel.obstacleLength(obstacle.kind)
+								expect(to < oFrom or from > oTo).to.equal(true)
+							end
+							for _, ride in spec.params.attractions do
+								expect(to < ride.flagZ or from > ride.z + ride.length).to.equal(true)
+							end
+							for _, station in spec.params.stations do
+								expect(to < station.z or from > station.z + Tunnel.STATION_PITCH).to.equal(
+									true
+								)
+							end
+							local gate = spec.params.gates[secret.segment]
+							expect(to <= gate.z - Tunnel.CLEARANCE_BEFORE_GATE).to.equal(true)
 						end
-						for _, ride in spec.params.attractions do
-							expect(to < ride.flagZ or from > ride.z + ride.length).to.equal(true)
-						end
-						for _, station in spec.params.stations do
-							expect(to < station.z or from > station.z + Tunnel.STATION_PITCH).to.equal(true)
-						end
-						local gate = spec.params.gates[secret.segment]
-						expect(to <= gate.z - Tunnel.CLEARANCE_BEFORE_GATE).to.equal(true)
 					end
 				end
 			end
 		)
 
-		it("по тому же рецепту — тот же секрет", function()
+		it("по тому же рецепту — те же секреты", function()
 			local spec = build(nil, 4, 6)
 			local again = TunnelRun.Rebuild({
 				challengeId = spec.challengeId,
@@ -776,25 +792,39 @@ return function()
 				checkpoint = 0,
 				savedAt = 0,
 			})
-			expect(again.params.secret.z).to.equal(spec.params.secret.z)
-			expect(again.params.secret.lane).to.equal(spec.params.secret.lane)
-			expect(again.params.secret.letterId).to.equal(spec.params.secret.letterId)
+			for index, secret in spec.params.secrets do
+				expect(again.params.secrets[index].z).to.equal(secret.z)
+				expect(again.params.secrets[index].lane).to.equal(secret.lane)
+				expect(again.params.secrets[index].letterId).to.equal(secret.letterId)
+			end
 		end)
 
-		it("находится один раз за забег", function()
-			local spec = build(nil, 3, 2)
-			local state = stateFor(spec)
-			local first = TunnelRun.Validate(state, { kind = "secret" })
-			expect(first.handled).to.equal(true)
-			expect(first.secret).to.equal(true)
-			expect(first.letterId).to.equal(spec.params.secret.letterId)
-			expect(TunnelRun.Validate(state, { kind = "secret" }).handled).to.equal(false)
-		end)
+		it(
+			"каждый находится один раз за забег, чужой номер не засчитывается",
+			function()
+				local spec = build(nil, 3, 2)
+				local state = stateFor(spec)
+				for index, secret in spec.params.secrets do
+					local first = TunnelRun.Validate(state, { kind = "secret", index = index })
+					expect(first.handled).to.equal(true)
+					expect(first.secret).to.equal(true)
+					expect(first.index).to.equal(index)
+					expect(first.letterId).to.equal(secret.letterId)
+					expect(TunnelRun.Validate(state, { kind = "secret", index = index }).handled).to.equal(
+						false
+					)
+				end
+				expect(TunnelRun.Validate(state, { kind = "secret", index = 99 }).handled).to.equal(false)
+				expect(TunnelRun.Validate(state, { kind = "secret" }).handled).to.equal(false)
+			end
+		)
 
 		it("найденный раньше не засчитывается", function()
 			local spec = build(nil, 3, 2)
-			spec.params.secret.found = true
-			expect(TunnelRun.Validate(stateFor(spec), { kind = "secret" }).handled).to.equal(false)
+			spec.params.secrets[2].found = true
+			local state = stateFor(spec)
+			expect(TunnelRun.Validate(state, { kind = "secret", index = 2 }).handled).to.equal(false)
+			expect(TunnelRun.Validate(state, { kind = "secret", index = 1 }).handled).to.equal(true)
 		end)
 
 		it("в пройденном до выхода отрезке секрета нет", function()
@@ -808,8 +838,38 @@ return function()
 				checkpoint = spec.targetCount,
 				savedAt = 0,
 			})
-			expect(TunnelRun.Validate(stateFor(resumed), { kind = "secret" }).handled).to.equal(false)
+			for index in resumed.params.secrets do
+				expect(TunnelRun.Validate(stateFor(resumed), { kind = "secret", index = index }).handled).to.equal(
+					false
+				)
+			end
 		end)
+	end)
+
+	describe("Logic/Secrets", function()
+		it("старый единственный секрет считается первым", function()
+			expect(Secrets.isFound({ "secret" }, 1)).to.equal(true)
+			expect(Secrets.isFound({ "secret" }, 2)).to.equal(false)
+			expect(Secrets.foundCount({ "secret", "secret_3" }, 1)).to.equal(2)
+		end)
+
+		it(
+			"охота ведёт на самый ранний открытый уровень, где найдено не всё",
+			function()
+				local counts = Secrets.counts({})
+				expect(Secrets.huntLevel(counts, 0)).to.equal(1)
+				for level = 1, 4 do
+					counts[level] = Secrets.perLevel(level)
+				end
+				-- Пройдено три уровня: четвёртый текущий, и на нём всё найдено — искать негде.
+				expect(Secrets.huntLevel(counts, 3)).to.equal(nil)
+				counts[2] = 1
+				expect(Secrets.huntLevel(counts, 3)).to.equal(2)
+				local found, all = Secrets.total(counts)
+				expect(all).to.equal(33)
+				expect(found).to.equal(Secrets.perLevel(1) + 1 + Secrets.perLevel(3) + Secrets.perLevel(4))
+			end
+		)
 	end)
 
 	--[[

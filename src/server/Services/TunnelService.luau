@@ -750,10 +750,11 @@ local function buildSecret(model: Model, origin: CFrame, secret: any, player: Pl
 	if not secret or secret.found or secret.segment <= resumeFrom then
 		return
 	end
+	local suffix = `_{secret.index}`
 
 	local x = Tunnel.laneOffset(secret.lane)
 	local pedestal = build(
-		"SecretPedestal",
+		`SecretPedestal{suffix}`,
 		Tunnel.SECRET_PEDESTAL,
 		origin * CFrame.new(x, Tunnel.SECRET_PEDESTAL.Y / 2, -secret.z),
 		Color3.fromRGB(190, 170, 140),
@@ -769,7 +770,7 @@ local function buildSecret(model: Model, origin: CFrame, secret: any, player: Pl
 		отучает Зеркало.
 	]]
 	local tile = build(
-		"SecretTile",
+		`SecretTile{suffix}`,
 		Vector3.new(Tunnel.SECRET_SIZE, Tunnel.SECRET_SIZE, 1.2),
 		origin * CFrame.new(x, Tunnel.SECRET_PEDESTAL.Y + Tunnel.SECRET_LIFT, -secret.z),
 		SECRET_GOLD,
@@ -785,9 +786,10 @@ local function buildSecret(model: Model, origin: CFrame, secret: any, player: Pl
 			material = Enum.Material.Foil,
 			reflectance = 0.1,
 		})
+		letter.Name = `SecretLetter{suffix}`
 		letter.Parent = model
 		-- Детали приварены к невидимой анкерной втулке: качается одна она.
-		local hub = build("SecretLetterHub", Vector3.one * 0.2, facing, SECRET_GOLD, model)
+		local hub = build(`SecretLetterHub{suffix}`, Vector3.one * 0.2, facing, SECRET_GOLD, model)
 		hub.Transparency = 1
 		hub.CanCollide = false
 		for _, letterPart in letter:GetChildren() do
@@ -824,7 +826,7 @@ local function buildSecret(model: Model, origin: CFrame, secret: any, player: Pl
 		if not character or Players:GetPlayerFromCharacter(character) ~= player then
 			return
 		end
-		ChallengeService.submitAction(player, { kind = "secret" })
+		ChallengeService.submitAction(player, { kind = "secret", index = secret.index })
 	end)
 end
 
@@ -2707,7 +2709,9 @@ function TunnelService.spawn(player: Player, spec: any)
 		buildGate(model, origin, gate, player)
 	end
 	buildObstacles(model, origin, spec.params.obstacles)
-	buildSecret(model, origin, spec.params.secret, player, spec.params.resumeFrom or 0)
+	for _, secret in spec.params.secrets or {} do
+		buildSecret(model, origin, secret, player, spec.params.resumeFrom or 0)
+	end
 	buildBalance(model, origin, spec.params.balance, player, spec.params.resumeFrom or 0)
 	buildFinish(model, origin, length, player)
 
@@ -2872,9 +2876,25 @@ function TunnelService.start()
 		-- Найденный секрет исчезает вместе с искрами: постамент остаётся — место находки.
 		if result.secret then
 			local run = runs[player]
-			local tile = run and run.model:FindFirstChild("SecretTile")
+			local tile = run and run.model:FindFirstChild(`SecretTile_{result.index}`)
 			if tile then
 				tile:Destroy()
+			end
+			-- Буква взлетает вверх и тает: нашёл — забрал.
+			local hub = run and run.model:FindFirstChild(`SecretLetterHub_{result.index}`)
+			local letter = run and run.model:FindFirstChild(`SecretLetter_{result.index}`)
+			if hub and hub:IsA("BasePart") then
+				TweenService:Create(
+					hub,
+					TweenInfo.new(0.9, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+					{ CFrame = hub.CFrame * CFrame.new(0, 9, 0) }
+				):Play()
+				task.delay(0.9, function()
+					hub:Destroy()
+					if letter then
+						letter:Destroy()
+					end
+				end)
 			end
 			return
 		end

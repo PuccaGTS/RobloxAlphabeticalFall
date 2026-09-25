@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Challenges = require(Shared.Config.Challenges)
 local Letters = require(Shared.Config.Letters)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
+local Secrets = require(Shared.Logic.Secrets)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
@@ -144,7 +145,7 @@ local function finish(player: Player, reason: string)
 		новый забег с новым сидом. Любой другой исход (вышел домой, тайм-аут,
 		закрыл игру) сохранку оставляет: именно ради него она и заводилась.
 	]]
-	if reason == "completed" and state.module.Rebuild then
+	if reason == "completed" and state.module.Rebuild and not state.spec.params.replay then
 		ProgressService.clearRun(player, state.module.id)
 	end
 
@@ -259,6 +260,12 @@ end
 export type StartOptions = {
 	focus: string?, -- буква-цель вместо первой из очереди повторений
 	daily: boolean?, -- задание буквы дня: отметка в плане для клиента и сервиса
+	--[[
+		Уровень мира букв вместо текущего: охота за секретами на уже открытом
+		уровне (пад у портала). Такой забег не пишет сохранку и не трогает
+		сохранку текущего уровня — его просто пробегают заново.
+	]]
+	level: number?,
 }
 
 --[[
@@ -323,6 +330,16 @@ local function onStart(player: Player, challengeId: any, options: StartOptions?)
 		elseif module.usesMathStage then ProgressService.mathStage(player)
 		elseif module.usesLevel then ProgressService.lettersLevel(player)
 		else nil
+	-- Повтор открытого уровня: не дальше текущего, открывать им новые нельзя.
+	local replay = options ~= nil
+		and module.usesLevel == true
+		and typeof(options.level) == "number"
+		and options.level >= 1
+		and options.level <= (track or 0)
+		and options.level ~= track
+	if replay then
+		track = math.floor(options.level)
+	end
 
 	--[[
 		Незаконченный забег продолжается, а не начинается заново.
@@ -334,7 +351,7 @@ local function onStart(player: Player, challengeId: any, options: StartOptions?)
 		Битую запись из DataStore тихо выбрасываем и строим новый забег: испорченный
 		профиль не повод не пустить ребёнка в игру.
 	]]
-	local saved = if module.Rebuild then ProgressService.savedRun(player, challengeId) else nil
+	local saved = if module.Rebuild and not replay then ProgressService.savedRun(player, challengeId) else nil
 	local spec
 	if saved then
 		local ok, rebuilt = pcall(module.Rebuild, saved)
@@ -352,15 +369,19 @@ local function onStart(player: Player, challengeId: any, options: StartOptions?)
 	if options and options.daily then
 		spec.params.daily = true
 	end
+	if replay then
+		spec.params.replay = true
+	end
 
 	--[[
 		Найденный секрет уровня больше не появляется: план забега об этом не знает
 		(он собирается из рецепта и должен быть одинаковым), поэтому отметка ставится
 		здесь, поверх готового плана.
 	]]
-	local secret = spec.params.secret
-	if secret and spec.level and ProgressService.secretFound(player, spec.level) then
-		secret.found = true
+	for _, secret in spec.params.secrets or {} do
+		if spec.level and ProgressService.secretFound(player, spec.level, secret.index) then
+			secret.found = true
+		end
 	end
 
 	local state = {
@@ -454,13 +475,19 @@ local function handleAction(player: Player, action: any, trusted: boolean)
 		секрет и сделан буквой, а не сундуком, — и за первую находку 15 ⭐.
 	]]
 	if result.secret then
-		local awarded = ProgressService.claimSecret(player, state.spec.level, result.letterId)
+		local awarded = ProgressService.claimSecret(player, state.spec.level, result.index, result.letterId)
 		fire(answerHooks, player, state.spec, result)
 		RemoteDefs.event("PlaySfx"):FireClient(player, "reward")
 		local letter = Letters.get(result.letterId)
 		if letter then
 			playVO(player, letter.vo.name)
 		end
+		-- «✨ Секрет 2 из 3»: ребёнок видит, что искать ещё есть что.
+		RemoteDefs.event("OpenUI"):FireClient(player, "secret", {
+			found = ProgressService.secretCounts(player)[state.spec.level] or 0,
+			total = Secrets.perLevel(state.spec.level),
+			awarded = awarded,
+		})
 		print(
 			`[Challenge] {player.Name} нашёл секрет уровня {state.spec.level}: +{awarded} ⭐`
 		)

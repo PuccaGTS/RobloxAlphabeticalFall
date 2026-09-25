@@ -276,6 +276,12 @@ RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string, argume
 		BuildPickerUI.open(argument)
 	elseif screen == "map" then
 		MapController.open()
+	elseif screen == "secret" and typeof(argument) == "table" then
+		local awarded = tonumber(argument.awarded) or 0
+		local reward = if awarded > 0 then `  +{awarded} ⭐` else ""
+		HUD.toast(`✨ Секрет {argument.found} из {argument.total}!{reward}`, 4)
+	elseif screen == "secrets_done" then
+		HUD.toast("✨ Все секреты найдены! Ты настоящий сыщик!", 4)
 	elseif screen == "locked_stage" then
 		HUD.toast("Эти буквы ещё спят. Поучись ещё немножко!", 3)
 	elseif screen == "need_stars" then

@@ -79,6 +79,12 @@ Base.DAILY_LETTER_POSITION = Vector3.new(0, 0, -18)
 ]]
 Base.MAP_BOARD_POSITION = Vector3.new(-25, 0, 13)
 
+--[[
+	Пад «Охота за секретами» — слева от портала мира букв: ведёт на самый ранний
+	открытый уровень, где найдены не все три золотые буквы (Logic/Secrets).
+]]
+Base.SECRETS_PAD_POSITION = Vector3.new(-45, 0, -24)
+
 Base.GROUND_SIZE = (Base.RING_RADIUS + Base.PLOT_SIZE) * 2
 
 --[[

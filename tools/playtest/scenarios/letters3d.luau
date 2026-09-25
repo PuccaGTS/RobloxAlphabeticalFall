@@ -42,7 +42,7 @@ return function(player, note)
 	task.wait(8)
 	local tile
 	for _, d in workspace:GetDescendants() do
-		if d.Name == "SecretTile" and d:IsA("BasePart") then
+		if string.sub(d.Name, 1, 10) == "SecretTile" and d:IsA("BasePart") then
 			tile = d
 			break
 		end

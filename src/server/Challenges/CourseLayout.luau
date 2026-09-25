@@ -106,8 +106,8 @@ function CourseLayout.layout(
 		obstacleCount: number,
 		obstacleTier: number,
 		makeGate: (index: number, random: Random) -> { [string]: any },
-		-- Секрет уровня: на каком отрезке он спрятан и свой генератор места.
-		secretSegment: number?,
+		-- Секреты уровня: на каких отрезках спрятаны (по одному на отрезок) и свой генератор места.
+		secretSegments: { number }?,
 		secretRandom: Random?,
 		-- Особый участок уровня: на каком отрезке, перед воротами (Tunnel.SPECIAL_PITCH).
 		specialSegment: number?,
@@ -145,7 +145,7 @@ function CourseLayout.layout(
 	local attractions = {}
 	-- Где лежат беговые клетки: на них трасса получает форму (Logic/TrackShape).
 	local runs = {}
-	local secret = nil
+	local secrets = {}
 	local special = nil
 	local previousId: string? = nil
 
@@ -169,7 +169,8 @@ function CourseLayout.layout(
 		]]
 		local secretBefore: number? = nil
 		local secretRandom = plan.secretRandom
-		if plan.secretSegment == index and secretRandom and #cells > 0 and #catalog > 0 then
+		local hidesSecret = plan.secretSegments ~= nil and table.find(plan.secretSegments, index) ~= nil
+		if hidesSecret and secretRandom and #cells > 0 and #catalog > 0 then
 			local first = if plan.stations then 2 else 1
 			secretBefore = secretRandom:NextInteger(math.min(first, #cells), #cells)
 		end
@@ -179,11 +180,12 @@ function CourseLayout.layout(
 
 		for step, cell in cells do
 			if secretBefore == step and secretRandom then
-				secret = {
+				table.insert(secrets, {
+					index = #secrets + 1,
 					segment = index,
 					z = cursor + Tunnel.SECRET_PITCH / 2,
 					lane = if secretRandom:NextInteger(1, 2) == 1 then 1 else Tunnel.LANE_COUNT,
-				}
+				})
 				cursor += Tunnel.SECRET_PITCH
 			end
 
@@ -270,7 +272,7 @@ function CourseLayout.layout(
 		obstacles = obstacles,
 		checkpoints = checkpoints,
 		length = z + Tunnel.FINISH_RUNWAY,
-		secret = secret,
+		secrets = secrets,
 		runs = runs,
 		special = special,
 		stations = stations,

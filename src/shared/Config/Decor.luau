@@ -516,6 +516,11 @@ local ZONES: { Zone } = {
 		radius = 10,
 		why = "доска-карта «Куда пойти?»",
 	},
+	{
+		center = Vector2.new(Base.SECRETS_PAD_POSITION.X, Base.SECRETS_PAD_POSITION.Z),
+		radius = 8,
+		why = "пад «Охота за секретами»",
+	},
 }
 
 --[[

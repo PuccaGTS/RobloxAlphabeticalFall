@@ -34,6 +34,8 @@ local Challenges = require(Shared.Config.Challenges)
 local Letters = require(Shared.Config.Letters)
 local Base = require(Shared.Config.Base)
 local Decor = require(Shared.Config.Decor)
+local Levels = require(Shared.Config.Levels)
+local Secrets = require(Shared.Logic.Secrets)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
 local ProfileService = require(script.Parent.ProfileService)
@@ -748,6 +750,71 @@ local function buildMapBoard(hub: Folder)
 end
 
 --[[
+	Пад «Охота за секретами» у портала мира букв. На каждом уровне три золотые
+	буквы (Logic/Secrets); пад ведёт на самый ранний открытый уровень, где
+	найдено не всё, и тот пробегается заново без потери сохранки текущего.
+	Над падом покачивается золотой шар в искрах и висит общий счёт «✨ 5 из 33» —
+	его ставит клиент (PortalSignController), у каждого ребёнка свой.
+]]
+local function buildSecretsPad(hub: Folder)
+	local gold = Color3.fromRGB(255, 205, 80)
+	local at = Base.SECRETS_PAD_POSITION
+	local ground = Decor.groundY(at.X, at.Z)
+	local pad = part(
+		"SecretsPad",
+		Vector3.new(9, 1, 9),
+		CFrame.new(at.X, ground + 0.4, at.Z),
+		Color3.fromRGB(120, 90, 190),
+		hub
+	)
+	pad.Material = Enum.Material.SmoothPlastic
+	local rim = part("SecretsPadRim", Vector3.new(7, 0.2, 7), pad.CFrame * CFrame.new(0, 0.6, 0), gold, hub)
+	rim.Material = Enum.Material.Neon
+	rim.CanCollide = false
+	rim.Transparency = 0.3
+
+	-- Золотой шар над падом: светится и искрит — видно издалека.
+	local star = part("SecretsStar", Vector3.new(3.2, 3.2, 3.2), pad.CFrame * CFrame.new(0, 7, 0), gold, hub)
+	star.Material = Enum.Material.Neon
+	star.CanCollide = false
+	star.Shape = Enum.PartType.Ball
+	local glow = Instance.new("PointLight")
+	glow.Color = gold
+	glow.Range = 14
+	glow.Brightness = 1.2
+	glow.Parent = star
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Rate = 8
+	sparkle.Lifetime = NumberRange.new(0.8, 1.6)
+	sparkle.Speed = NumberRange.new(1, 3)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Color = ColorSequence.new(gold)
+	sparkle.LightEmission = 1
+	sparkle.Size = NumberSequence.new(0.5, 0)
+	sparkle.Parent = star
+	TweenService:Create(
+		star,
+		TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+		{ CFrame = star.CFrame * CFrame.new(0, 1.2, 0) }
+	):Play()
+
+	caption(pad, "✨ Секреты", 11)
+	makeActivator(pad, "Искать", "Секреты уровней", function(player: Player)
+		local profile = ProfileService.get(player)
+		if not profile then
+			return
+		end
+		local cleared = Levels.sanitize(profile.levels)[Levels.WORLD]
+		local level = Secrets.huntLevel(ProgressService.secretCounts(player), cleared)
+		if not level then
+			RemoteDefs.event("OpenUI"):FireClient(player, "secrets_done")
+			return
+		end
+		ChallengeService.startFor(player, "tunnel_run", { level = level })
+	end)
+end
+
+--[[
 	Декор: деревья, фонари, клумбы. Мир должен выглядеть местом, а не полигоном.
 
 	Предметы на земле расставляет DecorService по каталогу Config/Decor: там же лежит
@@ -1132,6 +1199,7 @@ function WorldService.build()
 
 	buildDailyStone(hub)
 	buildMapBoard(hub)
+	buildSecretsPad(hub)
 	buildDecor(hub)
 	Horizon.build(hub)
 

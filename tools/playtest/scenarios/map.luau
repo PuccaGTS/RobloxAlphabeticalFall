@@ -55,7 +55,9 @@ return function(player, note)
 	Teleport.to(player, CFrame.new(mark.Position + Vector3.new(0, 3, 0)))
 	task.wait(4)
 	local quests = ProfileService.get(player).quests
-	note(`photo: progress={quests.progress.park_photo} stars +{ProfileService.get(player).stars - starsBefore}`)
+	note(
+		`photo: progress={quests.progress.park_photo} stars +{ProfileService.get(player).stars - starsBefore}`
+	)
 
 	local stall = workspace.Hub.Playground:FindFirstChild("Play_rental")
 	local rentalPad

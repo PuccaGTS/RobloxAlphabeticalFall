@@ -17,22 +17,28 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Levels = require(Shared.Config.Levels)
 local MathLevels = require(Shared.Config.MathLevels)
+local Secrets = require(Shared.Logic.Secrets)
 
 local PortalSignController = {}
 
 local SIGN_NAME = "ProgressSign"
 
 -- Портал ищем по имени арки, которое ставит WorldService: `PortalArch_{id}`.
+-- Счёт секретов висит над падом охоты за ними — у него своё имя.
+local function anchorName(portalId: string): string
+	return if portalId == "secrets" then "SecretsPad" else `PortalArch_{portalId}`
+end
+
 local function archOf(portalId: string): BasePart?
 	local hub = workspace:FindFirstChild("Hub")
-	local arch = hub and hub:FindFirstChild(`PortalArch_{portalId}`)
+	local arch = hub and hub:FindFirstChild(anchorName(portalId))
 	if arch and arch:IsA("BasePart") then
 		return arch
 	end
 	return nil
 end
 
-local function signOn(arch: BasePart): TextLabel
+local function signOn(arch: BasePart, portalId: string): TextLabel
 	local existing = arch:FindFirstChild(SIGN_NAME)
 	if existing then
 		return existing:FindFirstChildOfClass("TextLabel")
@@ -47,8 +53,9 @@ local function signOn(arch: BasePart): TextLabel
 		проплывали прямо по «Уровень 1 из 11», а издалека на неё ложилось название.
 		Арка — верхний камень кольца; буквы облетают врата на 4.8 студа выше неё.
 	]]
-	billboard.Size = UDim2.fromScale(18, 3.2)
-	billboard.StudsOffset = Vector3.new(0, 7, 0)
+	billboard.Size = if portalId == "secrets" then UDim2.fromScale(11, 2.4) else UDim2.fromScale(18, 3.2)
+	-- Над падом секретов — ниже золотого шара, над аркой — между буквами и названием.
+	billboard.StudsOffset = Vector3.new(0, if portalId == "secrets" then 4 else 7, 0)
 	-- Поверх облетающих букв: они сами поверх всего, и иначе табличку закрывали бы.
 	billboard.AlwaysOnTop = true
 	billboard.LightInfluence = 0
@@ -87,8 +94,15 @@ function PortalSignController.texts(snapshot: any): { [string]: string }
 
 	local mathIndex = MathLevels.current(Levels.sanitize(snapshot.levels)[MathLevels.WORLD])
 
+	-- Секреты уровня: «✨ 1/3» — есть зачем пробежать его ещё раз.
+	local counts = if typeof(snapshot.secrets) == "table" then snapshot.secrets else {}
+	local found = tonumber(counts[level]) or 0
+	local hidden = Secrets.perLevel(level)
+	local total, all = Secrets.total(counts)
+
 	return {
-		letters = `Уровень {level} из {Levels.count()} · {stage.title}`,
+		letters = `Уровень {level} из {Levels.count()} · {stage.title} · ✨ {found}/{hidden}`,
+		secrets = `✨ Найдено {total} из {all}`,
 		math = `Уровень {mathIndex} из {MathLevels.count()} · {MathLevels.expect(mathIndex).title}`,
 	}
 end
@@ -108,10 +122,10 @@ local function placeWhenReady(portalId: string)
 	waiting[portalId] = true
 	task.spawn(function()
 		local hub = workspace:WaitForChild("Hub", 60)
-		local arch = hub and hub:WaitForChild(`PortalArch_{portalId}`, 60)
+		local arch = hub and hub:WaitForChild(anchorName(portalId), 60)
 		waiting[portalId] = nil
 		if arch and arch:IsA("BasePart") then
-			signOn(arch).Text = latest[portalId]
+			signOn(arch, portalId).Text = latest[portalId]
 		end
 	end)
 end
@@ -124,7 +138,7 @@ function PortalSignController.update(snapshot: any)
 		latest[portalId] = text
 		local arch = archOf(portalId)
 		if arch then
-			signOn(arch).Text = text
+			signOn(arch, portalId).Text = text
 		else
 			placeWhenReady(portalId)
 		end

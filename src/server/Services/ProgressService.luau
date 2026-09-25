@@ -25,6 +25,7 @@ local MasteryRules = require(Shared.Logic.MasteryRules)
 local ReviewScheduler = require(Shared.Logic.ReviewScheduler)
 local DifficultyCurve = require(Shared.Logic.DifficultyCurve)
 local PlayLog = require(Shared.Logic.PlayLog)
+local Secrets = require(Shared.Logic.Secrets)
 local Variety = require(Shared.Logic.Variety)
 
 local ProfileService = require(script.Parent.ProfileService)
@@ -467,6 +468,10 @@ function ProgressService.saveRunCheckpoint(player: Player, spec, checkpointIndex
 	if typeof(checkpointIndex) ~= "number" or checkpointIndex < 1 then
 		return
 	end
+	-- Повтор открытого уровня за секретами не пишет сохранку: у текущего уровня она своя.
+	if typeof(spec.params) == "table" and spec.params.replay then
+		return
+	end
 
 	ProfileService.update(player, function(profile)
 		profile.runs = if typeof(profile.runs) == "table" then profile.runs else {}
@@ -508,17 +513,20 @@ end
 
 -- ===== Секреты уровней ===========================================================
 
-local SECRET_ID = "secret"
-
 --[[
-	Найден ли секрет этого уровня. Хранится в stages[уровень].chests —
-	поле заведено под сундуки ещё в первой версии профиля и пустовало.
-	Номер уровня совпадает с номером ступени (Config/Levels).
+	Найден ли секрет index этого уровня. Хранится в stages[уровень].chests
+	(Logic/Secrets). Номер уровня совпадает с номером ступени (Config/Levels).
 ]]
-function ProgressService.secretFound(player: Player, level: number): boolean
+function ProgressService.secretFound(player: Player, level: number, index: number): boolean
 	local profile = ProfileService.get(player)
 	local state = profile and profile.stages[level]
-	return state ~= nil and typeof(state.chests) == "table" and table.find(state.chests, SECRET_ID) ~= nil
+	return state ~= nil and Secrets.isFound(state.chests, index)
+end
+
+-- Сколько секретов найдено на каждом уровне (Logic/Secrets.counts).
+function ProgressService.secretCounts(player: Player): { number }
+	local profile = ProfileService.get(player)
+	return Secrets.counts(profile and profile.stages)
 end
 
 --[[
@@ -526,8 +534,8 @@ end
 	один раз на сундук. Найденный повторно не даёт ничего: это не ферма.
 	Возвращает, сколько начислено.
 ]]
-function ProgressService.claimSecret(player: Player, level: number, letterId: string): number
-	if ProgressService.secretFound(player, level) then
+function ProgressService.claimSecret(player: Player, level: number, index: number, letterId: string): number
+	if ProgressService.secretFound(player, level, index) then
 		return 0
 	end
 	local recorded = ProfileService.update(player, function(profile)
@@ -535,14 +543,14 @@ function ProgressService.claimSecret(player: Player, level: number, letterId: st
 			Ступени заводим подряд до нужной, а не одну её: таблица ступеней с дырой
 			посередине — разреженный массив, и DataStore такой сохраняет плохо.
 		]]
-		for index = 1, level do
-			if not profile.stages[index] then
-				profile.stages[index] = { unlocked = index == 1, chests = {} }
+		for stage = 1, level do
+			if not profile.stages[stage] then
+				profile.stages[stage] = { unlocked = stage == 1, chests = {} }
 			end
 		end
 		local state = profile.stages[level]
 		state.chests = if typeof(state.chests) == "table" then state.chests else {}
-		table.insert(state.chests, SECRET_ID)
+		table.insert(state.chests, Secrets.idOf(index))
 		return true
 	end)
 	if not recorded then
