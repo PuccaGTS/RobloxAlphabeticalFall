@@ -40,12 +40,18 @@ local function keyFor(player: Player): string
 	return `player_{player.UserId}`
 end
 
+-- Кто слушает изменения профиля (значки): зовутся после каждого снапшота.
+local changedHooks: { (Player, any) -> () } = {}
+
 local function pushSnapshot(player: Player)
 	local profile = profiles[player]
 	if not profile then
 		return
 	end
 	RemoteDefs.event("ProfileSnapshot"):FireClient(player, ProfileTemplate.toSnapshot(profile))
+	for _, hook in changedHooks do
+		task.spawn(hook, player, profile)
+	end
 end
 
 --[[
@@ -191,6 +197,10 @@ function ProfileService.playedToday(player: Player): number
 	local since = playClock[player]
 	local pending = if since and PlayLog.dayOf(since) == PlayLog.dayOf(now) then now - since else 0
 	return recorded + math.max(0, pending)
+end
+
+function ProfileService.onChanged(hook: (Player, any) -> ())
+	table.insert(changedHooks, hook)
 end
 
 function ProfileService.pushSnapshot(player: Player)

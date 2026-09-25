@@ -36,6 +36,7 @@ local PetService = require(Services.PetService)
 local DailyLetterService = require(Services.DailyLetterService)
 local SafetyService = require(Services.SafetyService)
 local ChestService = require(Services.ChestService)
+local BadgeAwardService = require(Services.BadgeAwardService)
 local DevService = require(Services.DevService)
 local DecorService = require(Services.DecorService)
 local RentalService = require(Services.RentalService)
@@ -121,6 +122,7 @@ start("DevService", DevService.start) -- полёт и звёзды для пр�
 start("TutorialService", TutorialService.start) -- подписывается на хуки испытаний и магазина
 start("PlayLimitService", PlayLimitService.start) -- сторож старта испытаний: время на сегодня
 start("PetService", PetService.start) -- подписывается на смену статусов букв
+start("BadgeAwardService", BadgeAwardService.start) -- значки Roblox, когда заведут их номера
 start("GardenService", GardenService.start) -- грядка букв у калитки: участки уже расставлены
 start("MailService", MailService.start) -- открытки от буквят: тоже по смене статусов букв
 start("DailyLetterService", DailyLetterService.start) -- подписывается на хуки испытаний
