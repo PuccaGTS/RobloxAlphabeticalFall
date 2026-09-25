@@ -1312,6 +1312,41 @@ local Items: { [string]: ShopItem } = {
 	back_angel = worn("back_angel", "back", "Крылья ангела", 300, 2, "🪽", 95651415246994),
 	face_daisy = worn("face_daisy", "face", "Очки-ромашки", 20, 0, "🌼", 14896027020),
 	face_aviators = worn("face_aviators", "face", "Очки лётчика", 30, 0, "🕶", 376526673),
+	-- Пополнение 25.09.2026: очков было всего семь, а дорогих вещей для спины — мало.
+	face_white = worn("face_white", "face", "Белые очки", 20, 0, "👓", 93014436321898),
+	face_hearts = worn("face_hearts", "face", "Очки-сердечки", 25, 0, "💕", 16465594171),
+	face_pink = worn("face_pink", "face", "Розовые очки", 30, 0, "😎", 15736803746),
+	face_pixel = worn("face_pixel", "face", "Пиксельные очки", 40, 0, "🌈", 71077368494828),
+	hat_unicorn = worn("hat_unicorn", "hat", "Рог единорога", 45, 0, "🦄", 16634515633),
+	hat_melon_cat = worn(
+		"hat_melon_cat",
+		"hat",
+		"Арбузный котик",
+		65,
+		1,
+		"🍉",
+		84675967666946
+	),
+	back_honey = worn("back_honey", "back", "Горшочек мёда", 85, 1, "🍯", 89183525497806),
+	back_bees = worn("back_bees", "back", "Пчёлки вокруг", 110, 1, "🐝", 15109031334),
+	back_dragon_blue = worn(
+		"back_dragon_blue",
+		"back",
+		"Крылья синего дракона",
+		220,
+		2,
+		"🐉",
+		113584078505102
+	),
+	back_dragon_fire = worn(
+		"back_dragon_fire",
+		"back",
+		"Крылья огненного дракона",
+		260,
+		2,
+		"🔥",
+		81836184420971
+	),
 
 	--[[
 		Награды задания недели (Logic/Quests.WEEK_REWARDS): по одной за каждую
