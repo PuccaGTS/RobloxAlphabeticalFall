@@ -201,9 +201,19 @@ local STEPS: { [number]: Step } = {
 		profile.variety = Variety.sanitize(profile.variety)
 		profile.quests = Quests.sanitize(profile.quests)
 	end,
-	-- 13 → 14: азбучная грядка у калитки, все лунки пустые.
+	--[[
+		13 → 14: азбучная грядка у калитки, все лунки пустые. И прогулка по парку
+		в обучении: кто обучение уже прошёл, того по парку не водим.
+	]]
 	[13] = function(profile)
 		profile.garden = LetterGarden.sanitize(profile.garden)
+		local tutorial = Tutorial.sanitize(profile.tutorial)
+		if tutorial.catch and tutorial.shop and tutorial.run then
+			for _, id in Tutorial.WALK do
+				tutorial[id] = true
+			end
+		end
+		profile.tutorial = tutorial
 	end,
 }
 

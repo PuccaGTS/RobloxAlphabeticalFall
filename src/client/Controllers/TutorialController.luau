@@ -19,6 +19,8 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Tutorial = require(Shared.Logic.Tutorial)
+local Playground = require(Shared.Config.Playground)
+local Decor = require(Shared.Config.Decor)
 
 local TutorialController = {}
 
@@ -35,6 +37,7 @@ local targetAttachment: Attachment? = nil
 local rootAttachment: Attachment? = nil
 local beam: Beam? = nil
 local token = 0
+local spotAnchor: BasePart? = nil
 
 local function clear()
 	for _, instance in { marker, targetAttachment, rootAttachment, beam } do
@@ -43,6 +46,27 @@ local function clear()
 		end
 	end
 	marker, targetAttachment, rootAttachment, beam, target = nil, nil, nil, nil, nil
+	if spotAnchor then
+		spotAnchor:Destroy()
+		spotAnchor = nil
+	end
+end
+
+-- Цель прогулки — место парка: невидимая точка над его серединой.
+local function anchorAt(spotId: string): BasePart
+	local position = Playground.position(Playground.expect(spotId))
+	local anchor = Instance.new("Part")
+	anchor.Name = "TutorialSpot"
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.Transparency = 1
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Position = Vector3.new(position.X, Decor.groundY(position.X, position.Z) + 4, position.Z)
+	anchor.Parent = workspace
+	spotAnchor = anchor
+	return anchor
 end
 
 local function buildMarker(part: BasePart)
@@ -120,8 +144,9 @@ local function show(step: Tutorial.Step)
 	local mine = token
 
 	task.spawn(function()
-		local hub = workspace:WaitForChild("Hub", 60)
-		local part = hub and hub:WaitForChild(step.target, 60)
+		local spotId = string.match(step.target, "^spot:(.+)$")
+		local hub = if spotId then nil else workspace:WaitForChild("Hub", 60)
+		local part = if spotId then anchorAt(spotId) else hub and hub:WaitForChild(step.target, 60)
 		-- Пока ждали, шаг мог смениться: рисовать устаревшую стрелку нельзя.
 		if mine ~= token or not part or not part:IsA("BasePart") then
 			return

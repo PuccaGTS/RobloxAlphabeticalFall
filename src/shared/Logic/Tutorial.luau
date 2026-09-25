@@ -10,6 +10,12 @@
 	  2. shop  — магазин: звёздочки превращаются в шапку на голове;
 	  3. run   — портал мира букв: первый уровень, ворота с А, Б и В.
 
+	После первого уровня — прогулка по парку (docs/17-CONTENT-PLAN.md § 7.3):
+	стрелка ведёт мимо трёх мест — паркур-горы, карусели и рыбалки. Шаг
+	засчитывается, когда ребёнок дошёл до места. На проверке 24.09.2026
+	взрослый, пройдя площадь, парка просто не нашёл; новичок теперь увидит
+	его в первые же минуты.
+
 	Состояние — набор сделанных шагов, а не номер текущего. Ребёнок не обязан
 	идти по порядку: побежал сначала в портал — шаг «run» засчитан, и стрелка
 	покажет на то, что осталось. С номером шага он застрял бы на первом,
@@ -32,7 +38,14 @@ Tutorial.STEPS = {
 	{ id = "catch", target = "Pad_letter_rain", vo = "story_intro" },
 	{ id = "shop", target = "ShopPad", vo = "ui_shop" },
 	{ id = "run", target = "Portal_letters", vo = nil },
+	-- Прогулка: цель "spot:<id>" — место парка (Config/Playground), стрелку ставит клиент.
+	{ id = "walk_obby", target = "spot:obby", vo = nil },
+	{ id = "walk_carousel", target = "spot:carousel", vo = nil },
+	{ id = "walk_pond", target = "spot:pond", vo = nil },
 } :: { Step }
+
+-- Шаги прогулки: миграция отмечает их сделанными у тех, кто прошёл обучение до неё.
+Tutorial.WALK = { "walk_obby", "walk_carousel", "walk_pond" }
 
 local byId: { [string]: Step } = {}
 for _, step in Tutorial.STEPS do
@@ -44,6 +57,10 @@ Tutorial.EVENTS = {
 	letter_rain = "catch",
 	purchase = "shop",
 	tunnel_run = "run",
+	-- Дошёл до места парка (TutorialService смотрит, где стоит ребёнок).
+	["arrive:obby"] = "walk_obby",
+	["arrive:carousel"] = "walk_carousel",
+	["arrive:pond"] = "walk_pond",
 } :: { [string]: string }
 
 export type State = { [string]: boolean }

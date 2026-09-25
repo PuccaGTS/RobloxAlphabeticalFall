@@ -73,7 +73,8 @@ Quests.POOL = {
 	},
 	{
 		id = "bubbles",
-		icon = "🫧",
+		-- 🫧 шрифт Roblox не рисует: вместо значка было пустое место.
+		icon = "🔵",
 		title = "Лопни пузыри с буквой",
 		event = "challenge:bubbles",
 		need = 1,

@@ -13,6 +13,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Playground = require(Shared.Config.Playground)
 local Tutorial = require(Shared.Logic.Tutorial)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
 
@@ -55,7 +56,24 @@ function TutorialService.complete(player: Player, event: string)
 	end
 
 	print(`[Tutorial] {player.Name}: шаг «{closed}» сделан`)
+	-- Дошёл до места прогулки: звон и картинка места, следующая стрелка сразу.
+	local walked = table.find(Tutorial.WALK, closed)
+	if walked then
+		RemoteDefs.event("PlaySfx"):FireClient(player, "reward")
+		RemoteDefs.event("OpenUI"):FireClient(player, "walk", { step = walked, total = #Tutorial.WALK })
+		return
+	end
 	task.delay(NEXT_STEP_DELAY, announce, player)
+end
+
+-- Где место прогулки: середина места парка, из цели шага "spot:<id>".
+local function walkSpot(step: Tutorial.Step): (Vector3?, number)
+	local id = string.match(step.target, "^spot:(.+)$")
+	if not id then
+		return nil, 0
+	end
+	local spot = Playground.expect(id)
+	return Playground.position(spot), spot.radius
 end
 
 -- Для родительского режима: «пропустить обучение» для второго ребёнка в семье.
@@ -79,6 +97,29 @@ function TutorialService.start()
 
 	ShopService.onPurchase(function(player: Player)
 		TutorialService.complete(player, "purchase")
+	end)
+
+	-- Прогулка: дошёл до места парка — шаг сделан. Проверяем два раза в секунду.
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			for _, player in Players:GetPlayers() do
+				local profile = ProfileService.get(player)
+				local step = profile and Tutorial.current(stateOf(profile))
+				local center, radius = nil, 0
+				if step then
+					center, radius = walkSpot(step)
+				end
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart")
+				if center and root and step then
+					local flat = (root.Position - center) * Vector3.new(1, 0, 1)
+					if flat.Magnitude < radius + 4 then
+						TutorialService.complete(player, `arrive:{string.sub(step.target, 6)}`)
+					end
+				end
+			end
+		end
 	end)
 
 	--[[

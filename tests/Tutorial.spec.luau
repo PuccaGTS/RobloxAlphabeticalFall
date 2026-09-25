@@ -5,6 +5,7 @@ local Shared = ReplicatedStorage.Shared
 local Tutorial = require(Shared.Logic.Tutorial)
 local AudioRegistry = require(Shared.Config.AudioRegistry)
 local Challenges = require(Shared.Config.Challenges)
+local Playground = require(Shared.Config.Playground)
 
 return function()
 	describe("Tutorial — шаги", function()
@@ -20,6 +21,11 @@ return function()
 			expect(Tutorial.complete(state, "purchase")).to.equal("shop")
 			expect(Tutorial.current(state).id).to.equal("run")
 			expect(Tutorial.complete(state, "tunnel_run")).to.equal("run")
+			-- После первого уровня — прогулка по парку мимо трёх мест.
+			expect(Tutorial.current(state).id).to.equal("walk_obby")
+			expect(Tutorial.complete(state, "arrive:obby")).to.equal("walk_obby")
+			expect(Tutorial.complete(state, "arrive:carousel")).to.equal("walk_carousel")
+			expect(Tutorial.complete(state, "arrive:pond")).to.equal("walk_pond")
 			expect(Tutorial.current(state)).to.equal(nil)
 			expect(Tutorial.isDone(state)).to.equal(true)
 		end)
@@ -34,6 +40,9 @@ return function()
 			expect(Tutorial.current(state).id).to.equal("catch")
 			Tutorial.complete(state, "letter_rain")
 			Tutorial.complete(state, "purchase")
+			for _, id in Tutorial.WALK do
+				state[id] = true
+			end
 			expect(Tutorial.isDone(state)).to.equal(true)
 		end)
 
@@ -87,7 +96,10 @@ return function()
 		it("каждое событие закрывает существующий шаг", function()
 			for event, stepId in Tutorial.EVENTS do
 				expect(Tutorial.get(stepId)).to.be.ok()
-				if event ~= "purchase" then
+				local spot = string.match(event, "^arrive:(.+)$")
+				if spot then
+					expect(Playground.expect(spot)).to.be.ok()
+				elseif event ~= "purchase" then
 					expect(Challenges.get(event)).to.be.ok()
 				end
 			end

@@ -303,6 +303,11 @@ RemoteDefs.event("OpenUI").OnClientEvent:Connect(function(screen: string, argume
 			HUD.showIntro(letter.glyph)
 			HUD.toast(`🌸 Урожай! {letter.picture or ""} {glyph}  +{argument.awarded or 0} ⭐`, 4)
 		end
+	elseif screen == "walk" and typeof(argument) == "table" then
+		local text = if argument.step >= argument.total
+			then "🎉 Ты обошёл парк! Открой 🗺 — там все места"
+			else `👣 Отлично! Ещё место: {argument.step} из {argument.total}`
+		HUD.toast(text, 4)
 	elseif screen == "secrets_done" then
 		HUD.toast("✨ Все секреты найдены! Ты настоящий сыщик!", 4)
 	elseif screen == "locked_stage" then
