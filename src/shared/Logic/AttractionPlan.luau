@@ -354,6 +354,37 @@ local function cookies(heat: number, random: Random)
 end
 
 --[[
+	Буквенные кочки: ряды по три кочки, по одной на дорожку. В каждом ряду
+	одна «верная» — на ней буква отрезка, её номер в ряду — right. Какие буквы
+	на остальных, решает забег (Challenges/RunCourse): здесь только места.
+	Верные соседних рядов не дальше соседней дорожки: прыжок наискосок, а не
+	через всю трассу.
+]]
+local function letterstones(heat: number, random: Random)
+	local rows = Attractions.param("letterstones", "rows", heat)
+	local size = Attractions.param("letterstones", "size", heat)
+	local gap = Attractions.param("letterstones", "gap", heat)
+
+	local stones = {}
+	local z = gap + size / 2
+	local previous: number? = nil
+	for row = 1, rows do
+		local right = laneNear(random, previous)
+		for lane, x in LANES do
+			table.insert(stones, { row = row, lane = lane, x = x, z = z, right = x == right })
+		end
+		previous = right
+		z += size + gap
+	end
+	return {
+		stones = stones,
+		size = size,
+		gap = gap,
+		length = z - size / 2,
+	}
+end
+
+--[[
 	Кубики-топотуны: ряды по три кубика над дорожками. В ряду кубики топают
 	по очереди, со сдвигом в треть цикла, соседние ряды — со своим сдвигом:
 	волна топота бежит по аттракциону, и переждать её надо с умом.
@@ -481,6 +512,7 @@ local MAKERS = {
 	wind = wind,
 	bounce = bounce,
 	cookies = cookies,
+	letterstones = letterstones,
 	stompers = stompers,
 	islands = islands,
 	lava = lava,

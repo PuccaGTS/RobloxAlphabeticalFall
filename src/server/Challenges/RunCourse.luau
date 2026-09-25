@@ -35,6 +35,8 @@ local SECRET_SEED_SALT = 104729
 -- Свой генератор у формы трассы: иначе сдвинулись бы ворота уже сохранённых забегов.
 local TRACK_SEED_SALT = 15485863
 local ATTRACTION_SEED_SALT = 49979687
+-- Буквы на буквенных кочках: свой генератор, чтобы не сдвигать остальной план.
+local STONES_SEED_SALT = 86028121
 
 --[[
 	Отвлекающие буквы уровня: по группам из Config/Levels, каждая перемешана
@@ -211,6 +213,43 @@ function RunCourse.new(id: string, params)
 			station.glyph = letter.glyph
 			station.color = letter.color
 			station.vo = letter.vo.name
+		end
+
+		--[[
+			Буквенные кочки: на верной кочке каждого ряда буква отрезка (её только
+			что назвала станция), на остальных — отвлекающие буквы уровня, те же,
+			что в проёмах ворот. Буквы соседних кочек ряда не повторяются.
+		]]
+		local stonesRandom = Random.new(seed + STONES_SEED_SALT)
+		for _, ride in course.attractions do
+			if ride.id ~= "letterstones" then
+				continue
+			end
+			local targetId = gates[ride.segment].targetLetter
+			for _, stone in ride.stones do
+				if stone.right then
+					stone.letterId = targetId
+				end
+			end
+			local rows: { [number]: { any } } = {}
+			for _, stone in ride.stones do
+				if not stone.right then
+					rows[stone.row] = rows[stone.row] or {}
+					table.insert(rows[stone.row], stone)
+				end
+			end
+			for _, wrong in rows do
+				local picked = levelDistractors(level.index, targetId, stonesRandom, #wrong)
+				for index, stone in wrong do
+					stone.letterId = picked[index] or picked[1]
+				end
+			end
+			for _, stone in ride.stones do
+				local letter = Letters.expect(stone.letterId)
+				stone.glyph = letter.glyph
+				stone.color = letter.color
+				stone.vo = letter.vo.name
+			end
 		end
 
 		-- Каждому секрету — своя новая буква ступени: три секрета — три буквы уровня.

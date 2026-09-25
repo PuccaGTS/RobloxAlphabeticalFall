@@ -1097,6 +1097,84 @@ function BUILDERS.cookies(model: Model, path, ride)
 end
 
 --[[
+	Буквенные кочки: каменные кочки во мху над пропастью, на каждой крупная
+	буква. Держит только кочка с буквой отрезка (Mover = letterstone: звенит
+	и называет букву), чужая булькает и мягко уходит вниз (Mover = crumble
+	с короткой выдержкой) — ребёнок падает на мягкое дно и возвращается к флажку.
+]]
+local STONE = Color3.fromRGB(160, 150, 138)
+local MOSS = Color3.fromRGB(110, 175, 95)
+
+function BUILDERS.letterstones(model: Model, path, ride)
+	local size = ride.size
+	for index, stone in ride.stones do
+		local center = at(path, ride, stone.x, -0.8, stone.z)
+		local body = part(
+			model,
+			`Stone_{ride.index}_{index}`,
+			Vector3.new(1.6, size, size),
+			center * CFrame.Angles(0, 0, math.pi / 2),
+			STONE
+		)
+		body.Shape = Enum.PartType.Cylinder
+		body.Material = Enum.Material.Slate
+		if stone.right then
+			mover(body, "letterstone", { Vo = stone.vo })
+		else
+			mover(body, "crumble", {
+				Hold = Attractions.STONE_HOLD,
+				Fall = Attractions.STONE_SINK,
+				Back = Attractions.COOKIE_BACK,
+				Sink = true,
+			})
+		end
+		-- Мох по кромке: кочка, а не тарелка. Уходит вниз вместе с камнем.
+		local moss = ghost(
+			part(
+				body,
+				"Moss",
+				Vector3.new(1.3, size + 0.7, size + 0.7),
+				center * CFrame.new(0, -0.3, 0) * CFrame.Angles(0, 0, math.pi / 2),
+				MOSS
+			)
+		)
+		moss.Shape = Enum.PartType.Cylinder
+		moss.Material = Enum.Material.Grass
+		-- Буква лежит на макушке: прозрачная пластина, на ней надпись цвета буквы.
+		local plate = ghost(
+			part(
+				body,
+				"Glyph",
+				Vector3.new(size * 0.8, 0.05, size * 0.8),
+				center * CFrame.new(0, 0.83, 0),
+				Color3.new(1, 1, 1)
+			)
+		)
+		plate.Transparency = 1
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Top
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		-- Крупно: TextScaled не рисует выше 100 пикселей, поэтому пикселей на студ мало.
+		gui.PixelsPerStud = 100 / (size * 0.8)
+		gui.LightInfluence = 0
+		gui.Parent = plate
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.fromScale(1, 1)
+		-- Верх надписи на верхней грани смотрит вбок: поворачиваем, чтобы бегущий читал её прямо.
+		label.Rotation = 90
+		label.BackgroundTransparency = 1
+		label.Text = stone.glyph or "?"
+		label.TextScaled = true
+		label.Font = Enum.Font.FredokaOne
+		label.TextColor3 = stone.color or Color3.new(1, 1, 1)
+		label.TextStrokeColor3 = Color3.new(1, 1, 1)
+		label.TextStrokeTransparency = 0
+		label.Parent = gui
+	end
+	sign(model, `Sign_{ride.index}`, at(path, ride, 0, 12, 0), "🔤")
+end
+
+--[[
 	Кубики-топотуны: над каждой дорожкой висит огромный игрушечный кубик
 	с буквой и по очереди топает вниз (Mover = stomp, движение считает
 	Attractions.stomperDrop). Под кубиком на полу его тень — видно, куда

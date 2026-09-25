@@ -30,6 +30,8 @@ export type Attraction = {
 	seconds: number,
 	-- Есть ли под аттракционом обычный пол. Где его нет, падать есть куда.
 	floor: boolean,
+	-- Только в мире букв: на аттракционе буквы отрезка, а в мире чисел их нет.
+	lettersOnly: boolean?,
 }
 
 local Attractions = {}
@@ -59,6 +61,20 @@ local CATALOG: { Attraction } = {
 	{ id = "belts", title = "Ленты", fromLevel = 1, seconds = 8, floor = false },
 	{ id = "boulders", title = "Валуны", fromLevel = 2, seconds = 8, floor = true },
 	{ id = "clouds", title = "Облачка", fromLevel = 2, seconds = 9, floor = false },
+	--[[
+		Буквенные кочки — единственный аттракцион, где прыжок и есть ответ
+		(docs/17-CONTENT-PLAN.md § 7.4): в ряду три кочки с буквами, держит
+		только та, что с буквой отрезка, — станция её только что назвала.
+		Чужая уходит вниз мягко, и ребёнок возвращается к флажку.
+	]]
+	{
+		id = "letterstones",
+		title = "Буквенные кочки",
+		fromLevel = 2,
+		seconds = 9,
+		floor = false,
+		lettersOnly = true,
+	},
 	{ id = "lava", title = "Лавовые кочки", fromLevel = 3, seconds = 8, floor = false },
 	{ id = "cookies", title = "Печеньки", fromLevel = 3, seconds = 7, floor = false },
 	{ id = "swings", title = "Качели", fromLevel = 4, seconds = 10, floor = false },
@@ -95,10 +111,11 @@ function Attractions.ids(): { string }
 end
 
 -- Какие аттракционы открыты на этом уровне пути, по порядку появления.
-function Attractions.unlocked(level: number): { string }
+-- mathWorld — для мира чисел: аттракционы с буквами туда не идут.
+function Attractions.unlocked(level: number, mathWorld: boolean?): { string }
 	local ids: { string } = {}
 	for _, attraction in CATALOG do
-		if attraction.fromLevel <= level then
+		if attraction.fromLevel <= level and not (mathWorld and attraction.lettersOnly) then
 			table.insert(ids, attraction.id)
 		end
 	end
@@ -197,6 +214,15 @@ Attractions.HEAT = {
 		нельзя: только бежать и прыгать дальше. Чем жарче, тем быстрее крошатся
 		и тем больше дырок между ними.
 	]]
+	--[[
+		Буквенные кочки: ряды по три кочки, по одной на дорожку. Чем жарче,
+		тем больше рядов, мельче кочки и шире прыжок между рядами.
+	]]
+	letterstones = {
+		rows = { 3, 3, 4, 4, 5 },
+		size = { 7, 6.5, 6, 5.5, 5 }, -- поперечник кочки
+		gap = { 2.5, 3, 3.5, 4, 4.5 }, -- от края до края между рядами
+	},
 	cookies = {
 		rows = { 5, 6, 7, 7, 8 },
 		size = { 7, 6.5, 6, 5.5, 5 }, -- поперечник печеньки
@@ -293,6 +319,9 @@ end
 
 Attractions.COOKIE_FALL = 0.45 -- за сколько секунд раскрошенная печенька уходит вниз
 Attractions.COOKIE_BACK = 2.5 -- через сколько после этого вырастает снова
+-- Чужая буквенная кочка держит совсем недолго: понял, что не та, — уже падаешь, но мягко.
+Attractions.STONE_HOLD = 0.35
+Attractions.STONE_SINK = 0.8 -- уходит вниз медленнее печеньки: не обвал, а «не сюда»
 
 Attractions.STOMPER_SIZE = 8 -- сторона кубика: почти во всю дорожку
 Attractions.STOMPER_GAP = 4.5 -- полоса пола между рядами: там можно переждать

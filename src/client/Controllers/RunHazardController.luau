@@ -306,7 +306,8 @@ local function crumble(part: BasePart, now: number, root: Vector3?)
 		if root and standsOn(part, root, part.Size.Y / 2) then
 			crumb.state = "crack"
 			crumb.since = now
-			sound("crack", part.Position)
+			-- Чужая буквенная кочка не трещит, а булькает: «не сюда», а не «беги».
+			sound(if part:GetAttribute("Sink") then "stone_sink" else "crack", part.Position)
 		end
 	elseif crumb.state == "crack" then
 		local share = math.clamp(elapsed / hold, 0, 1)
@@ -317,7 +318,9 @@ local function crumble(part: BasePart, now: number, root: Vector3?)
 			crumb.state = "fall"
 			crumb.since = now
 			part.CanCollide = false
-			sound("crumble", part.Position)
+			if not part:GetAttribute("Sink") then
+				sound("crumble", part.Position)
+			end
 		end
 	elseif crumb.state == "fall" then
 		local share = math.clamp(elapsed / fall, 0, 1)
@@ -333,6 +336,37 @@ local function crumble(part: BasePart, now: number, root: Vector3?)
 		part.CanCollide = true
 		placeCrumb(part, crumb, base, 0)
 	end
+end
+
+--[[
+	Верная буквенная кочка: встал — вспыхивает, звенит и называет свою букву.
+	Не чаще раза в пару секунд на кочку: стоящий на ней не слышит букву пулемётом.
+]]
+local stoneSaid: { [BasePart]: number } = {}
+
+local function letterstone(part: BasePart, now: number, root: Vector3?)
+	if not root or not standsOn(part, root, part.Size.Y / 2) then
+		return
+	end
+	if (stoneSaid[part] or -math.huge) + 2.5 > now then
+		return
+	end
+	stoneSaid[part] = now
+	sound("stone_right", part.Position)
+	local vo = part:GetAttribute("Vo")
+	if typeof(vo) == "string" then
+		AudioController.speak(vo)
+	end
+	local color = originalColor[part] or part.Color
+	originalColor[part] = color
+	part.Color = Color3.fromRGB(150, 235, 150)
+	part.Material = Enum.Material.Neon
+	task.delay(0.6, function()
+		if part.Parent then
+			part.Color = color
+			part.Material = Enum.Material.Slate
+		end
+	end)
 end
 
 --[[
@@ -542,6 +576,10 @@ local function step(frame: number)
 		end
 		if part:GetAttribute("Mover") == "crumble" then
 			crumble(part, now, rootPosition)
+			continue
+		end
+		if part:GetAttribute("Mover") == "letterstone" then
+			letterstone(part, now, rootPosition)
 			continue
 		end
 		local cframe = positionFor(part, now)

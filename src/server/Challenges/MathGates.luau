@@ -171,7 +171,7 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 		obstacleTier = obstacleTier,
 		specialSegment = specialSegment,
 		attractions = {
-			unlocked = Attractions.unlocked(level.index),
+			unlocked = Attractions.unlocked(level.index, true),
 			heat = level.heat,
 			perSegment = 1,
 			random = Random.new(seed + ATTRACTION_SEED_SALT),

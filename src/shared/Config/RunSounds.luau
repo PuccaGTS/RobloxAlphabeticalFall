@@ -31,6 +31,9 @@ RunSounds.EVENTS = {
 	creak = { key = "sfx_run_creak", volume = 0.35, speed = { 0.85, 1.1 }, seconds = 3 },
 	-- Тучка-ветродуй дует губами: «фу-у-у» слышно раньше, чем долетит ветер.
 	blow = { key = "sfx_run_blow", volume = 0.9, speed = { 0.9, 1.1 }, seconds = 4 },
+	-- Буквенные кочки: верная звенит кристаллом, чужая булькает и мягко уходит вниз.
+	stone_right = { key = "sfx_crystal", volume = 0.6, speed = { 1.1, 1.3 }, seconds = 3 },
+	stone_sink = { key = "sfx_run_bloop", volume = 0.9, speed = { 0.8, 1 }, seconds = 2 },
 } :: { [string]: Event }
 
 -- Звуки, которые звучат всё время, пока аттракцион рядом: бульканье лавы.

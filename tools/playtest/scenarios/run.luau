@@ -240,6 +240,52 @@ return function(player, note)
 			end
 		end
 
+		-- Буквенные кочки: верная держит и называет букву, чужая уходит вниз.
+		if id == "letterstones" then
+			local right, wrong
+			for _, stone in child:GetChildren() do
+				if string.sub(stone.Name, 1, 6) == "Stone_" and stone:IsA("BasePart") then
+					local glyph = stone:FindFirstChild("Glyph")
+					local label = glyph and glyph:FindFirstChildWhichIsA("TextLabel", true)
+					if stone:GetAttribute("Mover") == "letterstone" then
+						right = right or stone
+					else
+						wrong = wrong or stone
+					end
+					if label and stone == right then
+						note(`   letterstones: right glyph {label.Text}`)
+					end
+				end
+			end
+			local first = child:FindFirstChild(`Stone_{index}_2`)
+			if first then
+				_G.ZZ_Shot(
+					player,
+					`run_{index}_letterstones_close`,
+					CFrame.lookAt(
+						first.Position + Vector3.new(0, 9, 14),
+						first.Position + Vector3.new(0, 0, -8)
+					),
+					70
+				)
+				task.wait(4.5)
+			end
+			for label, stone in { right = right, wrong = wrong } do
+				if stone then
+					local r = standOn(stone)
+					local startY = r.Position.Y
+					local lowest = startY
+					for _ = 1, 25 do
+						task.wait(0.1)
+						lowest = math.min(lowest, r.Position.Y)
+					end
+					note(
+						string.format("   letterstones %s: stood at %.1f, lowest %.1f", label, startY, lowest)
+					)
+				end
+			end
+		end
+
 		-- Печенька должна раскрошиться под стоящим: встать и подождать.
 		if id == "cookies" then
 			local cookie = child:FindFirstChild(`Cookie_{index}_2`)

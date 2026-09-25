@@ -182,6 +182,38 @@ return function()
 			end
 		)
 
+		it(
+			"буквенные кочки: в каждом ряду ровно одна верная, прыжок между рядами по силам",
+			function()
+				for _, plan in plans("letterstones") do
+					expect(plan.gap + 1 <= Attractions.MAX_GAP).to.equal(true)
+					local rights, rows, previous = {}, {}, nil
+					for _, stone in plan.stones do
+						rows[stone.row] = (rows[stone.row] or 0) + 1
+						expect(math.abs(stone.x) + plan.size / 2 <= Tunnel.WIDTH / 2).to.equal(true)
+						if stone.right then
+							expect(rights[stone.row]).to.equal(nil)
+							rights[stone.row] = stone.x
+						end
+					end
+					for row, count in rows do
+						expect(count).to.equal(3)
+						expect(rights[row]).to.be.ok()
+						-- Верная соседнего ряда не дальше соседней дорожки: прыжок наискосок.
+						if previous then
+							expect(math.abs(rights[row] - previous) <= 9).to.equal(true)
+						end
+						previous = rights[row]
+					end
+				end
+			end
+		)
+
+		it("буквенные кочки: только в мире букв", function()
+			expect(table.find(Attractions.unlocked(11), "letterstones")).to.be.ok()
+			expect(table.find(Attractions.unlocked(11, true), "letterstones")).to.equal(nil)
+		end)
+
 		it("островки: чем жарче, тем шире прыжки", function()
 			expect(Attractions.param("islands", "gapMax", 5) > Attractions.param("islands", "gapMax", 1)).to.equal(
 				true
@@ -614,6 +646,30 @@ return function()
 						expect(to <= gate.z - Tunnel.CLEARANCE_BEFORE_GATE).to.equal(true)
 					end
 				end
+			end
+		)
+
+		it(
+			"на буквенных кочках верная — буква отрезка, в ряду буквы не повторяются",
+			function()
+				local seen = 0
+				for _, spec in levelSpecs() do
+					for _, ride in spec.params.attractions do
+						if ride.id == "letterstones" then
+							seen += 1
+							local target = spec.params.gates[ride.segment].targetLetter
+							local rows = {}
+							for _, stone in ride.stones do
+								expect(Letters.get(stone.letterId)).to.be.ok()
+								expect(stone.right == (stone.letterId == target)).to.equal(true)
+								rows[stone.row] = rows[stone.row] or {}
+								expect(rows[stone.row][stone.letterId]).to.equal(nil)
+								rows[stone.row][stone.letterId] = true
+							end
+						end
+					end
+				end
+				expect(seen > 0).to.equal(true)
 			end
 		)
 

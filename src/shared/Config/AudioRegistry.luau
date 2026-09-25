@@ -141,6 +141,7 @@ local LIBRARY: { [string]: number } = {
 	sfx_bike_bell = 9125390321, -- Bicycle Bell Ringing: сел на самокат или велосипед в прокате
 	sfx_mail_open = 9114347537, -- Envelope Close Stuff Handle Paper Movement 2: открыли почтовый ящик
 	sfx_magic = 9114369623, -- Fairy Dust 1: взял лошадку-единорога, долез до облачного острова
+	sfx_run_bloop = 9112872239, -- Small Bubbles Water Surface Float Up Pop 5: чужая буквенная кочка уходит вниз
 	sfx_run_blow = 9126167059, -- Vocal Wind Blowing Air Through Lips, 4 с: тучка-ветродуй дует
 	amb_winter_bells = 1839945406, -- APM Jingle Bells, джазовое фортепиано, 116 с: зимняя полянка
 	sfx_skate = 9114868847, -- Ice Skates 1: скрип коньков на катке, 26 с
