@@ -9,6 +9,28 @@ local Decor = require(Shared.Config.Decor)
 
 return function()
 	describe("Config: музыка и звуки природы", function()
+		it(
+			"звуковая зона: звучит ближайшая, у края и снаружи — ни одной",
+			function()
+				local zones = {
+					{ position = Vector3.new(0, 0, 0), radius = 60 },
+					{ position = Vector3.new(70, 0, 0), radius = 60 },
+				}
+				expect(Ambient.zoneAt(Vector3.new(10, 5, 0), zones)).to.equal(1)
+				expect(Ambient.zoneAt(Vector3.new(60, 0, 0), zones)).to.equal(2)
+				-- Посередине обе задевают, но слышна одна — та, к которой ближе.
+				expect(Ambient.zoneAt(Vector3.new(34, 0, 0), zones)).to.equal(1)
+				expect(Ambient.zoneAt(Vector3.new(0, 0, 50), zones)).to.equal(nil)
+				expect(Ambient.zoneAt(Vector3.new(0, 0, 0), {})).to.equal(nil)
+			end
+		)
+
+		it("у каждого места с музыкой — своя зона", function()
+			for _, spot in { Ambient.CAROUSEL, Ambient.WINTER, Ambient.SWANS, Ambient.SHIP, Ambient.GALLERY } do
+				expect(spot.zone).to.equal(true)
+			end
+		end)
+
 		it("каждый ключ плейлиста заведён в реестре", function()
 			for place, list in Music.PLAYLISTS do
 				for _, key in list do

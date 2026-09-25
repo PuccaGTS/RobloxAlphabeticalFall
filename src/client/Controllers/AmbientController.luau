@@ -8,6 +8,7 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -25,6 +26,10 @@ local MusicController = require(script.Parent.MusicController)
 local AmbientController = {}
 
 local folder: Folder? = nil
+
+-- Звуковые зоны мест с музыкой (Ambient.zoneAt): слышна только та, где стоит ребёнок.
+type Zone = { position: Vector3, radius: number, sound: Sound, volume: number }
+local zones: { Zone } = {}
 
 local function idOf(key: string): string?
 	local id = AudioRegistry.ids[key]
@@ -58,7 +63,13 @@ local function placeSpot(parent: Folder, position: Vector3, spot: Ambient.Spot)
 	anchor.CanTouch = false
 	anchor.CFrame = CFrame.new(position)
 	anchor.Parent = parent
-	local sound = makeSound(spot.key, spot.volume, anchor)
+	local sound = makeSound(spot.key, if spot.zone then 0 else spot.volume, anchor)
+	if sound and spot.zone then
+		table.insert(
+			zones,
+			{ position = position, radius = spot.radius, sound = sound, volume = spot.volume }
+		)
+	end
 	if sound then
 		sound.RollOffMode = Enum.RollOffMode.InverseTapered
 		sound.RollOffMinDistance = spot.radius * 0.15
@@ -153,6 +164,33 @@ function AmbientController.init()
 		placeSpot(sounds, Vector3.new(at.X, Decor.groundY(at.X, at.Z) + 4, at.Z), spec)
 	end
 	animateFallStripes()
+	task.spawn(function()
+		local playing: number? = -1 -- -1: ещё ни разу не решали
+		while true do
+			local character = Players.LocalPlayer.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			local camera = workspace.CurrentCamera
+			local at = if root and root:IsA("BasePart")
+				then root.Position
+				elseif camera then camera.CFrame.Position
+				else nil
+			-- В забеге зон нет: там своя музыка.
+			local place = MusicController.current()
+			local inPark = place == "hub" or place == "evening"
+			local chosen = if at and inPark then Ambient.zoneAt(at, zones) else nil
+			if chosen ~= playing then
+				playing = chosen
+				for index, zone in zones do
+					local volume = if index == chosen then zone.volume else 0
+					TweenService
+						:Create(zone.sound, TweenInfo.new(Ambient.ZONE_FADE_SECONDS), { Volume = volume })
+						:Play()
+				end
+				MusicController.hush("zone", chosen ~= nil, 0)
+			end
+			task.wait(0.3)
+		end
+	end)
 
 	--[[
 		Фон площади: днём птицы, в сумерки сверчки. Место берём у музыки:
