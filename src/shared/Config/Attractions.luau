@@ -125,6 +125,19 @@ function Attractions.ids(): { string }
 	return ids
 end
 
+--[[
+	Финал уровня (docs/17-CONTENT-PLAN.md § 7.5, «босс»): на каждом третьем
+	уровне и на последнем после последних ворот, перед финишем, — два самых
+	новых аттракциона подряд, на ступень жарче обычного, под золотой аркой 🏆.
+	Вершина уровня: не просто финишная черта, а то, что надо пройти.
+]]
+Attractions.BOSS_EVERY = 3
+Attractions.BOSS_RIDES = 2
+
+function Attractions.isBossLevel(index: number, count: number): boolean
+	return index % Attractions.BOSS_EVERY == 0 or index == count
+end
+
 -- Какие аттракционы открыты на этом уровне пути, по порядку появления.
 -- mathWorld — для мира чисел: аттракционы с буквами туда не идут.
 function Attractions.unlocked(level: number, mathWorld: boolean?): { string }

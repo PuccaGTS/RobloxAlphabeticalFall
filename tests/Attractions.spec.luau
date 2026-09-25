@@ -643,7 +643,7 @@ return function()
 		it(
 			"у мира математики станций нет, а аттракционы есть",
 			function()
-				local spec = MathGates.Build(nil, { "a" }, 3, 3)
+				local spec = MathGates.Build(nil, { "a" }, 3, 2)
 				expect(#(spec.params.stations or {})).to.equal(0)
 				expect(#spec.params.attractions).to.equal(#spec.params.gates)
 			end
@@ -654,7 +654,13 @@ return function()
 			function()
 				for _, spec in levelSpecs() do
 					local _, perSegment = Levels.attractions(spec.level)
-					expect(#spec.params.attractions).to.equal(perSegment * #spec.params.gates)
+					local regular = 0
+					for _, ride in spec.params.attractions do
+						if not ride.boss then
+							regular += 1
+						end
+					end
+					expect(regular).to.equal(perSegment * #spec.params.gates)
 				end
 			end
 		)
@@ -674,9 +680,47 @@ return function()
 							expect(to < station.z or from > station.z + Tunnel.STATION_PITCH).to.equal(true)
 						end
 						local gate = spec.params.gates[ride.segment]
-						expect(to <= gate.z - Tunnel.CLEARANCE_BEFORE_GATE).to.equal(true)
+						if ride.boss then
+							-- Финал — после последних ворот и до финиша.
+							expect(from > gate.z).to.equal(true)
+							expect(to < spec.params.length).to.equal(true)
+						else
+							expect(to <= gate.z - Tunnel.CLEARANCE_BEFORE_GATE).to.equal(true)
+						end
 					end
 				end
+			end
+		)
+
+		it(
+			"финал: на каждом третьем и последнем уровне два самых новых аттракциона",
+			function()
+				for _, spec in levelSpecs() do
+					local bosses = {}
+					for _, ride in spec.params.attractions do
+						if ride.boss then
+							table.insert(bosses, ride.id)
+						end
+					end
+					local isBoss = spec.params.boss ~= nil
+					expect(isBoss == (#bosses > 0)).to.equal(true)
+					if isBoss then
+						expect(#bosses).to.equal(Attractions.BOSS_RIDES)
+						expect(bosses[1] ~= bosses[2]).to.equal(true)
+					end
+				end
+				expect(Attractions.isBossLevel(3, 11)).to.equal(true)
+				expect(Attractions.isBossLevel(4, 11)).to.equal(false)
+				expect(Attractions.isBossLevel(11, 11)).to.equal(true)
+				local finals = 0
+				for _, level in Levels.all do
+					local spec = TunnelRun.Build(nil, Letters.ordered(), 3, level.index)
+					if spec.params.boss then
+						finals += 1
+					end
+				end
+				-- 3, 6, 9 и 11.
+				expect(finals).to.equal(4)
 			end
 		)
 

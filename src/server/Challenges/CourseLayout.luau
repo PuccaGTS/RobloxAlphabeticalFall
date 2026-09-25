@@ -119,6 +119,8 @@ function CourseLayout.layout(
 			heat: number,
 			perSegment: number,
 			random: Random,
+			-- Финал уровня (Attractions.isBossLevel): самые новые аттракционы после последних ворот.
+			boss: boolean?,
 		}?,
 	}
 )
@@ -267,10 +269,36 @@ function CourseLayout.layout(
 		table.insert(checkpoints, { index = index, z = z + Tunnel.CHECKPOINT_OFFSET })
 	end
 
+	--[[
+		Финал: после последних ворот (сохранка уже стоит за ними) два самых
+		новых аттракциона уровня на ступень жарче. Буквы на буквенных — буква
+		последнего отрезка. Упал — к флажку перед аттракционом, как везде.
+	]]
+	local boss = nil
+	if rides and rides.boss and #rides.unlocked > 0 and plan.gateCount > 0 then
+		local cursor = z + Tunnel.CLEARANCE_AFTER_GATE
+		boss = { from = cursor, to = cursor }
+		local count = math.min(Attractions.BOSS_RIDES, #rides.unlocked)
+		for offset = count - 1, 0, -1 do
+			local id = rides.unlocked[#rides.unlocked - offset]
+			local ride = AttractionPlan.make(id, math.min(rides.heat + 1, 5), rides.random)
+			ride.index = #attractions + 1
+			ride.segment = plan.gateCount
+			ride.boss = true
+			ride.flagZ = cursor + 1
+			ride.z = cursor + Attractions.FLAG_LEAD
+			table.insert(attractions, ride)
+			cursor = ride.z + ride.length + Attractions.EXIT
+		end
+		boss.to = cursor
+		z = cursor
+	end
+
 	return {
 		gates = gates,
 		obstacles = obstacles,
 		checkpoints = checkpoints,
+		boss = boss,
 		length = z + Tunnel.FINISH_RUNWAY,
 		secrets = secrets,
 		runs = runs,

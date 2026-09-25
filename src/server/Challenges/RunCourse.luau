@@ -183,6 +183,7 @@ function RunCourse.new(id: string, params)
 				heat = heat,
 				perSegment = perSegment,
 				random = Random.new(seed + ATTRACTION_SEED_SALT),
+				boss = Attractions.isBossLevel(level.index, Levels.count()),
 			},
 			makeGate = function(index: number, gateRandom: Random)
 				local targetId = targets[index]
@@ -343,6 +344,7 @@ function RunCourse.new(id: string, params)
 				checkpoints = course.checkpoints,
 				stations = course.stations,
 				attractions = course.attractions,
+				boss = course.boss,
 				secrets = secrets,
 				length = course.length,
 				track = TrackShape.plan(course.runs, seed + TRACK_SEED_SALT),

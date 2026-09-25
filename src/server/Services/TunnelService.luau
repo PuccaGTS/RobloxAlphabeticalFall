@@ -2478,6 +2478,50 @@ local function buildGarlands(model: Model, path, spec: any)
 	end
 end
 
+--[[
+	Золотая арка финала уровня (Attractions.isBossLevel): стоит перед первым
+	флажком финала, над ней кубок. Видно издалека: сейчас будет главное.
+]]
+local function buildBossArch(model: Model, origin: CFrame, boss: { from: number, to: number }?)
+	if not boss then
+		return
+	end
+	local gold = Color3.fromRGB(255, 205, 80)
+	local at = origin * CFrame.new(0, 0, -(boss.from - 1))
+	local half = Tunnel.WIDTH / 2
+	local height = 13
+	for _, side in { -1, 1 } do
+		local pillar = build(
+			`BossPillar_{side}`,
+			Vector3.new(1.8, height, 1.8),
+			at * CFrame.new(side * (half - 0.9), height / 2, 0),
+			gold,
+			model
+		)
+		pillar.Material = Enum.Material.Foil
+	end
+	local beam =
+		build("BossBeam", Vector3.new(Tunnel.WIDTH, 1.6, 1.8), at * CFrame.new(0, height, 0), gold, model)
+	beam.Material = Enum.Material.Foil
+	local cup = build("BossCup", Vector3.new(1, 1, 1), at * CFrame.new(0, height + 4, 0), gold, model)
+	cup.Transparency = 1
+	cup.CanCollide = false
+	local billboard = Instance.new("BillboardGui")
+	billboard.Size = UDim2.fromScale(10, 5)
+	billboard.LightInfluence = 0
+	billboard.MaxDistance = 250
+	billboard.Parent = cup
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.Text = "🏆 Финал"
+	label.TextScaled = true
+	label.Font = Enum.Font.FredokaOne
+	label.TextColor3 = gold
+	label.TextStrokeTransparency = 0.2
+	label.Parent = billboard
+end
+
 local function buildFinish(model: Model, origin: CFrame, length: number, player: Player)
 	local at = origin * CFrame.new(0, 0, -(length - 6))
 	local half = Tunnel.WIDTH / 2
@@ -2713,6 +2757,7 @@ function TunnelService.spawn(player: Player, spec: any)
 		buildSecret(model, origin, secret, player, spec.params.resumeFrom or 0)
 	end
 	buildBalance(model, origin, spec.params.balance, player, spec.params.resumeFrom or 0)
+	buildBossArch(model, origin, spec.params.boss)
 	buildFinish(model, origin, length, player)
 
 	local character = player.Character

@@ -37,6 +37,23 @@ return function(player, note)
 	end
 	local root = player.Character.HumanoidRootPart
 	note(`level {level} tunnel parts {#model:GetDescendants()}`)
+	-- Финал уровня: золотая арка перед последними аттракционами.
+	local bossBeam = model:FindFirstChild("BossBeam")
+	note(`boss arch: {bossBeam and "yes" or "no"}`)
+	if bossBeam then
+		Teleport.to(player, CFrame.new(bossBeam.Position + Vector3.new(0, -8, 0) + bossBeam.CFrame.LookVector * 20))
+		task.wait(2)
+		_G.ZZ_Shot(
+			player,
+			"run_boss_arch",
+			CFrame.lookAt(
+				bossBeam.Position + bossBeam.CFrame.LookVector * 30 + Vector3.new(0, -4, 0),
+				bossBeam.Position - bossBeam.CFrame.LookVector * 30 + Vector3.new(0, -8, 0)
+			),
+			70
+		)
+		task.wait(5)
+	end
 
 	local function pivotOf(name)
 		local found = model:FindFirstChild(name, true)

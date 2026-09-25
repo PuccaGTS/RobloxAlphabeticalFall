@@ -175,6 +175,7 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 			heat = level.heat,
 			perSegment = 1,
 			random = Random.new(seed + ATTRACTION_SEED_SALT),
+			boss = Attractions.isBossLevel(level.index, MathConfig.count()),
 		},
 		makeGate = function(_index: number, gateRandom: Random)
 			local task = MathConfig.generate(stage, gateRandom, choiceCount)
@@ -220,6 +221,7 @@ local function assemble(stage: number, difficulty: number, seed: number, resumeF
 			obstacles = course.obstacles,
 			checkpoints = course.checkpoints,
 			attractions = course.attractions,
+			boss = course.boss,
 			length = course.length,
 			-- Та же форма трассы, что у мира букв: горки и виражи на пробежках.
 			track = TrackShape.plan(course.runs, seed + TRACK_SEED_SALT),
