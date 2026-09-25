@@ -142,6 +142,27 @@ local function worn(
 	}
 end
 
+-- Вещь каталога за задание недели номер week: не продаётся, выдаёт QuestService.
+local function weekly(
+	id: string,
+	category: string,
+	title: string,
+	week: number,
+	icon: string,
+	accessory: number
+): ShopItem
+	return {
+		id = id,
+		category = category,
+		title = title,
+		grantedBy = `weekly:{week}`,
+		tier = 2,
+		unlockStage = 1,
+		icon = icon,
+		accessory = accessory,
+	}
+end
+
 local GOLD = Color3.fromRGB(255, 214, 102)
 
 local Items: { [string]: ShopItem } = {
@@ -1289,6 +1310,17 @@ local Items: { [string]: ShopItem } = {
 	back_angel = worn("back_angel", "back", "Крылья ангела", 300, 2, "🪽", 95651415246994),
 	face_daisy = worn("face_daisy", "face", "Очки-ромашки", 20, 0, "🌼", 14896027020),
 	face_aviators = worn("face_aviators", "face", "Очки лётчика", 30, 0, "🕶", 376526673),
+
+	--[[
+		Награды задания недели (Logic/Quests.WEEK_REWARDS): по одной за каждую
+		выполненную неделю, по порядку. Не продаются — в витрине видно, что они
+		есть и как их получить: «🏆 за неделю». Примерены на аватаре (сценарий tryon).
+	]]
+	hat_dino = weekly("hat_dino", "hat", "Капюшон-динозавр", 1, "🦖", 134363188636903),
+	back_bear = weekly("back_bear", "back", "Мишка за спиной", 2, "🧸", 113819362696768),
+	hat_dragon = weekly("hat_dragon", "hat", "Рожки дракончика", 3, "💗", 108272738153285),
+	hat_whaleshark = weekly("hat_whaleshark", "hat", "Капюшон-акула", 4, "🦈", 18318294168),
+	hat_goldshark = weekly("hat_goldshark", "hat", "Золотая акула", 5, "🏆", 17701414079),
 }
 
 --[[
@@ -1499,6 +1531,15 @@ function Module.visibleIds(hideRobux: boolean?): { string }
 		end
 	end
 	return ids
+end
+
+-- За какую по счёту неделю выдаётся предмет (задание недели), или nil.
+function Module.weekNumber(item: ShopItem): number?
+	local grantedBy = item.grantedBy
+	if not grantedBy or string.sub(grantedBy, 1, 7) ~= "weekly:" then
+		return nil
+	end
+	return tonumber(string.sub(grantedBy, 8))
 end
 
 -- За сколько дней серии буквы дня выдаётся предмет, или nil, если не за серию.

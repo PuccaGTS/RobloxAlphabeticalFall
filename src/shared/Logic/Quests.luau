@@ -301,16 +301,120 @@ function Quests.get(id: any): Quest?
 	return if typeof(id) == "string" then byId[id] else nil
 end
 
+--[[
+	Задание недели: одно большое дело на семь дней — «пройди 5 уровней»,
+	«найди 3 секрета», «побывай в 5 уголках парка». Цель длиннее дня
+	(docs/17-CONTENT-PLAN.md § 7.3), и награда за неё — вещь, которой нет
+	в витрине: каждую неделю следующая из WEEK_REWARDS. Все собраны — звёзды.
+	Живёт в том же поле профиля, что и задания дня: миграция не нужна.
+]]
+export type Weekly = {
+	id: string,
+	icon: string,
+	title: string,
+	-- "level" — уровень любого мира, "park" — разные уголки парка, остальное — как у дня.
+	event: string,
+	need: number,
+}
+
+Quests.WEEKLY = {
+	{ id = "week_levels", icon = "🏁", title = "Пройди 5 уровней", event = "level", need = 5 },
+	{
+		id = "week_park",
+		icon = "🎡",
+		title = "Побывай в 5 уголках парка",
+		event = "park",
+		need = 5,
+	},
+	{
+		id = "week_secrets",
+		icon = "✨",
+		title = "Найди 3 секрета в забеге",
+		event = "secret",
+		need = 3,
+	},
+	{
+		id = "week_daily",
+		icon = "📋",
+		title = "Выполни 8 заданий дня",
+		event = "daily_quest",
+		need = 8,
+	},
+	{
+		id = "week_play",
+		icon = "🎯",
+		title = "Сыграй 12 занятий",
+		event = "finished",
+		need = 12,
+	},
+} :: { Weekly }
+
+-- Вещи за недели по порядку (Config/Shop, grantedBy = "weekly:<номер>").
+Quests.WEEK_REWARDS = { "hat_dino", "back_bear", "hat_dragon", "hat_whaleshark", "hat_goldshark" }
+
+export type Week = {
+	week: number,
+	id: string,
+	have: number,
+	seen: { string }, -- уголки парка, уже засчитанные на этой неделе
+	done: boolean,
+}
+
 export type State = {
 	day: number,
 	list: { string }, -- задания сегодняшнего дня по порядку
 	progress: { [string]: number },
 	played: { string }, -- разные занятия, законченные сегодня (для «трёх разных»)
 	bonus: boolean, -- бонус за все три уже выдан
+	week: Week?,
 }
 
 function Quests.new(): State
 	return { day = 0, list = {}, progress = {}, played = {}, bonus = false }
+end
+
+function Quests.weekOf(day: number): number
+	return math.floor(day / 7)
+end
+
+function Quests.weekly(id: any): Weekly?
+	for _, weekly in Quests.WEEKLY do
+		if weekly.id == id then
+			return weekly
+		end
+	end
+	return nil
+end
+
+-- Задание недели week: по кругу, у всех детей одно и то же.
+function Quests.weeklyFor(week: number): Weekly
+	return Quests.WEEKLY[week % #Quests.WEEKLY + 1]
+end
+
+local function sanitizeWeek(raw: any): Week?
+	if typeof(raw) ~= "table" or typeof(raw.week) ~= "number" or raw.week ~= raw.week then
+		return nil
+	end
+	local weekly = Quests.weekly(raw.id)
+	if not weekly then
+		return nil
+	end
+	local have = if typeof(raw.have) == "number" and raw.have == raw.have then raw.have else 0
+	local seen: { string } = {}
+	if typeof(raw.seen) == "table" then
+		for _, id in raw.seen do
+			if typeof(id) == "string" and #id <= 32 and not table.find(seen, id) and #seen < 32 then
+				table.insert(seen, id)
+			end
+		end
+	end
+	return {
+		week = math.floor(raw.week),
+		id = weekly.id,
+		have = math.clamp(math.floor(have), 0, weekly.need),
+		seen = seen,
+		done = raw.done == true,
+	}
 end
 
 local function isCount(value: any): boolean
@@ -350,6 +454,7 @@ function Quests.sanitize(raw: any): State
 		end
 	end
 	state.bonus = raw.bonus == true
+	state.week = sanitizeWeek(raw.week)
 	return state
 end
 
@@ -391,15 +496,21 @@ function Quests.pick(day: number, available: { string }): { string }
 	return list
 end
 
--- Новый день — новые задания; тот же день — всё как было.
+-- Новый день — новые задания; тот же день — всё как было. Новая неделя — новое задание недели.
 function Quests.refresh(state: State, day: number, available: { string }): (State, boolean)
 	local clean = Quests.sanitize(state)
+	local week = Quests.weekOf(day)
+	local weekChanged = clean.week == nil or (clean.week :: Week).week ~= week
+	if weekChanged then
+		clean.week = { week = week, id = Quests.weeklyFor(week).id, have = 0, seen = {}, done = false }
+	end
 	if clean.day == day and #clean.list > 0 then
-		return clean, false
+		return clean, weekChanged
 	end
 	local fresh = Quests.new()
 	fresh.day = day
 	fresh.list = Quests.pick(day, available)
+	fresh.week = clean.week
 	return fresh, true
 end
 
@@ -455,6 +566,51 @@ function Quests.record(state: State, event: string, detail: string?): (State, { 
 		end
 	end
 	return clean, completed
+end
+
+--[[
+	То же событие — для задания недели. Отдельно от дня: сервер зовёт обе,
+	а выполненные задания дня приходят сюда событием "daily_quest" по одному.
+	Возвращает новое состояние и true, если неделя выполнена только что.
+]]
+function Quests.recordWeek(state: State, event: string): (State, boolean)
+	local clean = Quests.sanitize(state)
+	local week = clean.week
+	if not week or week.done then
+		return clean, false
+	end
+	local weekly = Quests.weekly(week.id) :: Weekly
+	local counts = false
+	if weekly.event == "level" then
+		counts = string.sub(event, 1, 6) == "level:"
+	elseif weekly.event == "park" then
+		local spot = string.match(event, "^park:(.+)$")
+		if spot and not table.find(week.seen, spot) then
+			table.insert(week.seen, spot)
+			counts = true
+		end
+	else
+		counts = event == weekly.event
+	end
+	if not counts then
+		return clean, false
+	end
+	week.have = math.min(week.have + 1, weekly.need)
+	if week.have >= weekly.need then
+		week.done = true
+		return clean, true
+	end
+	return clean, false
+end
+
+-- Вещь за выполненную неделю: первая из WEEK_REWARDS, которой у ребёнка ещё нет.
+function Quests.weekReward(inventory: { string }): string?
+	for _, id in Quests.WEEK_REWARDS do
+		if not table.find(inventory, id) then
+			return id
+		end
+	end
+	return nil
 end
 
 return Quests

@@ -19,6 +19,7 @@ local QuestsUI = {}
 local player = Players.LocalPlayer
 
 local ROW_HEIGHT = 50
+local WEEK_HEIGHT = 30 + ROW_HEIGHT
 local WIDTH = 290
 local GOLD = Color3.fromRGB(255, 214, 102)
 
@@ -26,6 +27,8 @@ local gui: ScreenGui? = nil
 local panel: Frame? = nil
 local list: Frame? = nil
 local header: TextLabel? = nil
+local weekHeader: TextLabel? = nil
+local weekRow: Frame? = nil
 local onPick: ((item: any) -> ())? = nil
 local open = true
 
@@ -75,7 +78,7 @@ function QuestsUI.build(callbacks: { onPick: (item: any) -> () })
 
 	local frame = Instance.new("Frame")
 	frame.Name = "QuestsPanel"
-	frame.Size = UDim2.fromOffset(WIDTH, 34 + ROW_HEIGHT * 3 + 8)
+	frame.Size = UDim2.fromOffset(WIDTH, 34 + ROW_HEIGHT * 3 + 8 + WEEK_HEIGHT)
 	frame.Position = UDim2.new(0, 68, 0, 72)
 	frame.BackgroundColor3 = Color3.fromRGB(28, 30, 44)
 	frame.BackgroundTransparency = 0.15
@@ -97,6 +100,29 @@ function QuestsUI.build(callbacks: { onPick: (item: any) -> () })
 	layout.Padding = UDim.new(0, 4)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = rows
+
+	--[[
+		Задание недели — под заданиями дня: значок, дело, полоска и вещь,
+		которая ждёт в конце. Полоска видна ребёнку, который не читает цифр.
+	]]
+	local wHeader = label(
+		frame,
+		"Задание недели",
+		UDim2.new(1, -16, 0, 22),
+		UDim2.fromOffset(10, 34 + ROW_HEIGHT * 3 + 6)
+	)
+	wHeader.TextColor3 = Color3.fromRGB(180, 220, 255)
+	wHeader.TextXAlignment = Enum.TextXAlignment.Left
+	weekHeader = wHeader
+
+	local wRow = Instance.new("Frame")
+	wRow.Name = "Week"
+	wRow.Size = UDim2.new(1, -12, 0, ROW_HEIGHT - 4)
+	wRow.Position = UDim2.fromOffset(6, 34 + ROW_HEIGHT * 3 + 30)
+	wRow.BackgroundColor3 = Color3.fromRGB(44, 60, 92)
+	wRow.Parent = frame
+	corner(wRow, 10)
+	weekRow = wRow
 
 	toggle.Activated:Connect(function()
 		open = not open
@@ -165,6 +191,42 @@ function QuestsUI.update(payload)
 		then "Задания дня: все сделаны! 🎉"
 		else `Задания дня · +{Economy.REWARDS.dailyQuest} ⭐ за каждое`
 	panel.Visible = open and total > 0
+
+	local week = payload.week
+	if weekRow and weekHeader and typeof(week) == "table" then
+		weekRow:ClearAllChildren()
+		corner(weekRow, 10)
+		weekHeader.Text = if week.done
+			then "Задание недели выполнено! 🏆"
+			else `Задание недели · награда {week.prizeIcon} {week.prizeTitle}`
+		label(weekRow, week.icon, UDim2.fromOffset(38, 38), UDim2.fromOffset(4, 4))
+		local title = label(weekRow, week.title, UDim2.new(1, -118, 0, 22), UDim2.fromOffset(46, 3))
+		title.TextXAlignment = Enum.TextXAlignment.Left
+		-- Полоска: сколько уже сделано из нужного.
+		local bar = Instance.new("Frame")
+		bar.Size = UDim2.new(1, -118, 0, 10)
+		bar.Position = UDim2.fromOffset(46, 30)
+		bar.BackgroundColor3 = Color3.fromRGB(25, 30, 45)
+		bar.Parent = weekRow
+		corner(bar, 5)
+		local fill = Instance.new("Frame")
+		fill.Size = UDim2.fromScale(math.clamp((week.have or 0) / math.max(1, week.need or 1), 0, 1), 1)
+		fill.BackgroundColor3 = if week.done
+			then Color3.fromRGB(120, 220, 130)
+			else Color3.fromRGB(120, 200, 255)
+		fill.Parent = bar
+		corner(fill, 5)
+		local status = label(
+			weekRow,
+			if week.done then "✅" else `{week.have}/{week.need}`,
+			UDim2.fromOffset(44, 30),
+			UDim2.new(1, -64, 0, 8)
+		)
+		status.TextColor3 = GOLD
+		weekRow.BackgroundColor3 = if week.done
+			then Color3.fromRGB(70, 110, 80)
+			else Color3.fromRGB(44, 60, 92)
+	end
 end
 
 -- Выполненное задание: панель подпрыгивает, даже если свёрнута — раскрывается.

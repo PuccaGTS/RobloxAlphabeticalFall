@@ -17,6 +17,7 @@ local Chests = require(Shared.Config.Chests)
 local Decor = require(Shared.Config.Decor)
 local Economy = require(Shared.Config.Economy)
 local Playground = require(Shared.Config.Playground)
+local Shop = require(Shared.Config.Shop)
 local PlayLog = require(Shared.Logic.PlayLog)
 local Quests = require(Shared.Logic.Quests)
 local RemoteDefs = require(Shared.Net.RemoteDefs)
@@ -28,6 +29,7 @@ local ShopService = require(script.Parent.ShopService)
 local BaseService = require(script.Parent.BaseService)
 local ChestService = require(script.Parent.ChestService)
 local RentalService = require(script.Parent.RentalService)
+local CosmeticsService = require(script.Parent.CosmeticsService)
 local RateLimiter = require(script.Parent.RateLimiter)
 
 --[[
@@ -116,7 +118,30 @@ local function targetOf(player: Player, profile, quest): Vector3?
 	return nil
 end
 
-local function push(player: Player, justDone: { string }?, awarded: number?)
+-- Задание недели для панели: что, сколько сделано и какая вещь ждёт в конце.
+local function weekOf(profile)
+	local state = Quests.sanitize(profile.quests)
+	local week = state.week
+	local weekly = week and Quests.weekly(week.id)
+	if not week or not weekly then
+		return nil
+	end
+	local prizeId = Quests.weekReward(profile.inventory)
+	local prize = prizeId and Shop.get(prizeId)
+	return {
+		id = weekly.id,
+		icon = weekly.icon,
+		title = weekly.title,
+		have = week.have,
+		need = weekly.need,
+		done = week.done,
+		prizeIcon = if prize then prize.icon else "⭐",
+		prizeTitle = if prize then prize.title else `{Economy.REWARDS.weeklyQuestNoItem} ⭐`,
+		daysLeft = 7 - (state.day % 7),
+	}
+end
+
+local function push(player: Player, justDone: { string }?, awarded: number?, weekPrize: string?)
 	local profile = ProfileService.get(player)
 	if not profile then
 		return
@@ -143,7 +168,31 @@ local function push(player: Player, justDone: { string }?, awarded: number?)
 		items = items,
 		justDone = justDone or {},
 		awarded = awarded or 0,
+		week = weekOf(profile),
+		-- Неделя выполнена только что: какая вещь выдана (id из Config/Shop) или "stars".
+		weekPrize = weekPrize,
 	})
+end
+
+--[[
+	Неделя выполнена: следующая вещь из Quests.WEEK_REWARDS — сразу на ребёнке,
+	как из сундука, и 100 ⭐ сверху. Все вещи собраны — 150 ⭐ вместо вещи.
+]]
+local function rewardWeek(player: Player): (number, string)
+	local itemId: string? = nil
+	ProfileService.update(player, function(p)
+		itemId = Quests.weekReward(p.inventory)
+		if itemId then
+			table.insert(p.inventory, itemId)
+			p.equipped[Shop.expect(itemId).category] = itemId
+		end
+	end)
+	if itemId then
+		CosmeticsService.apply(player)
+		print(`[Quests] {player.Name} выполнил задание недели: {itemId}`)
+		return EconomyService.award(player, "weekly_quest", Economy.REWARDS.weeklyQuest, itemId), itemId
+	end
+	return EconomyService.award(player, "weekly_quest", Economy.REWARDS.weeklyQuestNoItem), "stars"
 end
 
 -- Новый день — новые задания. Зовётся при входе и перед каждым событием.
@@ -171,11 +220,20 @@ function QuestService.record(player: Player, event: string, detail: string?)
 
 	local completed = {}
 	local allNow = false
+	local weekNow = false
 	ProfileService.update(player, function(p)
 		p.quests, completed = Quests.record(p.quests, event, detail)
 		allNow = Quests.allDone(p.quests) and not p.quests.bonus
 		if allNow then
 			p.quests.bonus = true
+		end
+		-- Неделя слышит то же событие, а каждое выполненное задание дня — как "daily_quest".
+		local done
+		p.quests, done = Quests.recordWeek(p.quests, event)
+		weekNow = weekNow or done
+		for _ in completed do
+			p.quests, done = Quests.recordWeek(p.quests, "daily_quest")
+			weekNow = weekNow or done
 		end
 	end)
 
@@ -186,11 +244,17 @@ function QuestService.record(player: Player, event: string, detail: string?)
 	if allNow then
 		awarded += EconomyService.award(player, "daily_quests_all", Economy.REWARDS.dailyQuestsAll)
 	end
-	if #completed > 0 then
+	local weekPrize: string? = nil
+	if weekNow then
+		local stars
+		stars, weekPrize = rewardWeek(player)
+		awarded += stars
+	end
+	if #completed > 0 or weekNow then
 		RemoteDefs.event("PlaySfx"):FireClient(player, "reward")
-		push(player, completed, awarded)
-	elseif event == "finished" or event == "chest" or event == "build" then
-		-- Счётчик «три разных» или цель стрелки (следующий сундук) могли сдвинуться.
+		push(player, completed, awarded, weekPrize)
+	else
+		-- Счётчик «три разных», задание недели или цель стрелки (следующий сундук) могли сдвинуться.
 		push(player)
 	end
 end
@@ -220,6 +284,12 @@ function QuestService.start()
 	end)
 	ChestService.onOpened(function(player: Player)
 		QuestService.record(player, "chest")
+	end)
+	-- Секрет уровня найден впервые (Logic/Secrets): для задания недели «найди 3 секрета».
+	ChallengeService.onAnswer(function(player: Player, _spec: any, result: any)
+		if typeof(result) == "table" and result.secret then
+			QuestService.record(player, "secret")
+		end
 	end)
 	RentalService.onMount(function(player: Player)
 		QuestService.record(player, "park:rental")

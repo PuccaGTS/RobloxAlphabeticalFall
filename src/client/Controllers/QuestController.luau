@@ -16,6 +16,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local RemoteDefs = require(Shared.Net.RemoteDefs)
+local Shop = require(Shared.Config.Shop)
 
 local QuestsUI = require(script.Parent.Parent.UI.QuestsUI)
 local HUD = require(script.Parent.Parent.UI.HUD)
@@ -171,6 +172,15 @@ local function onQuests(payload)
 			end
 		end
 		HUD.toast(`✅ Задание дня {table.concat(icons, " ")}  +{payload.awarded} ⭐`, 4)
+		QuestsUI.celebrate()
+	end
+	-- Неделя выполнена: вещь уже надета сервером, здесь — чтобы ребёнок заметил.
+	if typeof(payload.weekPrize) == "string" then
+		local item = Shop.get(payload.weekPrize)
+		local text = if item
+			then `🏆 Задание недели! {item.icon} {item.title} — теперь твоя!`
+			else `🏆 Задание недели! +{payload.awarded} ⭐`
+		task.delay(if #(payload.justDone or {}) > 0 then 4.2 else 0, HUD.toast, text, 5)
 		QuestsUI.celebrate()
 	end
 	-- Цель могла переехать (следующий сундук): стрелка ведёт туда, куда теперь нужно.

@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Quests = require(ReplicatedStorage.Shared.Logic.Quests)
 local Challenges = require(ReplicatedStorage.Shared.Config.Challenges)
 local Playground = require(ReplicatedStorage.Shared.Config.Playground)
+local Shop = require(ReplicatedStorage.Shared.Config.Shop)
 
 local function allIds()
 	local ids = {}
@@ -168,6 +169,79 @@ return function()
 			expect(clean.day).to.equal(0)
 			expect(#clean.list).to.equal(1)
 			expect(clean.progress.rain).to.equal(nil)
+		end)
+	end)
+	describe("Logic/Quests — задание недели", function()
+		local function fresh(day)
+			return (Quests.refresh(Quests.new(), day, allIds()))
+		end
+
+		it(
+			"неделя заводится сама, держится семь дней и сменяется на восьмой",
+			function()
+				local state = fresh(70)
+				expect(state.week).to.be.ok()
+				expect(state.week.week).to.equal(Quests.weekOf(70))
+				state = Quests.recordWeek(state, "level:letters")
+				local sameWeek = Quests.refresh(state, 76, allIds())
+				expect(sameWeek.week.have).to.equal(state.week.have)
+				local nextWeek = Quests.refresh(state, 77, allIds())
+				expect(nextWeek.week.week).to.equal(Quests.weekOf(77))
+				expect(nextWeek.week.have).to.equal(0)
+			end
+		)
+
+		it(
+			"уровни обоих миров идут в «пройди 5 уровней», и неделя закрывается один раз",
+			function()
+				local state = fresh(0)
+				state.week = { week = 0, id = "week_levels", have = 0, seen = {}, done = false }
+				local done
+				for index = 1, 4 do
+					state, done =
+						Quests.recordWeek(state, if index % 2 == 0 then "level:math" else "level:letters")
+					expect(done).to.equal(false)
+				end
+				state, done = Quests.recordWeek(state, "level:letters")
+				expect(done).to.equal(true)
+				local _, again = Quests.recordWeek(state, "level:letters")
+				expect(again).to.equal(false)
+			end
+		)
+
+		it(
+			"уголки парка считаются разными, повтор не в счёт",
+			function()
+				local state = fresh(0)
+				state.week = { week = 0, id = "week_park", have = 0, seen = {}, done = false }
+				state = Quests.recordWeek(state, "park:balloon")
+				state = Quests.recordWeek(state, "park:balloon")
+				state = Quests.recordWeek(state, "park:grotto")
+				expect(state.week.have).to.equal(2)
+				expect(Quests.sanitize(state).week.seen[2]).to.equal("grotto")
+			end
+		)
+
+		it(
+			"награды недели — не продаются, идут по порядку и есть в магазине",
+			function()
+				for index, id in Quests.WEEK_REWARDS do
+					local item = Shop.expect(id)
+					expect(item.price).to.equal(nil)
+					expect(Shop.weekNumber(item)).to.equal(index)
+				end
+				expect(Quests.weekReward({})).to.equal(Quests.WEEK_REWARDS[1])
+				expect(Quests.weekReward({ Quests.WEEK_REWARDS[1] })).to.equal(Quests.WEEK_REWARDS[2])
+				expect(Quests.weekReward(table.clone(Quests.WEEK_REWARDS))).to.equal(nil)
+			end
+		)
+
+		it("мусор в неделе не ломает профиль", function()
+			local clean = Quests.sanitize({ week = { week = 3, id = "нет такого", have = 99 } })
+			expect(clean.week).to.equal(nil)
+			clean = Quests.sanitize({ week = { week = 3, id = "week_play", have = 99, seen = { 1, "x" } } })
+			expect(clean.week.have).to.equal(Quests.weekly("week_play").need)
+			expect(#clean.week.seen).to.equal(1)
 		end)
 	end)
 end

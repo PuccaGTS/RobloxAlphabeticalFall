@@ -107,6 +107,7 @@ local function makeCard(item): Frame
 		then priceText(item.price)
 		elseif streakDays then `☀ {streakDays} дней`
 		elseif Chests.chestIdOf(item.grantedBy) then "🗝 в сундуке"
+		elseif Shop.weekNumber(item) then "🏆 за неделю"
 		else ""
 	price.TextColor3 = Color3.fromRGB(255, 214, 102)
 	price.TextScaled = true
@@ -298,6 +299,10 @@ function ShopUI.update(snapshot)
 		elseif Chests.chestIdOf(item.grantedBy) then
 			-- Не купить, а найти: сундук стоит в парке между площадью и домами.
 			action.Text = "Найди в парке"
+			action.BackgroundColor3 = COLOR_LOCKED
+		elseif Shop.weekNumber(item) then
+			-- Задание недели в панели заданий: выполнил — вещь приходит сама.
+			action.Text = "📋 задание недели"
 			action.BackgroundColor3 = COLOR_LOCKED
 		else
 			-- Не «замок», а сколько осталось накопить: замок демотивирует, цель — нет.
